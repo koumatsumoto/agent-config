@@ -1,31 +1,15 @@
-# AI Agent Guideline
+# agent-config
 
-全プロジェクト共通の Claude Code 動作指針。プロジェクト固有の設定は各リポジトリの CLAUDE.md で上書きする。
+Claude Code / Codex CLI の共通設定テンプレートを管理するリポジトリ。
 
-## 主要原則
+## 構成
 
-1. **Agent-First**: 複雑な作業は特化エージェントに委譲
-2. **Parallel Execution**: 可能なら複数エージェントを並列実行
-3. **Plan Before Execute**: 複雑な作業では Plan Mode
-4. **Test-Driven**: 実装前にテスト
-5. **Security-First**: セキュリティ妥協なし
+- `templates/` - デプロイ対象テンプレート（install.sh で ~/.claude/ 等に反映）
+- `.claude/` - このプロジェクト固有の設定
+- `docs/` - ドキュメント
 
-## ワークフロー
+## 注意
 
-- ユーザの指示は曖昧であることを前提とする。実装前に要求を分析し、積極的に質問して詳細を詰める
-- 複雑な作業では Plan Mode で作業計画を作成してから実装する
-- 作業が完了したら、git commit 前に包括的なセルフレビューを行う
-
-## スタイル
-
-- コード、コメント、ドキュメントに絵文字禁止
-
-## Git
-
-- Git Commit 時は `/commit` スキルを使う
-
-## 参照
-
-- @rules/security.md
-- @rules/coding-style.md
-- @rules/agents.md
+- テンプレートの編集は templates/ 配下で行う
+- install.sh 実行でテンプレートがホームディレクトリに反映される
+- .claude/skills/config-review/ はこのプロジェクト専用スキル（テンプレートではない）

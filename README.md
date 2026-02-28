@@ -9,7 +9,7 @@ Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理す�
 
 ## 運用ポリシー
 
-- **編集元は Claude-first**: このリポジトリ内の `CLAUDE.md` / `agents/` / `rules/` / `skills/` を編集する
+- **編集元は Claude-first**: このリポジトリ内の `templates/` 配下 (`CLAUDE.md` / `agents/` / `rules/` / `skills/`) を編集する
 - Codex 側の `~/.codex/AGENTS.md` は反映先。**直接編集しない**
 - 二重管理を避けるため、インストール時はリンク優先（必要ならコピーへフォールバック）
 - サブエージェントは最小構成を維持し、不要になったものは削除する
@@ -18,12 +18,15 @@ Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理す�
 
 ## ディレクトリ構造
 
-- `CLAUDE.md` - 共通エージェント方針（Claude と Codex AGENTS で共用）
-- `agents/` - Claude 用エージェント定義
-- `rules/` - ルール定義
-- `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
-- `config.toml` - Codex CLI 用の最小設定テンプレート
+- `templates/` - デプロイ対象のテンプレート群
+  - `CLAUDE.md` - 共通エージェント方針（Claude と Codex AGENTS で共用）
+  - `agents/` - Claude 用エージェント定義
+  - `rules/` - ルール定義
+  - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
+  - `config.toml` - Codex CLI 用の最小設定テンプレート
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
+- `docs/` - プロジェクトドキュメント
+- `.claude/` - プロジェクト固有の Claude 設定
 
 ## セットアップ
 
@@ -36,15 +39,15 @@ bash install.sh
 このコマンドは以下を反映します:
 
 - `~/.claude/`:
-  - `CLAUDE.md`
-  - `agents/`
-  - `rules/`
-  - `skills/`
+  - `CLAUDE.md`（`templates/CLAUDE.md` から反映）
+  - `agents/`（`templates/agents/` から反映）
+  - `rules/`（`templates/rules/` から反映）
+  - `skills/`（`templates/skills/` から反映）
 - `~/.codex/`:
-  - `AGENTS.md`（`CLAUDE.md` から反映）
-  - `config.toml`（`config.toml` から反映）
+  - `AGENTS.md`（`templates/CLAUDE.md` から反映）
+  - `config.toml`（`templates/config.toml` から反映）
 - `~/.agents/`:
-  - `skills/`（Codex Skills 用）
+  - `skills/`（`templates/skills/` から反映）
 
 `install.sh` は引数なしで、Claude/Codex の両方を一括反映します。
 
@@ -59,17 +62,17 @@ bash install.sh
 
 | Repository Source | Destination |
 | --- | --- |
-| `CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `agents/` | `~/.claude/agents/` |
-| `rules/` | `~/.claude/rules/` |
-| `skills/` | `~/.claude/skills/` |
-| `CLAUDE.md` | `~/.codex/AGENTS.md` |
-| `config.toml` | `~/.codex/config.toml` |
-| `skills/` | `~/.agents/skills/` |
+| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| `templates/agents/` | `~/.claude/agents/` |
+| `templates/rules/` | `~/.claude/rules/` |
+| `templates/skills/` | `~/.claude/skills/` |
+| `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
+| `templates/config.toml` | `~/.codex/config.toml` |
+| `templates/skills/` | `~/.agents/skills/` |
 
 ## エージェント運用（2026-02 時点）
 
-`agents/` は Claude Code のサブエージェント定義。現在は次の 6 つに集約:
+`templates/agents/` は Claude Code のサブエージェント定義。現在は次の 6 つに集約:
 
 - `planner` - 実装前の計画化
 - `architect` - 設計判断とトレードオフ整理
@@ -78,7 +81,7 @@ bash install.sh
 - `security-reviewer` - セキュリティレビュー
 - `refactor-cleaner` - 安全なクリーンアップ
 
-運用詳細は `rules/agents.md` を参照。
+運用詳細は `templates/rules/agents.md` を参照。
 
 ## 公式仕様（参照元）
 

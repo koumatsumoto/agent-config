@@ -27,12 +27,12 @@ install_item() {
 }
 
 echo "Install Claude + Codex configuration"
-install_item "$REPO_ROOT/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
-install_item "$REPO_ROOT/agents" "$HOME/.claude/agents"
-install_item "$REPO_ROOT/rules" "$HOME/.claude/rules"
-install_item "$REPO_ROOT/skills" "$HOME/.claude/skills"
+install_item "$REPO_ROOT/templates/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+install_item "$REPO_ROOT/templates/agents" "$HOME/.claude/agents"
+install_item "$REPO_ROOT/templates/rules" "$HOME/.claude/rules"
+install_item "$REPO_ROOT/templates/skills" "$HOME/.claude/skills"
 
-install_item "$REPO_ROOT/CLAUDE.md" "$HOME/.codex/AGENTS.md"
-install_item "$REPO_ROOT/config.toml" "$HOME/.codex/config.toml"
-install_item "$REPO_ROOT/skills" "$HOME/.agents/skills"
+install_item "$REPO_ROOT/templates/CLAUDE.md" "$HOME/.codex/AGENTS.md"
+install_item "$REPO_ROOT/templates/config.toml" "$HOME/.codex/config.toml"
+install_item "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
 echo "done"
