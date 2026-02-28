@@ -2,28 +2,33 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TS="$(date +%Y%m%d%H%M%S)"
 
 install_item() {
   local src="$1"
   local dest="$2"
 
   mkdir -p "$(dirname "$dest")"
-  if [[ -e "$dest" || -L "$dest" ]]; then
-    mv "$dest" "${dest}.bak.${TS}"
-  fi
 
-  if ln -s "$src" "$dest" 2>/dev/null; then
-    echo "linked: $dest -> $src"
+  # 既存のコピー先と内容が同一ならスキップ
+  if [[ -e "$dest" ]] && ! [[ -L "$dest" ]] && diff -rq "$src" "$dest" >/dev/null 2>&1; then
+    echo "ok: $dest"
     return 0
   fi
 
+  # 既存ファイル/ディレクトリがあればバックアップ（単一世代）
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    rm -rf "${dest}.bak"
+    mv "$dest" "${dest}.bak"
+    echo "backup: ${dest}.bak"
+  fi
+
+  # コピー
   if [[ -d "$src" ]]; then
     cp -R "$src" "$dest"
   else
     cp "$src" "$dest"
   fi
-  echo "copied: $src -> $dest"
+  echo "copied: $dest"
 }
 
 echo "Install Claude + Codex configuration"
