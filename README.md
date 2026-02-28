@@ -110,10 +110,6 @@ bash install.sh
 | スキル | 説明 |
 | --- | --- |
 | `code-review` | セキュリティ/品質レビュー |
-| `build-fix` | TypeScript/ビルドエラーの段階的修正 |
-| `refactor-clean` | デッドコード特定・安全な削除 |
-| `orchestrate` | 複数エージェントの段階実行ワークフロー |
-| `learn` | セッションから再利用可能パターンを抽出 |
 | `commit` | Conventional Commits 形式で git commit |
 
 ### 参照スキル（Claude が自動適用）
@@ -121,8 +117,6 @@ bash install.sh
 | スキル | 説明 |
 | --- | --- |
 | `security-review` | セキュリティレビューチェックリスト |
-| `continuous-learning` | パターン抽出と学習 |
-| `strategic-compact` | 戦略的コンテキスト圧縮 |
 
 ## ライセンス
 
