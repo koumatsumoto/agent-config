@@ -109,14 +109,8 @@ bash install.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `code-review` | セキュリティ/品質レビュー |
+| `code-review` | セキュリティ/保守性を主軸とした多角的レビュー |
 | `commit` | Conventional Commits 形式で git commit |
-
-### 参照スキル（Claude が自動適用）
-
-| スキル | 説明 |
-| --- | --- |
-| `security-review` | セキュリティレビューチェックリスト |
 
 ## ライセンス
 
