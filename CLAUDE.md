@@ -1,53 +1,31 @@
 # AI Agent Guideline
 
-## 基本思想
+全プロジェクト共通の Claude Code 動作指針。プロジェクト固有の設定は各リポジトリの CLAUDE.md で上書きする。
 
-あなたは Claude Code。複雑なタスクに特化エージェントやスキルを使う。
-
-**主要原則:**
+## 主要原則
 
 1. **Agent-First**: 複雑な作業は特化エージェントに委譲
-2. **Parallel Execution**: 可能なら Task ツールで複数エージェントを並列実行
+2. **Parallel Execution**: 可能なら複数エージェントを並列実行
 3. **Plan Before Execute**: 複雑な作業では Plan Mode
 4. **Test-Driven**: 実装前にテスト
 5. **Security-First**: セキュリティ妥協なし
 
-**哲学**: Agent-first 設計、並列実行、行動前の計画、テスト先行、常にセキュリティ。
+## ワークフロー
 
-## 作業ワークフロー
+- ユーザの指示は曖昧であることを前提とする。実装前に要求を分析し、積極的に質問して詳細を詰める
+- 複雑な作業では Plan Mode で作業計画を作成してから実装する
+- 作業が完了したら、git commit 前に包括的なセルフレビューを行う
 
-1. ユーザの指示を受ける
-2. ユーザの指示の曖昧な点を質問して要求を詳細化する
-3. 要求を深く理解して作業計画を作成する
-4. 作業計画が完成したらユーザーにレビューを求める
-5. 承認後、作業を行う
-6. 作業が完了したら結果をユーザに報告してレビューを求める
-7. ユーザ確認後、git commit する
-
-## 個人設定
-
-### リポジトリインデックス
-
-- rules: `security.md`, `coding-style.md`, `agents.md`
-- skills: `plan`, `tdd`, `code-review`, `build-fix`, `test-coverage`, `refactor-clean`, `orchestrate`, `learn`, `commit`, `coding-standards`, `security-review`, `continuous-learning`, `strategic-compact`
-
-### コードスタイル
+## スタイル
 
 - コード、コメント、ドキュメントに絵文字禁止
-- イミュータブルを優先（オブジェクト/配列をミューテーションしない）
-- 大きなファイル少数より小さなファイル多数
-- 1ファイル 300 行の目安、最大 800 行/ファイル
 
-### Git
+## Git
 
 - Git Commit 時は `/commit` スキルを使う
 
-## 成功指標
+## 参照
 
-成功条件:
-
-- ユーザー要件を満たす
-- セキュリティ脆弱性なし
-- コードが読みやすく保守しやすい
-- 全テスト合格
-- セルフレビュー済み
+- @rules/security.md
+- @rules/coding-style.md
+- @rules/agents.md
