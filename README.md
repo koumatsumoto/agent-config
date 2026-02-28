@@ -109,11 +109,8 @@ bash install.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `plan` | 実装計画の作成 |
-| `tdd` | テスト駆動開発ワークフロー |
 | `code-review` | セキュリティ/品質レビュー |
 | `build-fix` | TypeScript/ビルドエラーの段階的修正 |
-| `test-coverage` | テストカバレッジ分析と不足テスト生成 |
 | `refactor-clean` | デッドコード特定・安全な削除 |
 | `orchestrate` | 複数エージェントの段階実行ワークフロー |
 | `learn` | セッションから再利用可能パターンを抽出 |
@@ -123,7 +120,6 @@ bash install.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `coding-standards` | TypeScript/JavaScript コーディング規約 |
 | `security-review` | セキュリティレビューチェックリスト |
 | `continuous-learning` | パターン抽出と学習 |
 | `strategic-compact` | 戦略的コンテキスト圧縮 |
