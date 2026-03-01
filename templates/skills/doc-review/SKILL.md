@@ -1,21 +1,15 @@
 ---
 name: doc-review
-description: Use when reviewing uncommitted document changes for accuracy, consistency, and readability before commit.
-disable-model-invocation: true
+description: Review uncommitted document changes for accuracy, consistency, and readability before commit. Use this skill when the user asks to review documentation, check docs, or says "ドキュメントを確認して", "READMEをレビューして", "ドキュメントに問題ないか見て". Also use it proactively after creating or updating documentation as part of the standard workflow.
 ---
 
 # Document Review
 
 未コミットのドキュメント変更を対象に、正確性・一貫性・可読性をレビューする。
 
-## Use When
-
-- ドキュメント作成・更新後にコミット前レビューをしたい
-- 内容の正確性や構成の一貫性を確認したい
-
 ## Workflow
 
-1. 変更ファイルを収集する（`git diff --name-only` でドキュメントファイルを抽出）
+1. `git diff --name-only` で変更されたドキュメントファイルを収集する
 2. 重大度順で問題を抽出する
 3. 各問題に該当箇所・影響・修正案を付ける
 4. `CRITICAL/HIGH` があればコミットをブロックする
@@ -36,7 +30,14 @@ disable-model-invocation: true
 
 ## Output Format
 
-- 重大度
-- 位置（ファイル + 該当箇所）
-- 問題の説明
-- 推奨修正
+問題ごとに以下の形式で報告する。
+
+**Example:**
+
+```
+## HIGH: API エンドポイントの記述が実装と不一致
+
+**場所**: docs/api.md「認証」セクション
+**問題**: ドキュメントでは POST /auth/login と記載されているが、実装は POST /api/v1/auth/login。利用者が正しいエンドポイントにアクセスできない。
+**修正**: パスを /api/v1/auth/login に更新する。
+```

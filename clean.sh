@@ -16,7 +16,6 @@ remove_item() {
 }
 
 echo "Clean Claude + Codex configuration"
-remove_item "$HOME/.claude/agents"
 remove_item "$HOME/.claude/rules"
 remove_item "$HOME/.claude/skills"
 remove_item "$HOME/.agents/skills"

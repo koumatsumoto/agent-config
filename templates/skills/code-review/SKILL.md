@@ -1,22 +1,16 @@
 ---
 name: code-review
-description: Use when reviewing uncommitted changes for security, regressions, and maintainability before commit.
-disable-model-invocation: true
+description: Review uncommitted code changes for security vulnerabilities, regressions, and maintainability issues before commit. Use this skill whenever the user asks for a code review, quality check, security audit, or says things like "レビューして", "チェックして", "変更を確認して", "問題ないか見て". Also use it proactively after completing code changes as part of the standard workflow.
 ---
 
 # Code Review
 
 未コミット変更を対象に、セキュリティと保守性を主軸とした多角的レビューを行う。
 
-## Use When
-
-- 実装後にコミット前レビューをしたい
-- セキュリティや回帰リスクを先に潰したい
-
 ## Workflow
 
-1. 変更ファイルを収集する（`git diff --name-only`）
-2. 信頼境界に触れる変更を優先的に確認する
+1. `git diff --name-only` で変更ファイルを収集する
+2. 信頼境界（外部入力、認証、データ永続化）に触れる変更を優先的に確認する
 3. 重大度順で問題を抽出する
 4. 各問題に位置・影響・修正案を付ける
 5. `CRITICAL/HIGH` があればコミットをブロックする
@@ -29,12 +23,12 @@ disable-model-invocation: true
 
 ## Mandatory Blockers
 
-以下を検出した場合はコミットをブロックする。
+以下を検出した場合はコミットをブロックする。いずれも本番環境で発生するとユーザーデータの漏洩や不正アクセスにつながり、修復コストが極めて高い問題であるため。
 
-- ハードコードされたシークレット
-- 認証・認可の欠如
-- 非検証入力の直接利用（SQL、テンプレート、コマンド等）
-- 重大な機密情報を含むログ/エラー出力
+- ハードコードされたシークレット（漏洩時のローテーションコストが甚大）
+- 認証・認可の欠如（任意のユーザーがリソースにアクセス可能になる）
+- 非検証入力の直接利用 — SQL、テンプレート、コマンド等（注入攻撃の入口になる）
+- 重大な機密情報を含むログ/エラー出力（ログ収集経由で機密が拡散する）
 
 ## Severity Guide
 
@@ -45,11 +39,18 @@ disable-model-invocation: true
 
 ## Output Format
 
-- 重大度
-- 位置（ファイル + 行）
-- 問題の説明（セキュリティ問題は悪用シナリオを含める）
-- 推奨修正
+問題ごとに以下の形式で報告する。
+
+**Example:**
+
+```
+## CRITICAL: ハードコードされた API キー
+
+**場所**: src/api/client.ts:42
+**問題**: Stripe の API キーが文字列リテラルとして埋め込まれている。リポジトリにアクセスできる全員がキーを取得でき、不正課金に悪用される。
+**修正**: 環境変数 `STRIPE_SECRET_KEY` から読み込むように変更する。
+```
 
 ## References
 
-- `references/security-checklist.md` - セキュリティチェックリスト
+- `references/security-checklist.md` — セキュリティチェックリスト。レビュー時に参照して漏れを防ぐ。

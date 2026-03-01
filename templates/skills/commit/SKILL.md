@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Create a git commit with a structured Conventional Commits message. Use when the user requests a commit or after completing a task that needs committing.
+description: Create a git commit with a structured Conventional Commits message. Use when the user requests a commit, says "commit", "コミットして", "変更を保存して", or after completing a task that needs committing.
 argument-hint: "[message]"
 ---
 
