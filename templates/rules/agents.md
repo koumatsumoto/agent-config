@@ -13,8 +13,6 @@
 | `planner` | 実装前の計画化 |
 | `architect` | 設計判断とトレードオフ整理 |
 | `build-error-resolver` | ビルド/型エラー復旧 |
-| `code-reviewer` | 差分レビュー |
-| `security-reviewer` | セキュリティレビュー |
 | `refactor-cleaner` | 安全なクリーンアップ |
 
 ## 選定ガイド
@@ -22,8 +20,7 @@
 - 変更前の整理: `planner`
 - 設計判断が必要: `architect`
 - ビルドが壊れている: `build-error-resolver`
-- 実装後の品質確認: `code-reviewer`
-- 認証/入力/API を触る: `security-reviewer`
+- 実装後の品質確認: `/code-review` スキル
 - 未使用コード整理: `refactor-cleaner`
 
 ## 実行ルール
