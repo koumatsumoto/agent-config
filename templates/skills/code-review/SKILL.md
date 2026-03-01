@@ -39,6 +39,64 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - `MEDIUM`: 保守性低下、テスト不足、設計の不整合、不適切なエラー処理
 - `LOW`: スタイルや微小改善
 
+## Security Checklist (OWASP Top 10:2025)
+
+### Secrets Management
+
+- ソースコードにシークレット（API キー、パスワード、トークン）を埋め込まない
+- 秘密情報は環境変数またはシークレットストアで管理する
+- 環境変数の存在チェックを実装し、未設定時は起動を拒否する
+- シークレットをログやエラーメッセージに出力しない
+
+### Input Validation
+
+- すべての外部入力（リクエストパラメータ、ヘッダー、ファイルアップロード）を検証する
+- スキーマベースのバリデーション（Zod, JSON Schema 等）を優先する
+- サイズ制限・型制限・許可リストを設定する
+
+### Injection Prevention
+
+- SQL は必ずパラメータ化クエリを使う
+- テンプレートエンジンにユーザー入力を直接展開しない
+- シェルコマンドにユーザー入力を直結しない（引数配列を使う）
+- パス結合は正規化してディレクトリトラバーサルを防ぐ
+
+### Authentication / Authorization
+
+- 認証必須ルートを明示し、デフォルトで認証を要求する
+- リソースアクセスごとに認可を検証する（IDOR 防止）
+- 権限不足時は安全な失敗（403/404）を返す
+
+### Browser Security
+
+- HTML 出力箇所は XSS 対策する（自動エスケープ、CSP）
+- CSRF 防御を適用する（トークン、SameSite cookie）
+- セキュリティヘッダーを設定する（CSP, X-Content-Type-Options 等）
+
+### Error Handling / Fail-Secure (OWASP A10)
+
+認証・認可・決済などの重要処理で例外を握り潰すと fail-open になる。
+
+- エラーに内部構造・秘密情報を含めない
+- セキュリティ関連の try-catch で例外時にデフォルト許可しない
+- 予期しない状態では安全側に倒す（deny by default）
+- ログは PII の最小化とマスキングを行う
+
+### Supply Chain Security (OWASP A03)
+
+依存関係を経由した攻撃が急増している。
+
+- 依存パッケージのバージョンを固定し、lockfile をコミットする
+- CI では再現可能インストール（`npm ci`, `pip install --require-hashes` 等）を使う
+- 依存の脆弱性スキャンを定期実行する
+- 新規依存の追加時はメンテナンス状況と信頼性を確認する
+
+### Abuse Protection
+
+- 重要 API にレート制限を付与する
+- 認証・決済系は監査ログを残す
+- 認証失敗の回数制限やアカウントロックを導入する
+
 ## Output Format
 
 問題ごとに以下の形式で報告する。
@@ -52,7 +110,3 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 **問題**: Stripe の API キーが文字列リテラルとして埋め込まれている。リポジトリにアクセスできる全員がキーを取得でき、不正課金に悪用される。
 **修正**: 環境変数 `STRIPE_SECRET_KEY` から読み込むように変更する。
 ```
-
-## References
-
-- `references/security-checklist.md` — OWASP Top 10:2025 準拠のセキュリティチェックリスト。レビュー時に参照して漏れを防ぐ。
