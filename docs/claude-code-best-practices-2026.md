@@ -1,6 +1,6 @@
 # Claude Code ベストプラクティス 2026
 
-2026年2月時点の公式ドキュメントおよびコミュニティ記事を調査・精査し、CLAUDE.md / Rules / Skills の設定に関するベストプラクティスを統合整理したリファレンス。
+2026年3月時点の公式ドキュメントおよびコミュニティ記事を調査・精査し、CLAUDE.md / Rules / Skills / Subagents / Hooks の設定に関するベストプラクティスを統合整理したリファレンス。
 
 > **最重要原則**: コンテキストウィンドウは公共財である。CLAUDE.md、Rules、Skills はすべてこの有限リソースを共有する。各設定ファイルのすべてのトークンが、会話履歴・ファイル内容・コマンド出力と競合することを常に意識する。
 
@@ -12,9 +12,10 @@
 2. [Rules のベストプラクティス](#2-rules-のベストプラクティス)
 3. [Skills のベストプラクティス](#3-skills-のベストプラクティス)
 4. [Subagents のベストプラクティス](#4-subagents-のベストプラクティス)
-5. [コンテキスト管理](#5-コンテキスト管理)
-6. [よくある失敗パターンと対策](#6-よくある失敗パターンと対策)
-7. [出典](#7-出典)
+5. [Hooks のベストプラクティス](#5-hooks-のベストプラクティス)
+6. [コンテキスト管理](#6-コンテキスト管理)
+7. [よくある失敗パターンと対策](#7-よくある失敗パターンと対策)
+8. [出典](#8-出典)
 
 ---
 
@@ -60,7 +61,7 @@ LLM が安定して従える指示数には限界がある。研究によれば�
 
 ### 1.5 コードスタイルは CLAUDE.md に書かない
 
-コードスタイル（インデント、クォート、import順序）は Linter / Formatter で機械的に強制する。LLM は「比較的高コストで非常に遅いリンター」であり、この用途には適さない。代わりに Claude Code の Hooks を使って、ファイル編集後に自動でフォーマッターを実行する。
+コードスタイル（インデント、クォート、import順序）は Linter / Formatter で機械的に強制する。LLM は「比較的高コストで非常に遅いリンター」であり、この用途には適さない。代わりに Claude Code の Hooks を使って、ファイル編集後に自動でフォーマッターを実行する（具体的な設定例は §5.5 を参照）。
 
 ### 1.6 配置場所と優先順位
 
@@ -215,11 +216,14 @@ description: What this skill does and when to use it
 |-----------|------|
 | `name` | 小文字・数字・ハイフンのみ。最大64文字 |
 | `description` | 何をするか、いつ使うかを記述。最大1024文字 |
+| `argument-hint` | オートコンプリート時のヒント（例: `[issue-number]`） |
 | `disable-model-invocation` | `true` で Claude の自動呼び出しを禁止（手動のみ） |
 | `user-invocable` | `false` で `/` メニューから非表示（Claude のみ使用） |
 | `allowed-tools` | スキル実行時に許可するツール |
+| `model` | スキル実行時に使用するモデル指定 |
 | `context` | `fork` でサブエージェントとして分離実行 |
-| `agent` | `context: fork` 時のエージェントタイプ指定 |
+| `agent` | `context: fork` 時のエージェントタイプ指定（`Explore`, `Plan`, `general-purpose`, カスタム） |
+| `hooks` | スキルのライフサイクルに紐づくフック定義（§5 参照） |
 
 ### 3.3 命名規約
 
@@ -262,7 +266,7 @@ my-skill/
     └── helper.py         # ユーティリティスクリプト（実行用）
 ```
 
-**重要**: 参照は SKILL.md から1階層のみ。深いネストは避ける。
+**重要**: 参照は SKILL.md から1階層のみ。深いネストは避ける。`--add-dir` で追加したディレクトリの `.claude/skills/` も自動ロードされ、ライブ変更検知にも対応している。
 
 ```markdown
 # Bad: 深すぎるネスト
@@ -281,11 +285,11 @@ SKILL.md -> examples.md
 
 ### 3.7 呼び出し制御
 
-| 設定 | ユーザー呼出 | Claude 自動呼出 | 用途 |
-|------|:-----------:|:--------------:|------|
-| デフォルト | Yes | Yes | 一般的なスキル |
-| `disable-model-invocation: true` | Yes | No | `/deploy`, `/commit` など副作用のあるワークフロー |
-| `user-invocable: false` | No | Yes | レガシーシステムの知識など、バックグラウンド知識 |
+| 設定 | ユーザー呼出 | Claude 自動呼出 | description のコンテキスト負荷 | 用途 |
+|------|:-----------:|:--------------:|:---:|------|
+| デフォルト | Yes | Yes | 常時 | 一般的なスキル |
+| `disable-model-invocation: true` | Yes | No | なし | `/deploy`, `/commit` など副作用のあるワークフロー |
+| `user-invocable: false` | No | Yes | 常時 | レガシーシステムの知識など、バックグラウンド知識 |
 
 ### 3.8 コンテキストコスト
 
@@ -330,7 +334,26 @@ Input: Added user authentication with JWT
 Output: feat(auth): implement JWT-based authentication
 ```
 
-### 3.11 反復開発プロセス
+### 3.11 動的コンテキスト注入
+
+SKILL.md 内で `` !`command` `` 構文を使うと、スキル呼び出し時にシェルコマンドの出力を動的に注入できる:
+
+```yaml
+---
+name: pr-summary
+description: Summarize changes in a pull request
+context: fork
+agent: Explore
+---
+
+## Pull request context
+- PR diff: !`gh pr diff`
+- PR comments: !`gh pr view --comments`
+```
+
+コマンドはスキル読み込み時に即時実行（前処理）され、出力がプレースホルダーを置換する。
+
+### 3.12 反復開発プロセス
 
 1. スキルなしでタスクを完了し、繰り返し提供した情報を特定
 2. その情報をスキルとして構造化
@@ -342,7 +365,7 @@ Output: feat(auth): implement JWT-based authentication
 
 ## 4. Subagents のベストプラクティス
 
-Subagents は独自のコンテキストとツールセットで動作する専門エージェント。メインの会話を汚染せずに調査や検証を行える。
+Subagents は独自のコンテキストとツールセットで動作する専門エージェント。メインの会話を汚染せずに調査や検証を行える。v2.1.41 以降、Worktree Isolation・Agent Memory・Agent Teams が追加され、マルチエージェントプラットフォームとしての機能が大幅に強化された。
 
 ### 4.1 定義方法
 
@@ -352,7 +375,8 @@ Subagents は独自のコンテキストとツールセットで動作する専�
 name: security-reviewer
 description: Reviews code for security vulnerabilities
 tools: Read, Grep, Glob, Bash
-model: opus
+model: sonnet
+memory: project
 ---
 
 You are a senior security engineer. Review code for:
@@ -362,13 +386,82 @@ You are a senior security engineer. Review code for:
 - Insecure data handling
 ```
 
-### 4.2 主な用途
+### 4.2 フロントマターフィールド
+
+| フィールド | 必須 | 説明 |
+|-----------|:----:|------|
+| `name` | Yes | 一意識別子（小文字+ハイフン） |
+| `description` | Yes | いつ委譲するかの判断材料 |
+| `tools` | No | 許可するツール（省略時は親から継承） |
+| `disallowedTools` | No | 禁止するツール（拒否リスト） |
+| `model` | No | `sonnet` / `opus` / `haiku` / `inherit`（デフォルト: inherit） |
+| `permissionMode` | No | `default` / `acceptEdits` / `dontAsk` / `bypassPermissions` / `plan` |
+| `maxTurns` | No | 最大ターン数 |
+| `skills` | No | プリロードするスキル（全文がコンテキストに注入される） |
+| `mcpServers` | No | 利用可能な MCP サーバー |
+| `hooks` | No | ライフサイクルフック（`PreToolUse`, `PostToolUse`, `Stop`/`SubagentStop`） |
+| `memory` | No | 永続メモリのスコープ: `user` / `project` / `local` |
+| `background` | No | `true` でバックグラウンド実行（デフォルト: false） |
+| `isolation` | No | `worktree` で git worktree による分離実行 |
+
+### 4.3 配置スコープと優先順位
+
+同名のエージェントが複数存在する場合、上位が優先される:
+
+| 配置場所 | スコープ | 優先度 | 作成方法 |
+|----------|---------|:------:|----------|
+| `--agents` CLI フラグ | セッション限定 | 1（最高） | JSON をインラインで指定 |
+| `.claude/agents/` | プロジェクト | 2 | Git 管理可、チーム共有 |
+| `~/.claude/agents/` | 全プロジェクト | 3 | 個人用 |
+| プラグインの `agents/` | プラグイン有効時 | 4（最低） | プラグインに同梱 |
+
+- `claude agents` コマンドで設定済みエージェントを一覧表示
+- `/agents` でセッション内から対話的に作成・編集・削除
+
+### 4.4 Worktree Isolation
+
+`isolation: worktree` を設定すると、エージェントは一時的な git worktree で動作し、他のエージェントやメインの作業ディレクトリと干渉しない:
+
+```yaml
+---
+name: batch-worker
+description: Process tasks in isolation
+isolation: worktree
+---
+
+You are a worker that handles isolated tasks.
+```
+
+- 各エージェントが独自のブランチと作業ディレクトリを持つ
+- 変更がなければ worktree は自動クリーンアップされる
+- `WorktreeCreate` / `WorktreeRemove` フックで git 以外の VCS にも対応可能（§5 参照）
+
+### 4.5 Agent Memory
+
+`memory` フィールドで永続メモリを有効化すると、セッションを跨いで知識を蓄積できる:
+
+```yaml
+memory: project  # user | project | local
+```
+
+- `MEMORY.md` の先頭200行がシステムプロンプトに自動注入される
+- **ユースケース**: コードレビュアーがパターンを学習、アーキテクトがコードベースの知識を蓄積
+
+### 4.6 Agent Teams（実験的機能）
+
+Subagents はセッション内で動作するが、**Agent Teams** はセッションを跨いで複数の専門エージェントが並列に協調する仕組み。セキュリティ・パフォーマンス・テストカバレッジなど異なるレンズで並列レビューを行うケースに適する。
+
+> **注意**: Agent Teams は実験的機能であり、デフォルトでは無効。`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` を settings.json または環境変数で有効化する必要がある。
+
+詳細は [Agent Teams ドキュメント](https://code.claude.com/docs/en/agent-teams) を参照。
+
+### 4.7 主な用途
 
 - **調査の分離**: コードベースの探索をサブエージェントに委譲し、メインコンテキストを保護
 - **実装後の検証**: 別コンテキストでのコードレビュー（書いたコードへのバイアスを排除）
-- **並列実行**: 独立したタスクを複数のサブエージェントで同時処理
+- **並列実行**: `isolation: worktree` で独立したタスクを複数のサブエージェントで同時処理
 
-### 4.3 Skills との連携
+### 4.8 Skills との連携
 
 スキルに `context: fork` を設定するとサブエージェントとして分離実行される:
 
@@ -382,19 +475,137 @@ agent: Explore
 Research $ARGUMENTS thoroughly...
 ```
 
-### 4.4 設計指針
+`agent` フィールドには組み込みエージェント（`Explore`, `Plan`, `general-purpose`）またはカスタムエージェント（`.claude/agents/` 配下）を指定できる。
+
+### 4.9 設計指針
 
 - **汎用ロールより特化ロール**: 「バックエンドエンジニア」ではなく「認証フローレビュアー」
 - **1タスク1主担当**: 過剰な分割を避ける
 - **出力に判断根拠と次アクションを明示させる**
+- **並列処理には `isolation: worktree`**: マージコンフリクトを防ぐ
 
 ---
 
-## 5. コンテキスト管理
+## 5. Hooks のベストプラクティス
 
-コンテキストウィンドウは Claude Code で管理すべき最も重要なリソース。
+Hooks はエージェントのライフサイクルの特定ポイントで実行されるカスタムロジック。CLAUDE.md にコードスタイル指示を書くより、Hooks で機械的に強制する方が確実で効率的。
 
-### 5.1 セッション管理の原則
+### 5.1 フックタイプ
+
+| タイプ | 説明 |
+|--------|------|
+| `command` | シェルコマンドを実行。stdin で JSON を受信 |
+| `http` | URL に JSON を POST し、JSON レスポンスを受信。ヘッダーで環境変数展開対応 |
+| `prompt` | Claude に評価を送信 |
+| `agent` | 検証用サブエージェントを起動 |
+
+### 5.2 フックイベント一覧（17種）
+
+| カテゴリ | イベント | 発火タイミング |
+|----------|---------|---------------|
+| セッション | `SessionStart` | セッション開始/再開時 |
+| | `SessionEnd` | セッション終了時 |
+| | `InstructionsLoaded` | CLAUDE.md / rules 読み込み時 |
+| ユーザー操作 | `UserPromptSubmit` | プロンプト送信時（Claude 処理前） |
+| | `Stop` | メインエージェント応答完了時 |
+| | `SubagentStart` | サブエージェント起動時 |
+| | `SubagentStop` | サブエージェント完了時 |
+| | `Notification` | 通知送信時 |
+| ツール実行 | `PreToolUse` | ツール実行前（ブロック可能） |
+| | `PostToolUse` | ツール実行成功後 |
+| | `PostToolUseFailure` | ツール実行失敗後 |
+| | `PermissionRequest` | 権限ダイアログ表示時 |
+| Agent Teams | `TeammateIdle` | チームメイトがアイドルになる直前 |
+| | `TaskCompleted` | タスク完了マーク時 |
+| インフラ | `ConfigChange` | 設定ファイル変更時 |
+| | `PreCompact` | コンテキスト圧縮前 |
+| | `WorktreeCreate` / `WorktreeRemove` | Worktree の作成/削除時 |
+
+### 5.3 設定場所
+
+| 配置場所 | スコープ | 共有可否 |
+|----------|---------|---------|
+| `~/.claude/settings.json` | 全プロジェクト | 不可 |
+| `.claude/settings.json` | プロジェクト | Git 管理可 |
+| `.claude/settings.local.json` | プロジェクト | 不可（gitignored） |
+| エージェント/スキルのフロントマター | コンポーネント有効時 | 定義次第 |
+
+### 5.4 HTTP Hooks
+
+シェルコマンドの代わりに外部サービスへ JSON を POST できる:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://localhost:8080/hooks/validate",
+            "headers": {
+              "Authorization": "Bearer $MY_TOKEN"
+            },
+            "allowedEnvVars": ["MY_TOKEN"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+- `allowedEnvVars` に列挙されていない環境変数は空文字に置換される
+- 2xx + JSON レスポンスでツール実行をブロック可能
+- 接続失敗/タイムアウトは非ブロッキングエラー（実行は継続）
+
+### 5.5 実践的な活用パターン
+
+**コードスタイルの自動強制**（§1.5 の具体的な実装）:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**品質ゲートの強制**（Agent Teams 向け）:
+
+`TeammateIdle` でビルド成果物の存在を検証、`TaskCompleted` でテスト通過を強制できる。終了コード 2 でフィードバックを返すとエージェントは作業を継続する。
+
+**サブエージェント出力の後処理**:
+
+`SubagentStop` の `last_assistant_message` フィールドでサブエージェントの最終応答にアクセスし、ログ記録や通知に活用できる。
+
+### 5.6 終了コードの意味
+
+| コード | 意味 |
+|:------:|------|
+| 0 | 成功。JSON 出力がある場合は処理される |
+| 2 | ブロッキングエラー。アクションを阻止し、stderr を Claude/ユーザーに表示 |
+| その他 | 非ブロッキングエラー。verbose モードで表示 |
+
+---
+
+## 6. コンテキスト管理
+
+コンテキストウィンドウは Claude Code で管理すべき最も重要なリソース。Opus 4.6 は 1M コンテキストに対応しているが、有限であることに変わりはない。
+
+### 6.1 セッション管理の原則
 
 | 状況 | アクション |
 |------|----------|
@@ -404,7 +615,7 @@ Research $ARGUMENTS thoroughly...
 | 大量のファイル読み取りが必要な調査 | サブエージェントに委譲 |
 | コンテキスト使用率 70% 到達 | 手動で `/compact` を実行 |
 
-### 5.2 検証手段の提供
+### 6.2 検証手段の提供
 
 Claude に自分の作業を検証させることが、最もレバレッジの高い実践。
 
@@ -415,7 +626,7 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 
 検証手段がない場合、出荷しない。
 
-### 5.3 探索 -> 計画 -> 実装 -> コミット
+### 6.3 探索 -> 計画 -> 実装 -> コミット
 
 1. **Explore**: Plan Mode でファイルを読み、現状を理解
 2. **Plan**: 実装計画を作成（`Ctrl+G` でエディタ編集可能）
@@ -424,9 +635,24 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 
 スコープが明確で小さい修正ではこのフローをスキップしてよい。
 
+### 6.4 セッション転送と MCP 同期
+
+- **`/teleport`**: ターミナルのセッションを claude.ai/code やモバイルアプリに転送できる。外出先からの監視や承認に便利
+- **MCP サーバー同期**: claude.ai アカウントで設定した MCP サーバーが Claude Code でも自動的に利用可能
+
+### 6.5 モデル選択
+
+| モデル | 特徴 |
+|--------|------|
+| Opus 4.6 | 最高性能。1M コンテキスト対応。複雑なタスクに最適 |
+| Sonnet 4.6 | 速度と品質のバランス。日常的なタスクに推奨 |
+| Haiku 4.5 | 最速。軽量なタスクや大量並列処理に適する |
+
+Opus 4 / 4.1 は Claude Code から削除済み。ピン留めしていたユーザーは Opus 4.6 に自動移行された。
+
 ---
 
-## 6. よくある失敗パターンと対策
+## 7. よくある失敗パターンと対策
 
 | パターン | 症状 | 対策 |
 |----------|------|------|
@@ -440,12 +666,15 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 
 ---
 
-## 7. 出典
+## 8. 出典
 
 ### 公式ドキュメント（一次情報）
 
 - [Best Practices for Claude Code](https://code.claude.com/docs/en/best-practices) - Anthropic 公式
 - [Extend Claude with Skills](https://code.claude.com/docs/en/skills) - Anthropic 公式
+- [Create Custom Subagents](https://code.claude.com/docs/en/sub-agents) - Anthropic 公式
+- [Hooks Reference](https://code.claude.com/docs/en/hooks) - Anthropic 公式
+- [Automate Workflows with Hooks](https://code.claude.com/docs/en/hooks-guide) - Anthropic 公式
 - [Manage Claude's Memory](https://code.claude.com/docs/en/memory) - Anthropic 公式
 - [Skill Authoring Best Practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) - Anthropic API Docs
 
@@ -455,6 +684,8 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 - [Claude Code を使いこなすためのベストプラクティス（実践検証付き）](https://tech.enechange.co.jp/entry/2026/02/16/195000) - ENECHANGE Developer Blog
 - [claude-code-best-practice](https://github.com/shanraisshan/claude-code-best-practice) - GitHub (shanraisshan)
 - [Claude Skill vs Command: 2026 Best Practices](https://oneaway.io/blog/claude-skill-vs-command) - OneAway
+- [Claude Code 2.1.41–2.1.63: Eight Releases, One Platform Shift](https://www.vibesparking.com/en/blog/ai/claude-code/changelog/2026-03-04-claude-code-2141-2163-multi-agent-platform/) - Vibe Sparking AI
+- [Claude Skills and CLAUDE.md: A Practical 2026 Guide for Teams](https://www.gend.co/blog/claude-skills-claude-md-guide) - Gend Blog
 
 ### コミュニティ記事（参考情報）
 
@@ -463,4 +694,4 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 
 ---
 
-*最終更新: 2026-02-28*
+*最終更新: 2026-03-07*
