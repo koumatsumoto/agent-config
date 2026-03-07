@@ -19,7 +19,7 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 - **セキュリティ**: 認証/認可、入力検証、機密漏えい、注入脆弱性、依存関係の安全性
 - **堅牢性**: 例外処理、エラー伝播、fail-open の防止、境界値
-- **保守性**: 可読性、設計の一貫性、テスト不足
+- **保守性**: 可読性、設計の一貫性、冗長な実装、テスト不足
 - **正確性**: バグ、仕様回帰、データ整合性
 
 ## Mandatory Blockers
@@ -39,7 +39,7 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - `MEDIUM`: 保守性低下、テスト不足、設計の不整合、不適切なエラー処理
 - `LOW`: スタイルや微小改善
 
-## Security Checklist (OWASP Top 10:2025)
+## Security Checklist
 
 ### Secrets Management
 
@@ -47,6 +47,12 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - 秘密情報は環境変数またはシークレットストアで管理する
 - 環境変数の存在チェックを実装し、未設定時は起動を拒否する
 - シークレットをログやエラーメッセージに出力しない
+
+### Authentication / Authorization
+
+- 認証必須ルートを明示し、デフォルトで認証を要求する
+- リソースアクセスごとに認可を検証する（IDOR 防止）
+- 権限不足時は安全な失敗（403/404）を返す
 
 ### Input Validation
 
@@ -61,19 +67,7 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - シェルコマンドにユーザー入力を直結しない（引数配列を使う）
 - パス結合は正規化してディレクトリトラバーサルを防ぐ
 
-### Authentication / Authorization
-
-- 認証必須ルートを明示し、デフォルトで認証を要求する
-- リソースアクセスごとに認可を検証する（IDOR 防止）
-- 権限不足時は安全な失敗（403/404）を返す
-
-### Browser Security
-
-- HTML 出力箇所は XSS 対策する（自動エスケープ、CSP）
-- CSRF 防御を適用する（トークン、SameSite cookie）
-- セキュリティヘッダーを設定する（CSP, X-Content-Type-Options 等）
-
-### Error Handling / Fail-Secure (OWASP A10)
+### Error Handling / Fail-Secure
 
 認証・認可・決済などの重要処理で例外を握り潰すと fail-open になる。
 
@@ -82,9 +76,34 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - 予期しない状態では安全側に倒す（deny by default）
 - ログは PII の最小化とマスキングを行う
 
-### Supply Chain Security (OWASP A03)
+### Cryptographic Failures
 
-依存関係を経由した攻撃が急増している。
+- セキュリティ目的で MD5/SHA1 を使わない（パスワードハッシュは bcrypt/argon2）
+- 暗号鍵・IV をハードコードしない
+- 独自暗号を実装しない（標準ライブラリを使う）
+
+### SSRF
+
+- ユーザー提供の URL にサーバーサイドからリクエストする場合は許可リストで制限する
+- 内部ネットワーク（169.254.x.x, 10.x.x.x, localhost）へのアクセスをブロックする
+
+### Insecure Deserialization
+
+- 信頼できないデータの `pickle.load`, `yaml.load`, `eval` を禁止する
+- JSON パース時のプロトタイプ汚染に注意する
+
+### Race Conditions
+
+- 認証・認可・決済の TOCTOU（check-then-act）に注意する
+- 共有リソースへの並行アクセスで整合性が壊れないか確認する
+
+### Browser Security
+
+- HTML 出力箇所は XSS 対策する（自動エスケープ、CSP）
+- CSRF 防御を適用する（トークン、SameSite cookie）
+- セキュリティヘッダーを設定する（CSP, X-Content-Type-Options 等）
+
+### Supply Chain Security
 
 - 依存パッケージのバージョンを固定し、lockfile をコミットする
 - CI では再現可能インストール（`npm ci`, `pip install --require-hashes` 等）を使う
@@ -96,6 +115,31 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - 重要 API にレート制限を付与する
 - 認証・決済系は監査ログを残す
 - 認証失敗の回数制限やアカウントロックを導入する
+
+## Maintainability Checklist
+
+### 可読性
+
+- 変数名・関数名が意図を正確に表現しているか
+- ネストが深すぎないか（早期 return で簡潔にできないか）
+- マジックナンバーや意味不明な文字列リテラルがないか
+
+### 設計の一貫性
+
+- 既存コードの命名規則・パターンに従っているか
+- 同じ責務のコードが複数箇所に分散していないか
+- 抽象度が周囲のコードと揃っているか
+
+### 冗長性
+
+- 同一ロジックのコピペがないか（共通化すべきか検討する）
+- 不要な中間変数、到達しないコード、使われていない import がないか
+- 過剰な抽象化や不要なラッパーを導入していないか
+
+### テスト
+
+- 変更箇所に対応するテストが追加・更新されているか
+- 境界値やエラーケースのテストが含まれているか
 
 ## Output Format
 
