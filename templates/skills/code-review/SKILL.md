@@ -43,10 +43,6 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - 外部 API との通信
 - ファイルシステム・OS コマンド操作
 
-### 変更規模の把握
-
-大規模変更（300行超）では、論理的に独立した変更が混在していないか確認する。混在している場合はコミット分割を提案する。
-
 ### レビュー深度マトリクス
 
 | 変更タイプ | Phase 2 要件充足 | Phase 3 設計妥当性 | Phase 4 セキュリティ | Phase 4 その他品質特性 |
@@ -78,7 +74,7 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ## Phase 3: 設計妥当性
 
-変更が設計として妥当かを、関数→モジュール→システムの順に確認する。大規模変更（300行超）では、変更全体の設計意図と整合性を俯瞰し、ファイル間の依存関係・データフローの変化を重点的に追跡する。
+変更が設計として妥当かを、関数→モジュール→システムの順に確認する。
 
 ### 関数/メソッドレベル
 
@@ -119,8 +115,6 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ## Phase 4: 品質特性
 
-機能適合性以外の品質特性を確認する。SQuaRE の品質モデルに基づき、以下の観点でレビューする。
-
 ### セキュリティ
 
 信頼境界に触れる変更を優先的に確認する。詳細なチェックリストは security-checklist.md を参照。
@@ -142,8 +136,6 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ### 性能効率性
 
-変更がパフォーマンスに影響しうる場合に確認する。詳細は review-patterns.md を参照。
-
 - ホットパスに O(n²) 以上のアルゴリズムが導入されていないか
 - N+1 クエリや不要な繰り返しリクエストがないか
 - 無制限に成長するキャッシュ、キュー、バッファがないか
@@ -162,8 +154,6 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ### 互換性
 
-公開インターフェース（関数シグネチャ、REST API、CLI、設定ファイル形式等）を変更する場合に確認する。
-
 - 既存の呼び出し元/クライアントが変更なしで動作するか（後方互換性）
 - 破壊的変更がある場合、移行パスが提供されているか
 - エラーの型・コードが既存パターンと一貫しているか
@@ -171,13 +161,7 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ## Mandatory Blockers
 
-以下を検出した場合はコミットをブロックする:
-
-- ハードコードされたシークレット（API キー、パスワード、トークン）
-- 認証・認可の欠如
-- 非検証入力の直接利用（注入脆弱性）
-- 機密情報を含むログ/エラー出力
-- セキュリティ関連の例外握り潰し（fail-open）
+Phase 4 セキュリティの項目を検出した場合、コミットをブロックする。
 
 ## Severity Guide
 
@@ -185,11 +169,6 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 - `HIGH`: 明確なバグ、仕様回帰、悪用可能な入力検証不足
 - `MEDIUM`: 保守性低下、テスト不足、設計の不整合、不適切なエラー処理
 - `LOW`: 微小改善
-
-### 境界例（HIGH vs MEDIUM の判断基準）
-
-- **HIGH**: 未検証のリダイレクト URL（悪用可能）、正常入力でクラッシュする null チェック漏れ、レースコンディションでデータ不整合
-- **MEDIUM**: 理論上到達しない入力でのみ発生する null チェック漏れ、広すぎる catch ブロック（ログ出力して再送出はしている）、テストカバレッジの不足
 
 ## Output Format
 
@@ -205,7 +184,7 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ### 問題報告
 
-問題ごとに以下の形式で報告する。確信度を明示することで、開発者が優先順位を判断しやすくなる。
+問題ごとに以下の形式で報告する。確信度（`confirmed` = 確認済み / `suspected` = 疑い）を付与する。
 
 ```
 ## HIGH: 未検証の外部入力がクエリに使用されている [confirmed]
@@ -213,22 +192,4 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 **場所**: src/api/users.ts:42
 **問題**: リクエストパラメータ `sort_by` が検証なしに SQL ORDER BY 句に結合されている。攻撃者が任意の SQL フラグメントを注入できる。
 **修正**: 許可されたカラム名のホワイトリストで検証する。
-```
-
-確信度:
-- `confirmed`: コードパスを追跡して問題を確認済み
-- `suspected`: パターンから疑わしいが、全パスは未検証（理由を補足する）
-
-### 問題がない場合
-
-確認した主要な観点を明示して報告する:
-
-```
-## レビュー結果
-
-**変更分類**: fix (標準) | 変更行数: 25行 | ファイル数: 2
-**検出件数**: なし
-**コミット判定**: ✅ OK
-
-確認済み観点: 要件充足 ✓、型安全性 ✓、エラーハンドリング ✓、セキュリティ(Quick scan) ✓
 ```
