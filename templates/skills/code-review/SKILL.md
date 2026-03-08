@@ -77,20 +77,19 @@ description: Reviews uncommitted code changes for security vulnerabilities, regr
 
 ## Phase 4: 品質特性
 
-機能適合性以外の品質（セキュリティ・信頼性・性能効率性・保守性・互換性）を確認する。各カテゴリの詳細パターンは quality-patterns.md を参照。
+機能適合性以外の品質（セキュリティ・信頼性・性能効率性・保守性・互換性）を確認する。必ず quality-patterns.md を読み、各カテゴリのパターンに照らしてレビューすること。
 
-## Mandatory Blockers
+## 判定と報告
 
-Phase 4 セキュリティの項目を検出した場合、コミットをブロックする。
+問題の重大度を判定し、結果を報告する。
 
-## Severity Guide
-
+重大度:
 - `CRITICAL`: 機密漏えい、認可欠如、任意コード実行、fail-open など即時悪用可能
 - `HIGH`: 明確なバグ、仕様回帰、悪用可能な入力検証不足
 - `MEDIUM`: 保守性低下、テスト不足、設計の不整合、不適切なエラー処理
 - `LOW`: 微小改善
 
-## Output Format
+`CRITICAL` または `HIGH` を検出した場合、コミットをブロックする。
 
 ### サマリー（必ず冒頭に出力）
 
