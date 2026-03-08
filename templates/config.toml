@@ -2,7 +2,7 @@
 # Copy/link this file to ~/.codex/config.toml via scripts/install.sh.
 
 # Primary model used by Codex CLI.
-model = "gpt-5.3-codex"
+model = "gpt-5.4"
 
 # Approval policy:
 # - untrusted
@@ -19,4 +19,4 @@ sandbox_mode = "workspace-write"
 model_reasoning_effort = "medium"
 
 [notice.model_migrations]
-gpt-5-codex = "gpt-5.3-codex"
+gpt-5-codex = "gpt-5.4"
