@@ -31,13 +31,13 @@ description: Document review for uncommitted changes focusing on structural cons
 
 レビュー深度は 4 段階: **Full**(網羅的) / **Focused**(変更関連を重点的) / **Quick**(特定観点のみ) / **Skip**(省略)
 
-| ドキュメントタイプ | Phase 2 | Phase 3 | Phase 4 |
+|ドキュメントタイプ|Phase 2|Phase 3|Phase 4|
 |---|---|---|---|
-| README・ガイドライン・ルール | Full | Full | Full |
-| 要件ドキュメント | Full | Full | Focused |
-| 仕様書 | Focused | Focused | Full |
-| アーキテクチャ・設計書 | Full | Full | Focused |
-| 設定ドキュメント・手順書 | Quick | Focused | Full |
+|README・ガイドライン・ルール|Full|Full|Full|
+|要件ドキュメント|Full|Full|Focused|
+|仕様書|Focused|Focused|Full|
+|アーキテクチャ・設計書|Full|Full|Focused|
+|設定ドキュメント・手順書|Quick|Focused|Full|
 
 ## Phase 2: ドキュメント内整合性
 

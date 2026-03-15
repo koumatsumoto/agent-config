@@ -32,13 +32,13 @@ description: Development-perspective code review for uncommitted changes, coveri
 
 レビュー深度は 4 段階: **Full**(網羅的) / **Focused**(変更関連を重点的) / **Quick**(特定観点のみ) / **Skip**(省略)
 
-| 変更タイプ | Phase 2 | Phase 3 |
+|変更タイプ|Phase 2|Phase 3|
 |---|---|---|
-| feat | Full | Full |
-| fix | Focused | Focused |
-| refactor | Full | Focused |
-| test | Skip | Quick |
-| config/chore | Skip | Quick |
+|feat|Full|Full|
+|fix|Focused|Focused|
+|refactor|Full|Focused|
+|test|Skip|Quick|
+|config/chore|Skip|Quick|
 
 ## Phase 2: 設計・実装の確認
 

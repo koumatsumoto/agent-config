@@ -24,13 +24,13 @@ description: ISO/IEC 25010:2023 product quality characteristics review for uncom
 
 レビュー深度は 4 段階: **Full**(網羅的) / **Focused**(変更関連を重点的) / **Quick**(特定観点のみ) / **Skip**(省略)
 
-| 変更タイプ | Tier 1 | Tier 2 |
+|変更タイプ|Tier 1|Tier 2|
 |---|---|---|
-| feat | Full | Full |
-| fix | Focused | Focused |
-| refactor | Focused | Focused |
-| test | Quick | Quick |
-| config/chore | Quick | Quick |
+|feat|Full|Full|
+|fix|Focused|Focused|
+|refactor|Focused|Focused|
+|test|Quick|Quick|
+|config/chore|Quick|Quick|
 
 Quick の適用ルール:
 - `test`: Tier 1 は保守性（試験性）, 信頼性（失敗パス・時刻依存・モック境界）, セキュリティ（危険なテスト用緩和）のみを重点確認する

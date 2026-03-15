@@ -51,6 +51,15 @@ bash install.sh
 
 `install.sh` は引数なしで、Claude/Codex の両方を一括反映します。
 
+## Markdown 軽量化
+
+AI に渡す前の Markdown から余分な空白やテーブルのパディングを減らしたい場合は `scripts/pack-md.sh` を使います。
+
+```bash
+./scripts/pack-md.sh README.md > README.llm.md
+./scripts/pack-md.sh -i README.md
+```
+
 ## OS別メモ
 
 - Ubuntu/Linux:
