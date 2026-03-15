@@ -69,7 +69,7 @@ LLM が安定して従える指示数には限界がある。研究によれば�
 
 | 配置場所 | パス | 用途 | 共有範囲 |
 |----------|------|------|----------|
-| 組織ポリシー | `/Library/Application Support/ClaudeCode/CLAUDE.md` (macOS) | 全社共通ルール | 全ユーザー |
+| 組織ポリシー | `/Library/Application Support/ClaudeCode/CLAUDE.md` (macOS), `/etc/claude-code/CLAUDE.md` (Linux) | 全社共通ルール | 全ユーザー |
 | プロジェクト | `./CLAUDE.md` or `./.claude/CLAUDE.md` | チーム共有の指示 | チーム（Git経由） |
 | プロジェクトルール | `./.claude/rules/*.md` | モジュラーなトピック別指示 | チーム（Git経由） |
 | ユーザー | `~/.claude/CLAUDE.md` | 個人設定（全プロジェクト） | 自分のみ |
@@ -79,6 +79,8 @@ LLM が安定して従える指示数には限界がある。研究によれば�
 - 親ディレクトリの CLAUDE.md は起動時にフル読み込みされる
 - 子ディレクトリの CLAUDE.md はオンデマンドで読み込まれる
 - `CLAUDE.local.md` は自動的に `.gitignore` に追加される
+- CLAUDE.md はコンテキスト圧縮後にディスクから再読み込みされる（圧縮で失われない）
+- `claudeMdExcludes` 設定でモノレポ内の不要な CLAUDE.md をスキップ可能
 
 ### 1.7 @import による段階的開示
 
@@ -97,6 +99,7 @@ See @README.md for project overview and @package.json for available commands.
 - 再帰的インポートに対応（最大深度5ホップ）
 - コードブロック内の `@` はインポートとして評価されない
 - コードスニペットではなく `file:line` 形式の参照を使い、情報の陳腐化を防ぐ
+- `--add-dir` ディレクトリの CLAUDE.md も `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` で読み込み可能
 
 ### 1.8 強調による遵守率の向上
 
@@ -107,6 +110,7 @@ See @README.md for project overview and @package.json for available commands.
 - LLM は入力の**先頭と末尾**を強く重み付けする傾向がある（Lost in the Middle 問題）
 - Claude Code は CLAUDE.md の内容に「タスクに関連する場合もしない場合もある」とシステムリマインダーを付加する
 - ファイルが長すぎると、重要なルールが雑音に埋もれる
+- HTML コメントは自動注入時に非表示になる（v2.1.72）
 
 **対策**: 最重要情報をファイル先頭に配置し、普遍的に適用できる情報のみ含める。
 
@@ -143,7 +147,7 @@ Rules は `.claude/rules/*.md` に配置するモジュラーなトピック別�
 └── general.md
 ```
 
-すべての `.md` ファイルが再帰的に検出・読み込みされる。
+すべての `.md` ファイルが再帰的に検出・読み込みされる。`InstructionsLoaded` フック（§5.2）で読み込まれたファイルを監査できる。
 
 ### 2.2 パス固有ルール（YAML フロントマター）
 
@@ -194,7 +198,7 @@ ln -s ~/shared-claude-rules .claude/rules/shared
 
 ## 3. Skills のベストプラクティス
 
-Skills は Claude の知識をプロジェクト・チーム・ドメイン固有の情報で拡張する仕組み。関連する場面で自動的に適用されるか、`/skill-name` で直接呼び出せる。
+Skills は Claude の知識をプロジェクト・チーム・ドメイン固有の情報で拡張する仕組み。Agent Skills オープン標準（agentskills.io）に準拠しており、複数の AI ツール間で共有可能。関連する場面で自動的に適用されるか、`/skill-name` で直接呼び出せる。
 
 ### 3.1 SKILL.md の基本構造
 
@@ -225,14 +229,26 @@ description: What this skill does and when to use it
 | `agent` | `context: fork` 時のエージェントタイプ指定（`Explore`, `Plan`, `general-purpose`, カスタム） |
 | `hooks` | スキルのライフサイクルに紐づくフック定義（§5 参照） |
 
-### 3.3 命名規約
+### 3.3 文字列置換
+
+SKILL.md 本文内で使用可能な変数:
+
+| 変数 | 説明 |
+|------|------|
+| `$ARGUMENTS` | `/skill-name` に続いて渡された全引数 |
+| `$ARGUMENTS[N]` | N番目の引数（0始まり） |
+| `$N` | N番目の引数の短縮形 |
+| `${CLAUDE_SESSION_ID}` | 現在のセッション ID |
+| `${CLAUDE_SKILL_DIR}` | スキルディレクトリのパス（v2.1.69） |
+
+### 3.4 命名規約
 
 - **kebab-case** を使用（フォルダ名にスペースを含めるとロードが壊れる）
 - **動名詞形（gerund）を推奨**: `processing-pdfs`, `analyzing-spreadsheets`, `testing-code`
 - 曖昧な名前を避ける: `helper`, `utils`, `tools`
 - 予約語を含めない: `anthropic-*`, `claude-*`
 
-### 3.4 description の書き方
+### 3.5 description の書き方
 
 description は Claude がスキルを選択する際の判断材料。100以上のスキルから適切なものを選ぶ必要があるため、具体的に書く。
 
@@ -253,7 +269,7 @@ description: Extract text and tables from PDF files, fill forms, merge documents
 description: Helps with documents
 ```
 
-### 3.5 Progressive Disclosure（段階的開示）
+### 3.6 Progressive Disclosure（段階的開示）
 
 SKILL.md は概要と参照ポインタに留め、詳細は別ファイルに分離する。Claude は必要な時だけ参照ファイルを読み込む。
 
@@ -278,12 +294,12 @@ SKILL.md -> reference.md
 SKILL.md -> examples.md
 ```
 
-### 3.6 SKILL.md のサイズ制限
+### 3.7 SKILL.md のサイズ制限
 
 - **500行以下** を推奨（公式）
 - 超える場合は別ファイルに分離
 
-### 3.7 呼び出し制御
+### 3.8 呼び出し制御
 
 | 設定 | ユーザー呼出 | Claude 自動呼出 | description のコンテキスト負荷 | 用途 |
 |------|:-----------:|:--------------:|:---:|------|
@@ -291,13 +307,14 @@ SKILL.md -> examples.md
 | `disable-model-invocation: true` | Yes | No | なし | `/deploy`, `/commit` など副作用のあるワークフロー |
 | `user-invocable: false` | No | Yes | 常時 | レガシーシステムの知識など、バックグラウンド知識 |
 
-### 3.8 コンテキストコスト
+### 3.9 コンテキストコスト
 
 - **コマンド（手動呼出）**: 呼び出されるまでトークンコストゼロ。description がコンテキストに含まれない
 - **スキル（自動呼出）**: description が常にコンテキストに含まれる。スキル数が多いと文字予算（コンテキストウィンドウの2%、フォールバック16,000文字）を超える場合がある（`/context` で確認可能）
 - 使用頻度の低い自動スキルは、定期的にコマンド（手動呼出）に変換することを検討する
+- `SLASH_COMMAND_TOOL_CHAR_BUDGET` 環境変数で文字予算を上書き可能
 
-### 3.9 ワークフロースキルとフィードバックループ
+### 3.10 ワークフロースキルとフィードバックループ
 
 複雑な操作はチェックリスト形式のステップに分解する:
 
@@ -313,7 +330,7 @@ SKILL.md -> examples.md
 
 「実行 -> 検証 -> 修正 -> 再検証」のフィードバックループが品質を大幅に向上させる。
 
-### 3.10 テンプレートパターンと例示パターン
+### 3.11 テンプレートパターンと例示パターン
 
 **テンプレート**: 出力形式を制御したい場合に使用
 
@@ -334,7 +351,7 @@ Input: Added user authentication with JWT
 Output: feat(auth): implement JWT-based authentication
 ```
 
-### 3.11 動的コンテキスト注入
+### 3.12 動的コンテキスト注入
 
 SKILL.md 内で `` !`command` `` 構文を使うと、スキル呼び出し時にシェルコマンドの出力を動的に注入できる:
 
@@ -353,21 +370,51 @@ agent: Explore
 
 コマンドはスキル読み込み時に即時実行（前処理）され、出力がプレースホルダーを置換する。
 
-### 3.12 反復開発プロセス
+SKILL.md 内に "ultrathink" キーワードを含めると、拡張思考（high effort）がトリガーされる。
+
+### 3.13 バンドルスキル
+
+Claude Code に同梱される組み込みスキル:
+
+| スキル | 追加バージョン | 説明 |
+|--------|:---:|------|
+| `/batch <instruction>` | v2.1.63 | 大規模な並列変更を orchestrate。5-30 の作業単位に分解し、worktree で並列実行、各 PR を作成 |
+| `/simplify [focus]` | v2.1.63 | 最近変更したファイルのコード品質を3並列エージェントでレビュー |
+| `/claude-api` | v2.1.69 | Claude API / SDK リファレンスをロード。`anthropic` / `@anthropic-ai/sdk` の import で自動起動 |
+| `/debug [description]` | — | セッションのデバッグログをトラブルシュート |
+| `/loop [interval] <prompt>` | v2.1.71 | プロンプトを繰り返し実行（デフォルト10分間隔、3日で自動失効） |
+
+### 3.14 カスタムコマンドとの統合
+
+`.claude/commands/deploy.md` と `.claude/skills/deploy/SKILL.md` はどちらも `/deploy` を作成する。両方存在する場合はスキルが優先される。既存のカスタムコマンドはそのまま動作する。
+
+### 3.15 反復開発プロセス
 
 1. スキルなしでタスクを完了し、繰り返し提供した情報を特定
 2. その情報をスキルとして構造化
 3. 別の Claude インスタンスでテスト
 4. 実際の使用を観察し、改善を繰り返す
 5. Haiku / Sonnet / Opus すべてでテスト
+6. `/reload-plugins` でセッション中にスキルを再読み込み可能
 
 ---
 
 ## 4. Subagents のベストプラクティス
 
-Subagents は独自のコンテキストとツールセットで動作する専門エージェント。メインの会話を汚染せずに調査や検証を行える。v2.1.41 以降、Worktree Isolation・Agent Memory・Agent Teams が追加され、マルチエージェントプラットフォームとしての機能が大幅に強化された。
+Subagents は独自のコンテキストとツールセットで動作する専門エージェント。メインの会話を汚染せずに調査や検証を行える。v2.1.63 で Task ツールが Agent に改名され（`Task(...)` は別名として継続動作）、Worktree Isolation・Agent Memory・Agent Teams が追加されてマルチエージェントプラットフォームとしての機能が大幅に強化された。
 
-### 4.1 定義方法
+### 4.1 組み込みサブエージェント
+
+| エージェント | モデル | ツール | 用途 |
+|---|---|---|---|
+| `Explore` | Haiku | 読み取り専用（Read, Grep, Glob 等） | コードベース探索。quick/medium/very thorough の3段階 |
+| `Plan` | 継承 | 読み取り専用 | 実装計画の設計 |
+| `general-purpose` | 継承 | 全ツール | 汎用的なマルチステップタスク |
+| `Bash` | 継承 | Bash のみ | シェルコマンド実行 |
+| `statusline-setup` | Sonnet | Read, Edit | ステータスライン設定 |
+| `claude-code-guide` | Haiku | Glob, Grep, Read, WebFetch, WebSearch | Claude Code の使い方ガイド |
+
+### 4.2 カスタムサブエージェントの定義
 
 ```markdown
 # .claude/agents/security-reviewer.md
@@ -386,7 +433,7 @@ You are a senior security engineer. Review code for:
 - Insecure data handling
 ```
 
-### 4.2 フロントマターフィールド
+### 4.3 フロントマターフィールド
 
 | フィールド | 必須 | 説明 |
 |-----------|:----:|------|
@@ -398,13 +445,13 @@ You are a senior security engineer. Review code for:
 | `permissionMode` | No | `default` / `acceptEdits` / `dontAsk` / `bypassPermissions` / `plan` |
 | `maxTurns` | No | 最大ターン数 |
 | `skills` | No | プリロードするスキル（全文がコンテキストに注入される） |
-| `mcpServers` | No | 利用可能な MCP サーバー |
+| `mcpServers` | No | 利用可能な MCP サーバー（インライン定義または参照） |
 | `hooks` | No | ライフサイクルフック（`PreToolUse`, `PostToolUse`, `Stop`/`SubagentStop`） |
 | `memory` | No | 永続メモリのスコープ: `user` / `project` / `local` |
 | `background` | No | `true` でバックグラウンド実行（デフォルト: false） |
 | `isolation` | No | `worktree` で git worktree による分離実行 |
 
-### 4.3 配置スコープと優先順位
+### 4.4 配置スコープと優先順位
 
 同名のエージェントが複数存在する場合、上位が優先される:
 
@@ -418,7 +465,7 @@ You are a senior security engineer. Review code for:
 - `claude agents` コマンドで設定済みエージェントを一覧表示
 - `/agents` でセッション内から対話的に作成・編集・削除
 
-### 4.4 Worktree Isolation
+### 4.5 Worktree Isolation
 
 `isolation: worktree` を設定すると、エージェントは一時的な git worktree で動作し、他のエージェントやメインの作業ディレクトリと干渉しない:
 
@@ -435,8 +482,9 @@ You are a worker that handles isolated tasks.
 - 各エージェントが独自のブランチと作業ディレクトリを持つ
 - 変更がなければ worktree は自動クリーンアップされる
 - `WorktreeCreate` / `WorktreeRemove` フックで git 以外の VCS にも対応可能（§5 参照）
+- `worktree.sparsePaths` 設定で大規模モノレポの sparse-checkout に対応（v2.1.76）
 
-### 4.5 Agent Memory
+### 4.6 Agent Memory
 
 `memory` フィールドで永続メモリを有効化すると、セッションを跨いで知識を蓄積できる:
 
@@ -445,23 +493,31 @@ memory: project  # user | project | local
 ```
 
 - `MEMORY.md` の先頭200行がシステムプロンプトに自動注入される
+- ストレージ: `~/.claude/agent-memory/<name>/` または `.claude/agent-memory/<name>/`
 - **ユースケース**: コードレビュアーがパターンを学習、アーキテクトがコードベースの知識を蓄積
 
-### 4.6 Agent Teams（実験的機能）
+### 4.7 バックグラウンド実行
+
+- `background: true` で常にバックグラウンド実行
+- `Ctrl+B` で実行中のタスクをバックグラウンドに移行
+- `Ctrl+F` でバックグラウンドエージェントを終了
+- バックグラウンド起動時に権限が事前承認される
+- サブエージェントは ~95% 容量で自動圧縮（`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` で調整可能）
+
+### 4.8 Agent Teams（実験的機能）
 
 Subagents はセッション内で動作するが、**Agent Teams** はセッションを跨いで複数の専門エージェントが並列に協調する仕組み。セキュリティ・パフォーマンス・テストカバレッジなど異なるレンズで並列レビューを行うケースに適する。
 
 > **注意**: Agent Teams は実験的機能であり、デフォルトでは無効。`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` を settings.json または環境変数で有効化する必要がある。
 
-詳細は [Agent Teams ドキュメント](https://code.claude.com/docs/en/agent-teams) を参照。
+主な特徴:
+- チームリード + チームメイト + 共有タスクリスト + メールボックスメッセージング
+- 表示モード: in-process（Shift+Down で切替）、split-pane（tmux/iTerm2）
+- タスク依存関係、ファイルロック、チームメイトの計画承認
+- `TeammateIdle` / `TaskCompleted` フックで品質ゲートを強制可能
+- 推奨: 3-5 チームメイト、チームメイトあたり 5-6 タスク
 
-### 4.7 主な用途
-
-- **調査の分離**: コードベースの探索をサブエージェントに委譲し、メインコンテキストを保護
-- **実装後の検証**: 別コンテキストでのコードレビュー（書いたコードへのバイアスを排除）
-- **並列実行**: `isolation: worktree` で独立したタスクを複数のサブエージェントで同時処理
-
-### 4.8 Skills との連携
+### 4.9 Skills との連携
 
 スキルに `context: fork` を設定するとサブエージェントとして分離実行される:
 
@@ -477,7 +533,7 @@ Research $ARGUMENTS thoroughly...
 
 `agent` フィールドには組み込みエージェント（`Explore`, `Plan`, `general-purpose`）またはカスタムエージェント（`.claude/agents/` 配下）を指定できる。
 
-### 4.9 設計指針
+### 4.10 設計指針
 
 - **汎用ロールより特化ロール**: 「バックエンドエンジニア」ではなく「認証フローレビュアー」
 - **1タスク1主担当**: 過剰な分割を避ける
@@ -496,16 +552,16 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 |--------|------|
 | `command` | シェルコマンドを実行。stdin で JSON を受信 |
 | `http` | URL に JSON を POST し、JSON レスポンスを受信。ヘッダーで環境変数展開対応 |
-| `prompt` | Claude に評価を送信 |
-| `agent` | 検証用サブエージェントを起動 |
+| `prompt` | 単一ターンの LLM 評価（デフォルト Haiku、`model` で変更可）。`{ok: true/false, reason}` を返す |
+| `agent` | ツールアクセス付きの複数ターン検証サブエージェント（Read, Grep, Glob）。60秒タイムアウト、最大50ターン |
 
-### 5.2 フックイベント一覧（17種）
+### 5.2 フックイベント一覧（21種）
 
 | カテゴリ | イベント | 発火タイミング |
 |----------|---------|---------------|
 | セッション | `SessionStart` | セッション開始/再開時 |
 | | `SessionEnd` | セッション終了時 |
-| | `InstructionsLoaded` | CLAUDE.md / rules 読み込み時 |
+| | `InstructionsLoaded` | CLAUDE.md / rules 読み込み時（監査用） |
 | ユーザー操作 | `UserPromptSubmit` | プロンプト送信時（Claude 処理前） |
 | | `Stop` | メインエージェント応答完了時 |
 | | `SubagentStart` | サブエージェント起動時 |
@@ -517,9 +573,13 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 | | `PermissionRequest` | 権限ダイアログ表示時 |
 | Agent Teams | `TeammateIdle` | チームメイトがアイドルになる直前 |
 | | `TaskCompleted` | タスク完了マーク時 |
+| MCP | `Elicitation` | MCP サーバーの対話ダイアログ表示時 |
+| | `ElicitationResult` | MCP 対話結果受信時 |
 | インフラ | `ConfigChange` | 設定ファイル変更時 |
 | | `PreCompact` | コンテキスト圧縮前 |
-| | `WorktreeCreate` / `WorktreeRemove` | Worktree の作成/削除時 |
+| | `PostCompact` | コンテキスト圧縮後 |
+| | `WorktreeCreate` | Worktree 作成時 |
+| | `WorktreeRemove` | Worktree 削除時 |
 
 ### 5.3 設定場所
 
@@ -530,7 +590,20 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 | `.claude/settings.local.json` | プロジェクト | 不可（gitignored） |
 | エージェント/スキルのフロントマター | コンポーネント有効時 | 定義次第 |
 
-### 5.4 HTTP Hooks
+- `disableAllHooks: true` で全フックを一時無効化
+- `/hooks` メニューでフック一覧を読み取り専用で閲覧
+- エンタープライズ: `allowManagedHooksOnly` でユーザー/プロジェクト/プラグインフックをブロック
+
+### 5.4 フックオプション
+
+| オプション | 説明 |
+|-----------|------|
+| `once: true` | セッション内で1回のみ実行後、自動除去 |
+| `async: true` | 非同期実行（ノンブロッキング） |
+| `statusMessage` | 実行中に表示するカスタムスピナーメッセージ |
+| `timeout` | HTTP フックのタイムアウト秒数 |
+
+### 5.5 HTTP Hooks
 
 シェルコマンドの代わりに外部サービスへ JSON を POST できる:
 
@@ -561,7 +634,7 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 - 2xx + JSON レスポンスでツール実行をブロック可能
 - 接続失敗/タイムアウトは非ブロッキングエラー（実行は継続）
 
-### 5.5 実践的な活用パターン
+### 5.6 実践的な活用パターン
 
 **コードスタイルの自動強制**（§1.5 の具体的な実装）:
 
@@ -587,11 +660,15 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 
 `TeammateIdle` でビルド成果物の存在を検証、`TaskCompleted` でテスト通過を強制できる。終了コード 2 でフィードバックを返すとエージェントは作業を継続する。
 
+**圧縮後のコンテキスト再注入**:
+
+`SessionStart` フックで `compact` マッチャーを使い、圧縮後に重要なコンテキストを再注入できる。
+
 **サブエージェント出力の後処理**:
 
 `SubagentStop` の `last_assistant_message` フィールドでサブエージェントの最終応答にアクセスし、ログ記録や通知に活用できる。
 
-### 5.6 終了コードの意味
+### 5.7 終了コードの意味
 
 | コード | 意味 |
 |:------:|------|
@@ -610,12 +687,23 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 | 状況 | アクション |
 |------|----------|
 | 無関係なタスクに移る | `/clear` でコンテキストをリセット |
-| 長いセッションで性能低下 | `/compact <焦点>` で圧縮 |
+| 長いセッションで性能低下 | `/compact <焦点>` で圧縮（例: `/compact Focus on the API changes`） |
 | 同じ問題で2回以上修正失敗 | `/clear` して初期プロンプトを改善してやり直す |
 | 大量のファイル読み取りが必要な調査 | サブエージェントに委譲 |
 | コンテキスト使用率 70% 到達 | 手動で `/compact` を実行 |
+| 本題から逸れる質問をしたい | `/btw` で会話履歴に残さず質問 |
+| 部分的に圧縮したい | `/rewind` + "Summarize from here" |
+| コンテキスト使用状況を確認 | `/context` で警告と提案を表示（v2.1.74） |
 
-### 6.2 検証手段の提供
+### 6.2 自動圧縮
+
+- ~95% 容量到達で自動圧縮が発動
+- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` で閾値を調整可能
+- CLAUDE.md は圧縮後にディスクから再読み込みされる（失われない）
+- `PreCompact` / `PostCompact` フックで圧縮前後にカスタムロジックを実行可能
+- 圧縮時の指示をカスタマイズ可能: `"When compacting, always preserve the full list of modified files"`
+
+### 6.3 検証手段の提供
 
 Claude に自分の作業を検証させることが、最もレバレッジの高い実践。
 
@@ -626,7 +714,7 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 
 検証手段がない場合、出荷しない。
 
-### 6.3 探索 -> 計画 -> 実装 -> コミット
+### 6.4 探索 -> 計画 -> 実装 -> コミット
 
 1. **Explore**: Plan Mode でファイルを読み、現状を理解
 2. **Plan**: 実装計画を作成（`Ctrl+G` でエディタ編集可能）
@@ -635,20 +723,31 @@ Claude に自分の作業を検証させることが、最もレバレッジの�
 
 スコープが明確で小さい修正ではこのフローをスキップしてよい。
 
-### 6.4 セッション転送と MCP 同期
+### 6.5 セッション転送と MCP 同期
 
 - **`/teleport`**: ターミナルのセッションを claude.ai/code やモバイルアプリに転送できる。外出先からの監視や承認に便利
 - **MCP サーバー同期**: claude.ai アカウントで設定した MCP サーバーが Claude Code でも自動的に利用可能
+- MCP ツール検索はコンテキストの 10% を超えるツールを遅延読み込みする
 
-### 6.5 モデル選択
+### 6.6 モデル選択
 
 | モデル | 特徴 |
 |--------|------|
-| Opus 4.6 | 最高性能。1M コンテキスト対応。複雑なタスクに最適 |
-| Sonnet 4.6 | 速度と品質のバランス。日常的なタスクに推奨 |
+| Opus 4.6 | 最高性能。1M コンテキスト対応（Max/Team/Enterprise で追加コストなし）。複雑なタスクに最適 |
+| Sonnet 4.6 | 速度と品質のバランス。日常的なタスクに推奨。1M コンテキストは追加使用量消費 |
 | Haiku 4.5 | 最速。軽量なタスクや大量並列処理に適する |
 
-Opus 4 / 4.1 は Claude Code から削除済み。ピン留めしていたユーザーは Opus 4.6 に自動移行された。
+- Opus 4 / 4.1 は Claude Code から削除済み（v2.1.68）。Sonnet 4.5 は 4.6 に自動移行（v2.1.69）
+- `modelOverrides` 設定で Bedrock ARN や Vertex 名など、プロバイダー固有のモデル ID にマッピング可能（v2.1.73）
+- `/effort` コマンドで effort レベルを制御: low / medium / high（v2.1.72）
+- セッション名: `-n` / `--name` フラグまたは `/rename` で設定（v2.1.75）
+
+### 6.7 スケジュールタスク
+
+- `/loop [interval] <prompt>`: プロンプトを定期実行（デフォルト10分、`s`/`m`/`h`/`d` 単位、3日で自動失効）
+- `CronCreate` / `CronList` / `CronDelete` ツール: 自然言語でスケジューリング
+- ワンタイムリマインダー: "remind me at 3pm to push the release branch"
+- `CLAUDE_CODE_DISABLE_CRON=1` で無効化
 
 ---
 
@@ -677,6 +776,10 @@ Opus 4 / 4.1 は Claude Code から削除済み。ピン留めしていたユー
 - [Automate Workflows with Hooks](https://code.claude.com/docs/en/hooks-guide) - Anthropic 公式
 - [Manage Claude's Memory](https://code.claude.com/docs/en/memory) - Anthropic 公式
 - [Skill Authoring Best Practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) - Anthropic API Docs
+- [Agent Teams](https://code.claude.com/docs/en/agent-teams) - Anthropic 公式
+- [Plugins](https://code.claude.com/docs/en/plugins) - Anthropic 公式
+- [Scheduled Tasks](https://code.claude.com/docs/en/scheduled-tasks) - Anthropic 公式
+- [Model Configuration](https://code.claude.com/docs/en/model-config) - Anthropic 公式
 
 ### コミュニティ記事（実践検証あり）
 
@@ -694,4 +797,4 @@ Opus 4 / 4.1 は Claude Code から削除済み。ピン留めしていたユー
 
 ---
 
-*最終更新: 2026-03-07*
+*最終更新: 2026-03-15*
