@@ -13,7 +13,7 @@ intent-review はメインコンテキストで実行し（会話履歴へのア
 |---------|------|---------|
 | `/km:intent-review` | 要件充足・意図の検証 | メインコンテキスト（条件付き） |
 | `/km:code-review` | 設計・バグ・コード品質 | サブエージェント（並列） |
-| `/km:quality-review` | ISO/IEC 25010:2023 の品質特性 | サブエージェント（並列） |
+| `/km:quality-review` | ISO/IEC 25010:2023 の9品質特性を Tier 運用で確認 | サブエージェント（並列） |
 | `/km:doc-review` | 構造整合性・横断整合性・正確性 | サブエージェント（並列） |
 
 ## Workflow
@@ -80,6 +80,7 @@ Phase 1 の結果に基づき、サブエージェントを `run_in_background: 
 ### Quality Review サブエージェント
 
 - `quality-review/SKILL.md` と `quality-review/quality-patterns.md` を Read し、Phase 1 を除くレビューを実行するよう指示
+- 品質特性は ISO/IEC 25010:2023 の 9 特性を前提とし、Tier 1 は常時、Tier 2/3 は変更タイプと変更内容に応じて適用すること
 - 結果は「重大度ごとの件数サマリー + 個別問題報告」で返すこと
 
 ### Doc Review サブエージェント（ドキュメント変更がある場合）
