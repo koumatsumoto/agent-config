@@ -81,6 +81,7 @@ Phase 1 の結果に基づき、サブエージェントを `run_in_background: 
 
 - `quality-review/SKILL.md` と `quality-review/quality-patterns.md` を Read し、Phase 1 を除くレビューを実行するよう指示
 - 品質特性は ISO/IEC 25010:2023 の 9 特性を前提とし、Tier 1 は常時、Tier 2/3 は変更タイプと変更内容に応じて適用すること
+- `Quick` 指定時は quality-review 側で定義された優先観点に絞って確認し、根拠の弱い推測は報告しないこと
 - 結果は「重大度ごとの件数サマリー + 個別問題報告」で返すこと
 
 ### Doc Review サブエージェント（ドキュメント変更がある場合）
