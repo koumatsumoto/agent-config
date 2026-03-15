@@ -107,6 +107,7 @@ bash install.sh
 
 | スキル | 説明 |
 | --- | --- |
+| `km:review` | 包括的レビューオーケストレーター（code/quality/doc-review を自動判定・並列実行） |
 | `km:code-review` | 要件充足・設計妥当性・バグ検出など開発観点のコードレビュー |
 | `km:quality-review` | ISO/IEC 25010 の8品質特性を軸とした品質レビュー |
 | `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー |

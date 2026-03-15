@@ -1,6 +1,6 @@
 ---
 name: km:quality-review
-description: Reviews uncommitted code changes against ISO/IEC 25010 quality characteristics including security, reliability, performance efficiency, maintainability, compatibility, functional suitability, usability, and portability. Triggers on quality review requests or phrases like "品質レビューして", "品質チェックして", "セキュリティ確認して". Also triggers proactively after completing code changes to ensure non-functional quality.
+description: ISO/IEC 25010 quality characteristics review for uncommitted changes, covering security, reliability, performance efficiency, maintainability, compatibility, functional suitability, usability, and portability. Use /km:quality-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "品質レビューして", "品質チェックして", "セキュリティ確認して".
 ---
 
 # Quality Review

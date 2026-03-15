@@ -1,6 +1,6 @@
 ---
 name: km:code-review
-description: Reviews uncommitted code changes from a development perspective, focusing on requirements satisfaction, design appropriateness, bug detection, and CLAUDE.md compliance. Triggers on code review requests or phrases like "コードレビューして", "レビューして", "チェックして", "変更を確認して", "問題ないか見て". Also triggers proactively after completing code changes as part of the standard workflow.
+description: Development-perspective code review for uncommitted changes, covering requirements satisfaction, design appropriateness, bug detection, and CLAUDE.md compliance. Use /km:code-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "コードレビューして" or "code review".
 ---
 
 # Code Review

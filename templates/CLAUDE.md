@@ -28,8 +28,8 @@
 
 ### 4. レビュー
 
-- コード変更の場合: `/km:code-review` で開発観点のレビュー、`/km:quality-review` で品質特性レビューを行う。テストで動作を検証する
-- ドキュメント作成の場合: `/km:doc-review` で正確性・一貫性・可読性をレビューする
+- `/km:review` で包括的レビューを実行する（code-review + quality-review + doc-review を自動判定・並列実行）
+- 個別に実行したい場合: `/km:code-review`, `/km:quality-review`, `/km:doc-review` を直接呼び出す
 - IMPORTANT: 最初の仕様に立ち返り、見落としがないか入念に確認する
 
 ### 5. 完了

@@ -1,6 +1,6 @@
 ---
 name: km:doc-review
-description: Reviews uncommitted document changes with focus on intra-document structural consistency, cross-document coherence, and primary source verification. Use when the user asks to review docs or says "ドキュメントを確認して", "READMEをレビューして", "ドキュメントに問題ないか見て". Also triggers proactively after creating or updating documentation.
+description: Document review for uncommitted changes with focus on intra-document structural consistency, cross-document coherence, and primary source verification. Use /km:doc-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "ドキュメントをレビューして", "READMEをレビューして", "ドキュメントに問題ないか見て".
 ---
 
 # Document Review
