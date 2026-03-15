@@ -1,28 +1,30 @@
 ---
 name: km:code-review
-description: Development-perspective code review for uncommitted changes, covering requirements satisfaction, design appropriateness, bug detection, and CLAUDE.md compliance. Use /km:code-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "コードレビューして" or "code review".
+description: Development-perspective code review for uncommitted changes, covering design appropriateness, bug detection, and CLAUDE.md compliance. Use /km:code-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "コードレビューして" or "code review".
 ---
 
 # Code Review
 
-未コミット変更を対象に、開発観点からの体系的なコードレビューを行う。
+未コミット変更を対象に、設計・実装・コード品質の観点からの体系的なコードレビューを行う。
 
 ## レビューの重心
 
-開発者はコードを書いている最中、目の前の実装に集中する。その結果、要件の充足漏れ、設計上の問題、明らかなバグ、プロジェクト規約との乖離が視野外になりやすい。このスキルの最大の価値は Phase 3（設計・実装の確認）にある。Phase 2（要件・意図の確認）で実装の方向性を検証し、Phase 4（コード品質の確認）でプロジェクト固有の規約への準拠を確認する。
+開発者はコードを書いている最中、目の前の実装に集中する。その結果、設計上の問題、明らかなバグ、プロジェクト規約との乖離が視野外になりやすい。このスキルの最大の価値は Phase 2（設計・実装の確認）にある。Phase 3（コード品質の確認）でプロジェクト固有の規約への準拠を確認する。
+
+要件・意図の充足確認は `/km:intent-review` の責務であり、本スキルの対象外。
 
 関連スキル:
-- `/km:quality-review`: ISO/IEC 25010 の品質特性（セキュリティ・信頼性・性能効率性など）を軸とした品質レビュー。本スキルとは観点が異なり、相互に補完する
+- `/km:intent-review`: 会話履歴に基づく要件・意図の充足確認
+- `/km:quality-review`: ISO/IEC 25010 の品質特性を軸とした品質レビュー
 - `/km:doc-review`: ドキュメントの整合性・正確性レビュー
 
 ## Workflow
 
 1. **Phase 1: 変更把握・分類** — 変更ファイルを収集し、変更タイプを判定してレビュー深度を決定する
-2. **Phase 2: 要件・意図の確認** — 会話履歴から要求を把握し、仕様充足を確認する
-3. **Phase 3: 設計・実装の確認** — 関数→モジュール→システムの多層で設計と実装を確認する
-4. **Phase 4: コード品質の確認** — CLAUDE.md 準拠、コードコメントとの整合性、命名・可読性を確認する
-5. **偽陽性フィルタリング** — 検出項目を再評価し、ノイズを除外する
-6. **報告** — 問題を重大度順に報告する。`CRITICAL/HIGH` があればコミットをブロックする
+2. **Phase 2: 設計・実装の確認** — 関数→モジュール→システムの多層で設計と実装を確認する
+3. **Phase 3: コード品質の確認** — CLAUDE.md 準拠、コードコメントとの整合性、命名・可読性を確認する
+4. **偽陽性フィルタリング** — 検出項目を再評価し、ノイズを除外する
+5. **報告** — 問題を重大度順に報告する。`CRITICAL/HIGH` があればコミットをブロックする
 
 ## Phase 1: 変更把握・分類
 
@@ -30,26 +32,15 @@ description: Development-perspective code review for uncommitted changes, coveri
 
 レビュー深度は 4 段階: **Full**(網羅的) / **Focused**(変更関連を重点的) / **Quick**(特定観点のみ) / **Skip**(省略)
 
-| 変更タイプ | Phase 2 | Phase 3 | Phase 4 |
-|---|---|---|---|
-| feat | Full | Full | Full |
-| fix | Full | Focused | Focused |
-| refactor | Focused | Full | Focused |
-| test | Skip | Skip | Quick |
-| config/chore | Quick | Skip | Quick |
+| 変更タイプ | Phase 2 | Phase 3 |
+|---|---|---|
+| feat | Full | Full |
+| fix | Focused | Focused |
+| refactor | Full | Focused |
+| test | Skip | Quick |
+| config/chore | Skip | Quick |
 
-## Phase 2: 要件・意図の確認
-
-ユーザーの元の要求を振り返り、変更が仕様を正確に満たしているか確認する。
-要求の背景・意図を会話履歴から把握し、当初の目的を達成できているか確認する。
-元の要求が会話履歴から不明確な場合、その旨を報告し、推測で判断しない。
-
-確認観点:
-- 要求に対する過不足（実装漏れ、スコープ外の変更混入）
-- 既存機能への回帰的影響
-- エッジケース・境界条件の考慮
-
-## Phase 3: 設計・実装の確認
+## Phase 2: 設計・実装の確認
 
 変更が設計・実装として妥当かを、関数→モジュール→システムの順に確認する。明らかなバグの検出に集中し、些末な問題は避ける。
 
@@ -80,7 +71,7 @@ description: Development-perspective code review for uncommitted changes, coveri
 - 信頼境界の見落とし（外部入力がバリデーションなしに内部レイヤーまで到達）
 - 分散トランザクションの原子性仮定（複数サービス間の整合性が保証されていない）
 
-## Phase 4: コード品質の確認
+## Phase 3: コード品質の確認
 
 プロジェクト固有の規約と一般的なコード品質の観点から確認する。
 
@@ -96,7 +87,7 @@ description: Development-perspective code review for uncommitted changes, coveri
 除外カテゴリ:
 - **既存の問題**: 今回の変更で導入されたものではない（変更前から存在した問題）
 - **ツール検出対象**: Linter・型チェッカー・フォーマッターで検出すべき問題（CI で別途検出される前提）
-- **意図的な変更**: 会話履歴で明示的に議論・合意された設計判断
+- **意図的な変更**: オーケストレーターから合意事項リストが提供されている場合はそれを参照する。提供されていない場合はコード自体から判断する
 - **未変更行の問題**: 変更されていない行に対する指摘
 - **過度な指摘**: シニアエンジニアが指摘しないレベルの些末な問題
 - **抑制済みの問題**: lint ignore コメント等で明示的に抑制されている問題

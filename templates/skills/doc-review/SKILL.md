@@ -12,7 +12,8 @@ description: Document review for uncommitted changes with focus on intra-documen
 作業者はドキュメントを書くとき、追加部分を意識して作業する。その際、部分的な修正が全体構造を崩す問題、複数ドキュメント間の矛盾、読者にとっての理解しやすさは作業者の視野外になりがちで、レビューで初めて発見される問題が多い。このスキルの最大の価値は Phase 2（構造的整合性）と Phase 3（横断整合性）にある。Phase 4（一次情報検証）は時間がかかるが、誤情報の防止に不可欠である。
 
 関連スキル:
-- `/km:code-review`: 要件充足・設計妥当性・バグ検出など開発観点のレビュー
+- `/km:intent-review`: 会話履歴に基づく要件・意図の充足確認
+- `/km:code-review`: 設計妥当性・バグ検出・コード品質など開発観点のレビュー
 - `/km:quality-review`: ISO/IEC 25010 の品質特性を軸とした品質レビュー
 
 ## Workflow
