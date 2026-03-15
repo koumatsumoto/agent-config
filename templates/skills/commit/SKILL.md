@@ -1,5 +1,5 @@
 ---
-name: commit
+name: km:commit
 description: Create a git commit with a structured Conventional Commits message. Use when the user requests a commit, says "commit", "コミットして", "変更を保存して".
 argument-hint: "[message]"
 ---

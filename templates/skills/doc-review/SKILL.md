@@ -1,5 +1,5 @@
 ---
-name: doc-review
+name: km:doc-review
 description: Reviews uncommitted document changes with focus on intra-document structural consistency, cross-document coherence, and primary source verification. Use when the user asks to review docs or says "ドキュメントを確認して", "READMEをレビューして", "ドキュメントに問題ないか見て". Also triggers proactively after creating or updating documentation.
 ---
 
@@ -11,17 +11,22 @@ description: Reviews uncommitted document changes with focus on intra-document s
 
 作業者はドキュメントを書くとき、追加部分を意識して作業する。その際、部分的な修正が全体構造を崩す問題、複数ドキュメント間の矛盾、読者にとっての理解しやすさは作業者の視野外になりがちで、レビューで初めて発見される問題が多い。このスキルの最大の価値は Phase 2（構造的整合性）と Phase 3（横断整合性）にある。Phase 4（一次情報検証）は時間がかかるが、誤情報の防止に不可欠である。
 
+関連スキル:
+- `/km:code-review`: 要件充足・設計妥当性・バグ検出など開発観点のレビュー
+- `/km:quality-review`: ISO/IEC 25010 の品質特性を軸とした品質レビュー
+
 ## Workflow
 
 1. **Phase 1: 変更把握・分類** — 変更ファイルを収集し、ドキュメントタイプを判定してレビュー深度を決定する
 2. **Phase 2: ドキュメント内整合性** — 構造・書式・明瞭性の観点で全体の一貫性を検証する
 3. **Phase 3: ドキュメント間整合性** — 関連ドキュメントとの矛盾・重複・更新漏れを検出する
 4. **Phase 4: 一次情報による正確性検証** — 実装コード・設定ファイル・外部リンクと照合し、鮮度を確認する
-5. **報告**: 問題を重大度順に報告する。`CRITICAL/HIGH` があればコミットをブロックする
+5. **偽陽性フィルタリング** — 検出項目を再評価し、ノイズを除外する
+6. **報告** — 問題を重大度順に報告する。`CRITICAL/HIGH` があればコミットをブロックする
 
 ## Phase 1: 変更把握・分類
 
-`git diff --name-only` で変更ファイルを収集し、ドキュメントタイプを判定してレビュー深度を決定する。コードのみの変更は `/quality-review` に委譲する。
+`git diff --name-only` で変更ファイルを収集し、ドキュメントタイプを判定してレビュー深度を決定する。コードのみの変更は `/km:code-review` に委譲する。
 
 レビュー深度は 4 段階: **Full**(網羅的) / **Focused**(変更関連を重点的) / **Quick**(特定観点のみ) / **Skip**(省略)
 
@@ -85,6 +90,17 @@ description: Reviews uncommitted document changes with focus on intra-document s
 - 設定ファイルのパスやキー名が実際のものと異なる
 - コマンド例の出力が現バージョンの実際の出力と異なる
 - バージョン番号の陳腐化、「近日公開」「将来的に」等の期限切れ表現
+
+## 偽陽性フィルタリング
+
+報告前に各検出項目を以下のカテゴリに照らして再評価し、該当するものは除外する。読者にとって真に有害な問題に集中できるようにする。
+
+除外カテゴリ:
+- **既存の問題**: 今回の変更で導入されたものではない（変更前から存在した問題）
+- **スタイルの好み**: 実質的なエラーではなく個人的な表現の好み
+- **意図的な簡略化**: 読者層に合わせた意図的な省略
+- **自動生成コンテンツ**: ツールにより自動生成された部分（目次の自動再生成など）
+- **未変更セクションの問題**: 変更されていないセクションに対する指摘
 
 ## 判定と報告
 

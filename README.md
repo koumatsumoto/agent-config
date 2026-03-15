@@ -105,12 +105,12 @@ bash install.sh
 
 ## スキル一覧
 
-### スラッシュコマンド（`disable-model-invocation: true`）
-
 | スキル | 説明 |
 | --- | --- |
-| `quality-review` | セキュリティ/保守性を主軸とした多角的レビュー |
-| `commit` | Conventional Commits 形式で git commit |
+| `km:code-review` | 要件充足・設計妥当性・バグ検出など開発観点のコードレビュー |
+| `km:quality-review` | ISO/IEC 25010 の8品質特性を軸とした品質レビュー |
+| `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー |
+| `km:commit` | Conventional Commits 形式で git commit |
 
 ## ライセンス
 
