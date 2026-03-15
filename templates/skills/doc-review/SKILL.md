@@ -21,7 +21,7 @@ description: Reviews uncommitted document changes with focus on intra-document s
 
 ## Phase 1: 変更把握・分類
 
-`git diff --name-only` で変更ファイルを収集し、ドキュメントタイプを判定してレビュー深度を決定する。コードのみの変更は `/code-review` に委譲する。
+`git diff --name-only` で変更ファイルを収集し、ドキュメントタイプを判定してレビュー深度を決定する。コードのみの変更は `/quality-review` に委譲する。
 
 レビュー深度は 4 段階: **Full**(網羅的) / **Focused**(変更関連を重点的) / **Quick**(特定観点のみ) / **Skip**(省略)
 

@@ -109,7 +109,7 @@ bash install.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `code-review` | セキュリティ/保守性を主軸とした多角的レビュー |
+| `quality-review` | セキュリティ/保守性を主軸とした多角的レビュー |
 | `commit` | Conventional Commits 形式で git commit |
 
 ## ライセンス

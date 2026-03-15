@@ -1,9 +1,9 @@
 ---
-name: code-review
+name: quality-review
 description: Reviews uncommitted code changes for security vulnerabilities, regressions, and maintainability issues before commit. Triggers on code review, quality check, security audit requests, or phrases like "レビューして", "チェックして", "変更を確認して", "問題ないか見て". Also triggers proactively after completing code changes as part of the standard workflow.
 ---
 
-# Code Review
+# Quality Review
 
 未コミット変更を対象に、ISO/IEC 25010 (SQuaRE) の品質モデルに基づく体系的なレビューを行う。
 
