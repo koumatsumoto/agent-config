@@ -54,19 +54,6 @@ feat(auth): JWT トークンのリフレッシュ機能を追加
 - lib/auth/refresh.ts 新規作成、middleware.ts に検証ロジック追加
 ```
 
-```text
-fix(api): ページネーションのオフセット計算を修正
-
-**作業背景**
-- 2ページ目以降で同じデータが表示されるバグ報告
-
-**計画と理由**
-- off-by-one エラーが原因。offset 計算式を (page - 1) * limit に修正
-
-**作業内容と結果**
-- src/api/pagination.ts の calculateOffset 関数を修正、テスト追加
-```
-
 ## Safety Rules
 
 - `git add -A` / `git add .` は使わない（必ず個別にファイルを指定する）

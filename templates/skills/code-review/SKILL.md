@@ -1,6 +1,6 @@
 ---
 name: km:code-review
-description: Development-perspective code review for uncommitted changes, covering design appropriateness, bug detection, and CLAUDE.md compliance. Use /km:code-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "コードレビューして" or "code review".
+description: Development-perspective code review for uncommitted changes, covering design appropriateness, bug detection, and CLAUDE.md compliance. Use /km:code-review for standalone execution. Triggers on "コードレビューして" or "code review".
 ---
 
 # Code Review
@@ -9,7 +9,7 @@ description: Development-perspective code review for uncommitted changes, coveri
 
 ## レビューの重心
 
-開発者はコードを書いている最中、目の前の実装に集中する。その結果、設計上の問題、明らかなバグ、プロジェクト規約との乖離が視野外になりやすい。このスキルの最大の価値は Phase 2（設計・実装の確認）にある。Phase 3（コード品質の確認）でプロジェクト固有の規約への準拠を確認する。
+開発者は目の前の実装に集中し、設計上の問題・明らかなバグ・プロジェクト規約との乖離が視野外になりやすい。このスキルの最大の価値は Phase 2（設計・実装の確認）にある。Phase 3（コード品質の確認）でプロジェクト固有の規約への準拠を確認する。
 
 要件・意図の充足確認は `/km:intent-review` の責務であり、本スキルの対象外。
 
@@ -20,11 +20,11 @@ description: Development-perspective code review for uncommitted changes, coveri
 
 ## Workflow
 
-1. **Phase 1: 変更把握・分類** — 変更ファイルを収集し、変更タイプを判定してレビュー深度を決定する
-2. **Phase 2: 設計・実装の確認** — 関数→モジュール→システムの多層で設計と実装を確認する
-3. **Phase 3: コード品質の確認** — CLAUDE.md 準拠、コードコメントとの整合性、命名・可読性を確認する
-4. **偽陽性フィルタリング** — 検出項目を再評価し、ノイズを除外する
-5. **報告** — 問題を重大度順に報告する。`CRITICAL/HIGH` があればコミットをブロックする
+1. Phase 1: 変更把握・分類
+2. Phase 2: 設計・実装の確認
+3. Phase 3: コード品質の確認
+4. Phase 4: 偽陽性フィルタリング
+5. Phase 5: 判定と報告
 
 ## Phase 1: 変更把握・分類
 
@@ -80,7 +80,7 @@ description: Development-perspective code review for uncommitted changes, coveri
 - **コードコメントとの整合性**: 変更対象ファイルの既存コメント（TODO、HACK、NOTE 等）に記載された指示や注意事項に、変更が従っているか確認する
 - **命名・可読性**: 意図が明確な命名、適切なネスト深度、過度な複雑性がないか確認する
 
-## 偽陽性フィルタリング
+## Phase 4: 偽陽性フィルタリング
 
 報告前に各検出項目を以下のカテゴリに照らして再評価し、該当するものは除外する。開発者にとってノイズとなる指摘を減らすことで、真に重要な問題に集中できるようにする。
 
@@ -92,7 +92,7 @@ description: Development-perspective code review for uncommitted changes, coveri
 - **過度な指摘**: シニアエンジニアが指摘しないレベルの些末な問題
 - **抑制済みの問題**: lint ignore コメント等で明示的に抑制されている問題
 
-## 判定と報告
+## Phase 5: 判定と報告
 
 問題の重大度を判定し、結果を報告する。
 
@@ -104,24 +104,4 @@ description: Development-perspective code review for uncommitted changes, coveri
 
 `CRITICAL` または `HIGH` を検出した場合、コミットをブロックする。
 
-### サマリー（必ず冒頭に出力）
-
-```
-## レビュー結果
-
-**変更分類**: feat (高リスク) | 変更行数: 450行 | ファイル数: 8
-**検出件数**: CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 1
-**コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
-```
-
-### 問題報告
-
-問題ごとに以下の形式で報告する。確信度（`confirmed` = 確認済み / `suspected` = 疑い）を付与する。
-
-```
-## HIGH: 未検証の外部入力がクエリに使用されている [confirmed]
-
-**場所**: src/api/users.ts:42
-**問題**: リクエストパラメータ `sort_by` が検証なしに SQL ORDER BY 句に結合されている。攻撃者が任意の SQL フラグメントを注入できる。
-**修正**: 許可されたカラム名のホワイトリストで検証する。
-```
+出力形式は `report-format.md` を参照。

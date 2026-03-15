@@ -1,6 +1,6 @@
 ---
 name: km:review
-description: Comprehensive review orchestrator that coordinates intent-review, code-review, quality-review, and doc-review based on change type and context. Use when the user requests any kind of review, says "レビューして", "チェックして", "変更を確認して", "問題ないか見て", or after completing code changes. Runs intent review in main context, then delegates code/quality/doc reviews to parallel sub-agents.
+description: Comprehensive review orchestrator that coordinates intent-review, code-review, quality-review, and doc-review based on change type and context. Use when the user requests any kind of review, says "レビューして", "チェックして", "変更を確認して", "問題ないか見て", or after completing code changes.
 ---
 
 # Review
@@ -18,10 +18,10 @@ intent-review はメインコンテキストで実行し（会話履歴へのア
 
 ## Workflow
 
-1. **Phase 1: 変更把握・ルーティング** — 変更を分類し、実行するレビューとその深度を決定する
-2. **Phase 2: 意図検証** — 会話コンテキストがあれば intent-review をメインで実行する
-3. **Phase 3: 並列レビュー実行** — code/quality/doc-review をサブエージェントで並列実行する
-4. **Phase 4: 結果統合** — 全レビュー結果を統合サマリーにまとめ、コミット判定を行う
+1. Phase 1: 変更把握・ルーティング
+2. Phase 2: 意図検証（メインコンテキスト、条件付き）
+3. Phase 3: 並列レビュー実行（サブエージェント）
+4. Phase 4: 結果統合・コミット判定
 
 ## Phase 1: 変更把握・ルーティング
 
@@ -108,44 +108,4 @@ Phase 1 の結果に基づき、サブエージェントを `run_in_background: 
 
 ## 報告
 
-### 統合サマリー（必ず冒頭に出力）
-
-```
-## 統合レビュー結果
-
-**変更概要**: feat | コード 450行 (8ファイル) + ドキュメント 80行 (3ファイル)
-**総検出件数**: CRITICAL: 0 / HIGH: 1 / MEDIUM: 3 / LOW: 2
-**コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
-```
-
-### 各レビューの詳細
-
-各レビューの結果をセクションごとに表示する。
-
-```
----
-### Intent Review
-（スキップ / または結果を表示）
----
-### Code Review
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
-
-## HIGH: [問題タイトル] [confirmed]
-**場所**: src/api/users.ts:42
-**問題**: ...
-**修正**: ...
----
-### Quality Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
----
-### Doc Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
-```
-
-ドキュメント更新チェックの結果がある場合は末尾に追加する:
-
-```
----
-### ドキュメント更新の必要性
-- README.md: API エンドポイントの追加に伴い更新推奨
-```
+全レビュー結果を統合サマリーにまとめ、コミット判定を行う。出力形式は `report-format.md` を参照。

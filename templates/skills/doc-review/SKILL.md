@@ -1,6 +1,6 @@
 ---
 name: km:doc-review
-description: Document review for uncommitted changes with focus on intra-document structural consistency, cross-document coherence, and primary source verification. Use /km:doc-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "ドキュメントをレビューして", "READMEをレビューして", "ドキュメントに問題ないか見て".
+description: Document review for uncommitted changes focusing on structural consistency, cross-document coherence, and primary source verification. Use /km:doc-review for standalone execution. Triggers on "ドキュメントをレビューして", "READMEをレビューして", "ドキュメントに問題ないか見て".
 ---
 
 # Document Review
@@ -9,7 +9,7 @@ description: Document review for uncommitted changes with focus on intra-documen
 
 ## レビューの重心
 
-作業者はドキュメントを書くとき、追加部分を意識して作業する。その際、部分的な修正が全体構造を崩す問題、複数ドキュメント間の矛盾、読者にとっての理解しやすさは作業者の視野外になりがちで、レビューで初めて発見される問題が多い。このスキルの最大の価値は Phase 2（構造的整合性）と Phase 3（横断整合性）にある。Phase 4（一次情報検証）は時間がかかるが、誤情報の防止に不可欠である。
+作業者はドキュメントの追加部分に意識を集中し、部分的な修正が全体構造を崩す問題、複数ドキュメント間の矛盾、読者にとっての理解しやすさが視野外になりやすい。このスキルの最大の価値は Phase 2（構造的整合性）と Phase 3（横断整合性）にある。Phase 4（一次情報検証）は時間がかかるが、誤情報の防止に不可欠である。
 
 関連スキル:
 - `/km:intent-review`: 会話履歴に基づく要件・意図の充足確認
@@ -18,12 +18,12 @@ description: Document review for uncommitted changes with focus on intra-documen
 
 ## Workflow
 
-1. **Phase 1: 変更把握・分類** — 変更ファイルを収集し、ドキュメントタイプを判定してレビュー深度を決定する
-2. **Phase 2: ドキュメント内整合性** — 構造・書式・明瞭性の観点で全体の一貫性を検証する
-3. **Phase 3: ドキュメント間整合性** — 関連ドキュメントとの矛盾・重複・更新漏れを検出する
-4. **Phase 4: 一次情報による正確性検証** — 実装コード・設定ファイル・外部リンクと照合し、鮮度を確認する
-5. **偽陽性フィルタリング** — 検出項目を再評価し、ノイズを除外する
-6. **報告** — 問題を重大度順に報告する。`CRITICAL/HIGH` があればコミットをブロックする
+1. Phase 1: 変更把握・分類
+2. Phase 2: ドキュメント内整合性
+3. Phase 3: ドキュメント間整合性
+4. Phase 4: 一次情報による正確性検証
+5. Phase 5: 偽陽性フィルタリング
+6. Phase 6: 判定と報告
 
 ## Phase 1: 変更把握・分類
 
@@ -92,7 +92,7 @@ description: Document review for uncommitted changes with focus on intra-documen
 - コマンド例の出力が現バージョンの実際の出力と異なる
 - バージョン番号の陳腐化、「近日公開」「将来的に」等の期限切れ表現
 
-## 偽陽性フィルタリング
+## Phase 5: 偽陽性フィルタリング
 
 報告前に各検出項目を以下のカテゴリに照らして再評価し、該当するものは除外する。読者にとって真に有害な問題に集中できるようにする。
 
@@ -103,7 +103,7 @@ description: Document review for uncommitted changes with focus on intra-documen
 - **自動生成コンテンツ**: ツールにより自動生成された部分（目次の自動再生成など）
 - **未変更セクションの問題**: 変更されていないセクションに対する指摘
 
-## 判定と報告
+## Phase 6: 判定と報告
 
 問題の重大度を判定し、結果を報告する。
 
@@ -115,24 +115,4 @@ description: Document review for uncommitted changes with focus on intra-documen
 
 `CRITICAL` または `HIGH` を検出した場合、コミットをブロックする。
 
-### サマリー（必ず冒頭に出力）
-
-```
-## レビュー結果
-
-**ドキュメントタイプ**: README (高重要度) | 変更行数: 80行 | ファイル数: 3
-**検出件数**: CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 1
-**コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
-```
-
-### 問題報告
-
-問題ごとに以下の形式で報告する。確信度（`confirmed` = 確認済み / `suspected` = 疑い）を付与する。
-
-```
-## HIGH: API エンドポイントのパスが実装と不一致 [confirmed]
-
-**場所**: docs/api.md:42
-**問題**: `/api/v2/users` と記載されているが、実装は `/api/v1/users` のまま。
-**修正**: 実装に合わせて `/api/v1/users` に修正する。
-```
+出力形式は `report-format.md` を参照。

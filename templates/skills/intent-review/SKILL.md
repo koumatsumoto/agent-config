@@ -1,6 +1,6 @@
 ---
 name: km:intent-review
-description: Verifies that code changes fulfill the user's original intent and requirements by tracing conversation history. Use /km:intent-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow when conversation context is available. Skipped when reviewing others' code with no conversation history.
+description: Verifies that code changes fulfill the user's original intent and requirements by tracing conversation history. Use /km:intent-review for standalone execution. Runs only when conversation context is available; skipped for third-party code reviews.
 ---
 
 # Intent Review
@@ -18,11 +18,11 @@ description: Verifies that code changes fulfill the user's original intent and r
 
 ## Workflow
 
-1. **Phase 1: 変更把握** — git diff で変更内容を収集する
-2. **Phase 2: 要求の復元** — 会話履歴からユーザーの要求を構造化して抽出する
-3. **Phase 3: 充足判定** — 復元した要求に対して変更が過不足なく応えているかを判定する
-4. **偽陽性フィルタリング** — 会話中で除外・延期が合意された項目を除外する
-5. **報告** — 問題を重大度順に報告する
+1. Phase 1: 変更把握
+2. Phase 2: 要求の復元
+3. Phase 3: 充足判定
+4. Phase 4: 偽陽性フィルタリング
+5. Phase 5: 報告
 
 ## Phase 1: 変更把握
 
@@ -49,7 +49,7 @@ Phase 2 で復元した要求に対して、変更内容を照合する。
 - **回帰的影響**: 変更が既存機能に意図しない影響を与えていないか
 - **合意事項との整合**: Phase 2 で抽出した設計判断が実装に正しく反映されているか
 
-## 偽陽性フィルタリング
+## Phase 4: 偽陽性フィルタリング
 
 報告前に各検出項目を再評価し、以下に該当するものは除外する:
 
@@ -57,25 +57,9 @@ Phase 2 で復元した要求に対して、変更内容を照合する。
 - **段階的実装の一部**: 会話中で段階的に進める方針が合意されており、未実装部分が次のステップとして認識されている
 - **意図的なスコープ制限**: ユーザーが明示的にスコープを限定した場合の、スコープ外の指摘
 
-## 報告
+## Phase 5: 報告
 
-### 構造化出力（km:review オーケストレーター経由の場合）
-
-オーケストレーターから呼び出された場合、以下の構造化情報も出力する。これはサブエージェント（code-review, quality-review）の偽陽性フィルタリングに使用される:
-
-```
-### 要求リスト
-1. [明示的] ...
-2. [合意] ...
-3. [暗黙的/推測] ...
-
-### 合意された設計判断
-- ...
-```
-
-### 問題報告
-
-問題の重大度を判定し、結果を報告する。
+問題の重大度を判定し、結果を報告する。オーケストレーターから呼び出された場合、構造化情報も出力する（code-review, quality-review の偽陽性フィルタリングに使用される）。
 
 重大度（CRITICAL は本スキルでは定義しない。要件充足の観点では即時悪用可能な問題は発生せず、該当ケースは quality-review の管轄）:
 - `HIGH`: 明示的な要求の未実装、合意事項との不整合
@@ -84,22 +68,4 @@ Phase 2 で復元した要求に対して、変更内容を照合する。
 
 `HIGH` を検出した場合、コミットをブロックする。
 
-### サマリー（必ず冒頭に出力）
-
-```
-## レビュー結果
-
-**レビュー種別**: Intent Review
-**検出件数**: HIGH: 0 / MEDIUM: 1 / LOW: 0
-**コミット判定**: PASSED
-```
-
-### 問題報告フォーマット
-
-```
-## MEDIUM: ページネーション機能が未実装 [confirmed]
-
-**要求**: 「一覧表示にページネーションを追加してほしい」（会話履歴より）
-**現状**: API エンドポイントは作成されたが、ページネーションパラメータの処理が未実装
-**対応**: offset/limit パラメータのハンドリングを追加する
-```
+出力形式は `report-format.md` を参照。

@@ -1,22 +1,22 @@
 ---
 name: km:quality-review
-description: ISO/IEC 25010:2023 quality characteristics review for uncommitted changes. Tiered approach based on the 9 product quality characteristics, adapted for code-diff review while preserving ISO characteristic boundaries. Use /km:quality-review for standalone execution. Normally invoked as part of /km:review orchestrated workflow. Triggers on "品質レビューして", "品質チェックして", "セキュリティ確認して".
+description: ISO/IEC 25010:2023 product quality characteristics review for uncommitted changes. Covers 9 characteristics (security, reliability, performance, maintainability, etc.) via tiered approach prioritizing diff-detectable patterns. Use /km:quality-review for standalone execution. Triggers on "品質レビューして", "品質チェックして", "セキュリティ確認して".
 ---
 
 # Quality Review
 
-未コミット変更を対象に、ISO/IEC 25010:2023 の品質モデルに基づく非機能品質レビューを行う。
+未コミット変更を対象に、ISO/IEC 25010:2023 の品質モデルに基づく品質レビューを行う。
 
-開発者は「仕様どおりに動くか」に集中しがちで、非機能品質特性（セキュリティ・信頼性・性能効率性・保守性など）は視野外になりやすい。本スキルはこれらを体系的に確認する。コードdiffから直接検出可能な観点を重視し、システム全体の構成や運用実態を知らないと確証できない懸念は、今回の差分から直接裏づけられる場合のみ扱う。
+開発者は「仕様どおりに動くか」に集中しがちで、品質特性（セキュリティ・信頼性・性能効率性・保守性・機能適合性など）は視野外になりやすい。本スキルはこれらを体系的に確認する。コードdiffから直接検出可能な観点を重視し、diff から裏づけられない推測は扱わない。
 
 関連: `/km:intent-review`（要件充足）, `/km:code-review`（設計・バグ・規約）, `/km:doc-review`（ドキュメント整合性）
 
 ## Workflow
 
-1. **Phase 1: 変更把握・分類** — 変更ファイルを収集し、変更タイプとレビュー深度を決定
-2. **Phase 2: 品質特性レビュー** — Tier 1 は全変更で確認、Tier 2/3 は変更タイプと変更内容に応じて確認
-3. **Phase 3: 偽陽性フィルタリング** — 検出項目を再評価し、ノイズを除外
-4. **Phase 4: 判定と報告** — 重大度順に報告。`CRITICAL/HIGH` でコミットをブロック
+1. Phase 1: 変更把握・分類
+2. Phase 2: 品質特性レビュー
+3. Phase 3: 偽陽性フィルタリング
+4. Phase 4: 判定と報告
 
 ## Phase 1: 変更把握・分類
 
@@ -39,13 +39,13 @@ Quick の適用ルール:
 
 ## Phase 2: 品質特性レビュー
 
-必ず quality-patterns.md を読み込み、各特性のパターンに照らしてレビューすること。
+Phase 2 実行前に必ず `quality-patterns.md` を読み込み、各特性のパターンに照らしてレビューすること。
 
 ISO/IEC 25010:2023 の 9 品質特性を、コードdiffレビューで扱いやすい Tier に並べ替えている。ISO の品質特性そのものは統合・削除しない。各特性の副特性を核にしつつ、diff から判断しやすい実務補助観点を追加している。
 
 システム全体の構成・運用・履歴確認が必要な懸念は、今回の diff や同一変更セットに直接根拠がある場合のみ報告する。根拠の弱い推測は報告しない。
 
-Tier 1 は全変更で確認、Tier 2 は変更タイプと変更内容に応じて確認、Tier 3 はユーザー/運用者との接点に変更がある場合のみ確認する。
+Tier 1 は全変更で確認、Tier 2 は変更タイプと変更内容に応じて確認、Tier 3 はユーザー/運用者接点の変更がある場合のみ確認する。
 
 ### Tier 1: 常に確認する品質特性
 
@@ -166,24 +166,4 @@ UI, CLI, 管理画面, エラーメッセージ, スクリプト化されたオ�
 
 `CRITICAL` または `HIGH` を検出した場合、コミットをブロックする。
 
-### サマリー（必ず冒頭に出力）
-
-```
-## レビュー結果
-
-**変更分類**: feat (高リスク) | 変更行数: 450行 | ファイル数: 8
-**検出件数**: CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 1
-**コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
-```
-
-### 問題報告
-
-問題ごとに以下の形式で報告する。確信度（`confirmed` = 確認済み / `suspected` = 疑い）を付与する。
-
-```
-## HIGH: 未検証の外部入力がクエリに使用されている [confirmed]
-
-**場所**: src/api/users.ts:42
-**問題**: リクエストパラメータ `sort_by` が検証なしに SQL ORDER BY 句に結合されている。攻撃者が任意の SQL フラグメントを注入できる。
-**修正**: 許可されたカラム名のホワイトリストで検証する。
-```
+出力形式は `report-format.md` を参照。
