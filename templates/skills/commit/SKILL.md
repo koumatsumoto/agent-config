@@ -8,21 +8,29 @@ argument-hint: "[message]"
 
 変更内容を確認し、Conventional Commits 形式で安全にコミットする。
 
+## Context
+
+- Git status: !`git status`
+- Changes: !`git diff HEAD`
+- Branch: !`git branch --show-current`
+- Recent commits: !`git log --oneline -10`
+
 ## Workflow
 
-1. `git status` / `git diff` で変更内容を確認する
-2. ユーザーが `$ARGUMENTS` でメッセージを指定した場合、タイトルの参考情報として扱う
-3. 必要ファイルのみ個別に `git add <file>` する
-4. ステージ済みファイルに機密情報がないか検証する
-   - ファイル: `.env*`, `*.pem`, `*.key`, `*credentials*`
-   - 文字列: `AKIA`, `sk-`, `password=`, `secret=` 等
+1. Context を分析する。`$ARGUMENTS` があればタイトルのヒントとして使用する
+2. 必要ファイルのみ個別に `git add <file>` でステージする
+3. ステージ済みファイルに機密情報がないか検証する
+   - ファイル名: `.env*`, `*.pem`, `*.key`, `*credentials*`
+   - 文字列パターン: `AKIA`, `sk-`, `password=`, `secret=` 等
    - **検出時はコミットを中止し、ユーザーに報告する**
-5. 下記の Commit Message 形式に従ってコミットする
-6. `git log -1 --stat` でコミット結果を確認し、ユーザーに報告する
+4. 下記の Commit Message 形式に従ってコミットする
+5. `git log -1 --stat` でコミット結果を確認し、ユーザーに報告する
+
+ステージとコミットを可能な限り少ないツール呼び出しで実行すること。複数の `git add` は並列実行可能。
 
 ## Commit Message
 
-Conventional Commits 形式に従う。将来の開発者が変更の背景を理解できるよう、丁寧に十分な情報を記述すること。
+Conventional Commits 形式に従う。基本は下記の形式に従い、Context の Recent commits はスコープ命名や言語の参考にする。
 
 - タイトル: `type(scope): description`（50文字以内、命令形）
 - 本体 (3行目以降): 以下の 3 項目を含める
@@ -57,19 +65,6 @@ fix(api): ページネーションのオフセット計算を修正
 
 **作業内容と結果**
 - src/api/pagination.ts の calculateOffset 関数を修正、テスト追加
-```
-
-```text
-refactor(db): クエリビルダーを repository パターンに移行
-
-**作業背景**
-- 各ハンドラに SQL が散在しテスト困難との指摘
-
-**計画と理由**
-- repository パターンで DB アクセスを集約しモック可能に
-
-**作業内容と結果**
-- UserRepository, OrderRepository を新規作成、既存ハンドラから直接クエリを除去
 ```
 
 ## Safety Rules
