@@ -24,6 +24,7 @@ Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理す�
   - `rules/` - ルール定義
   - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
   - `config.toml` - Codex CLI 用の最小設定テンプレート
+- `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
 - `docs/` - プロジェクトドキュメント
 - `.claude/` - プロジェクト固有の Claude 設定
@@ -119,7 +120,7 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 | `km:review` | 包括的レビューオーケストレーター（intent/code/quality/doc-review を自動判定・並列実行） |
 | `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（コンテキストがない場合はスキップ） |
 | `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー |
-| `km:quality-review` | ISO/IEC 25010 の8品質特性を軸とした品質レビュー |
+| `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー |
 | `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
 
