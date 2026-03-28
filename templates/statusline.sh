@@ -24,6 +24,14 @@ json_val() {
   printf '%s' "$INPUT" | grep -o "\"$1\"[[:space:]]*:[^,}]*" | head -1 | sed 's/.*://;s/^[[:space:]]*//;s/[[:space:]]*$//;s/"//g'
 }
 
+# Extract value from nested JSON by parent key context
+# Usage: json_nested_val "five_hour" "used_percentage"
+json_nested_val() {
+  local parent="$1"
+  local key="$2"
+  printf '%s' "$INPUT" | grep -o "\"$parent\"[^}]*" | grep -o "\"$key\"[[:space:]]*:[^,}]*" | head -1 | sed 's/.*://;s/^[[:space:]]*//;s/[[:space:]]*$//;s/"//g'
+}
+
 # Ensure value is numeric, fallback to 0
 ensure_num() {
   local val="$1"
@@ -39,6 +47,7 @@ CONTEXT_PCT=$(ensure_num "$(json_val "used_percentage")")
 CONTEXT_USED=$(ensure_num "$(json_val "current_usage")")
 CONTEXT_TOTAL=$(ensure_num "$(json_val "context_window_size")")
 COST=$(ensure_num "$(json_val "total_cost_usd")")
+RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
 BRANCH=$(sanitize "$(json_val "branch")")
 
 MODEL=${MODEL:-"?"}
@@ -46,6 +55,7 @@ CONTEXT_PCT=${CONTEXT_PCT:-0}
 CONTEXT_USED=${CONTEXT_USED:-0}
 CONTEXT_TOTAL=${CONTEXT_TOTAL:-0}
 COST=${COST:-0}
+RATE_5H=${RATE_5H:-0}
 
 # Format token count (e.g., 350000 -> 350K, 1000000 -> 1.0M)
 format_tokens() {
@@ -99,9 +109,13 @@ else
   COST_DEC="00"
 fi
 
+# Format rate limit
+RATE_5H_INT=$(printf "%.0f" "$RATE_5H" 2>/dev/null || echo 0)
+[[ "$RATE_5H_INT" =~ ^[0-9]+$ ]] || RATE_5H_INT=0
+
 # Output using printf — %b for the color bar, %s for sanitized text values
-printf '%s  │  %b %s%% (%s/%s)  │  $%s.%s' \
-  "$MODEL" "$BAR" "$PCT_INT" "$USED_FMT" "$TOTAL_FMT" "${COST_INT:-0}" "${COST_DEC:-00}"
+printf '%s  │  %b %s%% (%s/%s)  │  $%s.%s  │  5h:%s%%' \
+  "$MODEL" "$BAR" "$PCT_INT" "$USED_FMT" "$TOTAL_FMT" "${COST_INT:-0}" "${COST_DEC:-00}" "$RATE_5H_INT"
 
 if [ -n "$BRANCH" ]; then
   printf '  │  %s' "$BRANCH"
