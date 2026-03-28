@@ -20,11 +20,10 @@ Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理す�
 
 - `templates/` - デプロイ対象のテンプレート群
   - `CLAUDE.md` - 共通エージェント方針（Claude と Codex AGENTS で共用）
-  - `agents/` - Claude 用エージェント定義
   - `rules/` - ルール定義
   - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
   - `keybindings.json` - キーバインド設定（Shift+Enter で改行）
-  - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・ブランチ）
+  - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・5hレート制限・ブランチ）
   - `config.toml` - Codex CLI 用の最小設定テンプレート
 - `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
@@ -43,7 +42,6 @@ bash install.sh
 
 - `~/.claude/`:
   - `CLAUDE.md`（`templates/CLAUDE.md` から反映）
-  - `agents/`（`templates/agents/` から反映）
   - `rules/`（`templates/rules/` から反映）
   - `skills/`（`templates/skills/` から反映）
   - `keybindings.json`（`templates/keybindings.json` から反映）
@@ -60,7 +58,7 @@ bash install.sh
 
 `install.sh` は以下のターミナルカスタマイズ設定も反映します:
 
-- **ステータスライン** (`statusline.sh`): モデル名・コンテキスト使用率（色付きプログレスバー）・セッションコスト・Git ブランチを常時表示
+- **ステータスライン** (`statusline.sh`): モデル名・コンテキスト使用率（色付きプログレスバー）・セッションコスト・5時間レート制限・Git ブランチを常時表示
 - **キーバインド** (`keybindings.json`): `Shift+Enter` で改行
 
 ステータスラインを有効にするには `settings.json` に以下を追加（パスは自分の環境に合わせる）:
@@ -98,7 +96,6 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 | Repository Source | Destination |
 | --- | --- |
 | `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `templates/agents/` | `~/.claude/agents/` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/keybindings.json` | `~/.claude/keybindings.json` |
@@ -106,19 +103,6 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 | `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/skills/` | `~/.agents/skills/` |
-
-## エージェント運用（2026-02 時点）
-
-`templates/agents/` は Claude Code のサブエージェント定義。現在は次の 6 つに集約:
-
-- `planner` - 実装前の計画化
-- `architect` - 設計判断とトレードオフ整理
-- `build-error-resolver` - ビルド/型エラー復旧
-- `code-reviewer` - 差分レビュー
-- `security-reviewer` - セキュリティレビュー
-- `refactor-cleaner` - 安全なクリーンアップ
-
-運用詳細は `templates/rules/agents.md` を参照。
 
 ## 公式仕様（参照元）
 

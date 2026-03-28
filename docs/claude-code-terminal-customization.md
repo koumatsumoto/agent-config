@@ -42,7 +42,7 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 ### セキュリティ上の注意
 
-- **絶対パスで指定する**: チルダ (`~`) はシェル展開に依存するため、`/home/<user>/.claude/statusline.sh` の形式で記述する
+- **フルパス（絶対パス）で指定する**: チルダ (`~`) はシェル展開に依存するため、`/home/<user>/.claude/statusline.sh` の形式で記述する
 - **PATH を固定する**: スクリプト冒頭で `export PATH="/usr/local/bin:/usr/bin:/bin"` を設定し、PATH 汚染を防止する
 - **外部入力をサニタイズする**: ブランチ名等はユーザ制御可能な値。制御文字・ANSI エスケープシーケンスを除去してからターミナルに出力する
 - **`echo -e` を避ける**: 未サニタイズの変数がエスケープ解釈される。`printf '%s'` + `'%b'`（カラーコード部分のみ）を使用する
@@ -54,10 +54,10 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 ### 主要なアクション
 
-|アクション|デフォルト|説明|
+|アクション|Claude Code デフォルト|説明|
 |---|---|---|
 |`chat:submit`|Enter|メッセージ送信|
-|`chat:newline`|(未設定)|改行挿入（送信せず）|
+|`chat:newline`|(未設定) ※本リポジトリでは Shift+Enter に設定|改行挿入（送信せず）|
 |`chat:externalEditor`|Ctrl+G|外部エディタで編集|
 |`chat:stash`|Ctrl+S|プロンプトを一時退避|
 |`chat:modelPicker`|Meta+P|モデル切替|
@@ -196,7 +196,7 @@ chmod 600 ~/.claude/keybindings.json
 chmod 700 ~/.claude/statusline.sh
 ```
 
-`~/.claude/` 配下には hook コマンド、パーミッション設定、credentials 等が含まれるため、他ユーザからの読み取りを防止する。`install.sh` はディレクトリと statusline.sh、keybindings.json のパーミッションを自動設定する。
+`~/.claude/` 配下には hook コマンド、パーミッション設定、credentials 等が含まれるため、他ユーザからの読み取りを防止する。`install.sh` はディレクトリと statusline.sh、keybindings.json のパーミッションを自動設定する。`settings.json` は install.sh の管理対象外のため、手動で `chmod 600` を設定すること。
 
 ### 多層防御の考え方
 
@@ -207,7 +207,7 @@ Claude Code のセキュリティは単一の仕組みではなく、以下の�
 3. **allow / deny リスト**: ベストエフォートのコマンドフィルタ
 4. **Hooks** (`PreToolUse`): プログラマティックなツール実行制御
 
-**重要**: deny リストだけでは安全ではない。deny リストは glob パターンマッチ（ワイルドカード `*`）であり、引数の順序変更やエイリアスでバイパス可能（例: `Bash(rm -rf *)` の deny は `rm --recursive --force` にマッチしない）。また Read/Edit の deny ルールは Bash コマンドには適用されない（`Read(.env)` を deny しても `cat .env` は防げない）。強固な隔離が必要な場合はサンドボックス (`sandbox.enabled: true`) を使用すること。
+**重要**: deny リストだけでは安全ではない。制約の詳細は「permissions.deny の注意事項」を参照。強固な隔離が必要な場合はサンドボックス (`sandbox.enabled: true`) を使用すること。
 
 ### permissions.allow のベストプラクティス
 

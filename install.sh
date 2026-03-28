@@ -58,6 +58,10 @@ install_item "$REPO_ROOT/templates/keybindings.json" "$HOME/.claude/keybindings.
 chmod 600 "$HOME/.claude/keybindings.json" || echo "WARN: failed to set permissions on keybindings.json" >&2
 install_executable "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statusline.sh"
 
+# Harden other deployment directories (umask 077 covers new dirs, chmod for existing)
+chmod 700 "$HOME/.codex/" 2>/dev/null || true
+chmod 700 "$HOME/.agents/" 2>/dev/null || true
+
 install_item "$REPO_ROOT/templates/CLAUDE.md" "$HOME/.codex/AGENTS.md"
 install_item "$REPO_ROOT/templates/config.toml" "$HOME/.codex/config.toml"
 install_item "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"

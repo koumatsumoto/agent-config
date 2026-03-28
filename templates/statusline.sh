@@ -20,12 +20,14 @@ sanitize() {
 # Simple JSON value extractor (no jq dependency)
 # INPUT is already flattened to single line.
 # Uses printf (not echo) to avoid backslash expansion.
+# IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_val() {
   printf '%s' "$INPUT" | grep -o "\"$1\"[[:space:]]*:[^,}]*" | head -1 | sed 's/.*://;s/^[[:space:]]*//;s/[[:space:]]*$//;s/"//g'
 }
 
 # Extract value from nested JSON by parent key context
 # Usage: json_nested_val "five_hour" "used_percentage"
+# IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_nested_val() {
   local parent="$1"
   local key="$2"
@@ -43,9 +45,9 @@ ensure_num() {
 }
 
 MODEL=$(sanitize "$(json_val "display_name")")
-CONTEXT_PCT=$(ensure_num "$(json_val "used_percentage")")
-CONTEXT_USED=$(ensure_num "$(json_val "current_usage")")
-CONTEXT_TOTAL=$(ensure_num "$(json_val "context_window_size")")
+CONTEXT_PCT=$(ensure_num "$(json_nested_val "context_window" "used_percentage")")
+CONTEXT_USED=$(ensure_num "$(json_nested_val "context_window" "current_usage")")
+CONTEXT_TOTAL=$(ensure_num "$(json_nested_val "context_window" "context_window_size")")
 COST=$(ensure_num "$(json_val "total_cost_usd")")
 RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
 BRANCH=$(sanitize "$(json_val "branch")")
@@ -60,6 +62,7 @@ RATE_5H=${RATE_5H:-0}
 # Format token count (e.g., 350000 -> 350K, 1000000 -> 1.0M)
 format_tokens() {
   local t="$1"
+  t="${t%.*}"  # truncate decimal part
   [[ "$t" =~ ^[0-9]+$ ]] || t=0
   if [ "$t" -ge 1000000 ] 2>/dev/null; then
     local m
