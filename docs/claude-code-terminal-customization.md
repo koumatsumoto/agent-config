@@ -144,9 +144,27 @@ keep-coding-instructions: true
 }
 ```
 
-#### WSL2 (Windows トースト通知)
+#### Windows — Git Bash
 
-WSL2 では `powershell.exe` をフルパスで指定し、PATH 汚染を防止する:
+Git Bash では `powershell.exe` が Windows PATH 経由で利用可能。フルパスで指定する:
+
+```json
+{
+  "hooks": {
+    "Notification": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -Command \"[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]; $t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $n = $t.GetElementsByTagName('text'); $n.Item(0).InnerText = 'Claude Code'; $n.Item(1).InnerText = 'Action needed'; [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show([Windows.UI.Notifications.ToastNotification]::new($t))\""
+      }]
+    }]
+  }
+}
+```
+
+#### Windows — WSL2
+
+WSL2 では `/mnt/c/` プレフィックスでフルパス指定する:
 
 ```json
 {
@@ -164,7 +182,7 @@ WSL2 では `powershell.exe` をフルパスで指定し、PATH 汚染を防止�
 
 ### フックのセキュリティ注意事項
 
-- **外部コマンドはフルパスで指定する**: 特に WSL2 の `powershell.exe` は PATH 汚染で偽バイナリが実行される可能性がある
+- **外部コマンドはフルパスで指定する**: 特に Windows 環境（Git Bash / WSL2）の `powershell.exe` は PATH 汚染で偽バイナリが実行される可能性がある
 - **matcher は必要なイベントに絞る**: 空文字列 (`""`) は全イベントにマッチし、高頻度でプロセスが起動される
 
 ## 5. settings.json セキュリティハードニング
@@ -291,10 +309,20 @@ deny リストはベストエフォートの追加防御であり、以下の制
 - `ConfigChange` フックで設定変更を監査・ブロックする
 - `.claude/settings.json` への書き込みは Claude Code が確認プロンプトを表示する（`bypassPermissions` モード以外）
 
-#### WSL2 固有の注意
+#### Windows 環境の注意（Git Bash / WSL2 共通）
 
-WSL2 では Linux と Windows のセキュリティ境界が曖昧になる:
+Windows 上で Claude Code を使用する場合、環境に応じた考慮が必要:
 
+**Git Bash:**
+- パスの形式が POSIX 風（`/c/Users/...`）になるが、`powershell.exe` 等の Windows バイナリは `C:/WINDOWS/...` のネイティブパスでも動作する
+- `chmod` はファイルシステムが NTFS の場合に制限がある。`install.sh` は `chmod` 失敗時に警告を出力する
+- `~/.claude/` は `C:/Users/<user>/.claude/` に対応する
+
+**WSL2:**
 - `/mnt/c/` 経由で Windows ファイルシステムにアクセス可能。Bash コマンドで Windows 側のファイルを読み書きできる
 - フックで Windows プロセス（powershell.exe 等）を起動すると、Windows 側から `\\wsl$\` 経由で WSL2 ファイルシステムにアクセス可能
 - サンドボックスの `allowRead` / `allowWrite` で `/mnt/c/` へのアクセスを制限することを推奨
+
+**共通:**
+- 通知フックでは `powershell.exe` をフルパスで指定し PATH 汚染を防止する（Git Bash: `C:/WINDOWS/...`、WSL2: `/mnt/c/WINDOWS/...`）
+- `statusline.sh` は bash スクリプトのため、Git Bash / WSL2 のどちらでも動作する
