@@ -23,6 +23,8 @@ Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理す�
   - `agents/` - Claude 用エージェント定義
   - `rules/` - ルール定義
   - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
+  - `keybindings.json` - キーバインド設定（Shift+Enter で改行）
+  - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・ブランチ）
   - `config.toml` - Codex CLI 用の最小設定テンプレート
 - `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
@@ -44,6 +46,8 @@ bash install.sh
   - `agents/`（`templates/agents/` から反映）
   - `rules/`（`templates/rules/` から反映）
   - `skills/`（`templates/skills/` から反映）
+  - `keybindings.json`（`templates/keybindings.json` から反映）
+  - `statusline.sh`（`templates/statusline.sh` から反映、`chmod 700`）
 - `~/.codex/`:
   - `AGENTS.md`（`templates/CLAUDE.md` から反映）
   - `config.toml`（`templates/config.toml` から反映）
@@ -51,6 +55,27 @@ bash install.sh
   - `skills/`（`templates/skills/` から反映）
 
 `install.sh` は引数なしで、Claude/Codex の両方を一括反映します。
+
+## ターミナルカスタマイズ
+
+`install.sh` は以下のターミナルカスタマイズ設定も反映します:
+
+- **ステータスライン** (`statusline.sh`): モデル名・コンテキスト使用率（色付きプログレスバー）・セッションコスト・Git ブランチを常時表示
+- **キーバインド** (`keybindings.json`): `Shift+Enter` で改行
+
+ステータスラインを有効にするには `settings.json` に以下を追加（パスは自分の環境に合わせる）:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/home/<user>/.claude/statusline.sh",
+    "padding": 2
+  }
+}
+```
+
+通知フック、Output Styles、permissions のセキュリティハードニング等の詳細は `docs/claude-code-terminal-customization.md` を参照。
 
 ## Markdown 軽量化
 
@@ -76,6 +101,8 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 | `templates/agents/` | `~/.claude/agents/` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
+| `templates/keybindings.json` | `~/.claude/keybindings.json` |
+| `templates/statusline.sh` | `~/.claude/statusline.sh` |
 | `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/skills/` | `~/.agents/skills/` |
@@ -111,7 +138,7 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 ## 既存ファイルの保護
 
 `install.sh` は同名ファイル/ディレクトリが既に存在する場合、
-`*.bak.<timestamp>` へ退避してから置換します。
+`*.bak` へ退避してから置換します（単一世代。再実行時は前回のバックアップが上書きされる）。
 
 ## スキル一覧
 
