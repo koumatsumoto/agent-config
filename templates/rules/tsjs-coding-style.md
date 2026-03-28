@@ -5,37 +5,14 @@ paths:
 
 # コーディングスタイル
 
-前提: Node.js 24+ / TypeScript 5.9+ / ES2025。
-
-## 基本方針
-
-- まず動くコードを実装し、動いてからリファクタリングする
-- プログラムは成長する。保守性・可読性を常に意識する
-- 作業が終わったら必ずレビューする。仕様の見落としがないか確認する
-
-## 命名規則
-
-- 変数・関数: `camelCase`
-- 型・クラス: `PascalCase`
-- 定数: `UPPER_SNAKE_CASE`
-- ファイル名: `kebab-case.ts`
-- 命名はドメイン語彙を優先する
-
-## 型安全
-
-- `any` は使わない。外部データは `unknown` + 型ガード or Zod で絞り込む
-- `enum` / `namespace` は使わない。`as const satisfies` / ES モジュールで代替する
-- Non-null assertion `!` / Type assertion `as` は使わない。型ガード or `satisfies` で代替する
-- `@ts-ignore` / `@ts-expect-error` は原則禁止。使う場合は理由をコメントする
-- 型のみのインポートには `import type` を使う
-- 状態の分岐は Discriminated Union + exhaustiveness check で表現する
+前提: Node.js 24+ / TypeScript 6+ / ES2025。
+型安全・コードスタイルは tsc strict (`erasableSyntaxOnly`, `isolatedDeclarations`) と ESLint `strictTypeChecked` に委譲する。本ルールはツールで強制できない設計判断のみ記載。
 
 ## 設計ルール
 
+- 状態の分岐は Discriminated Union + exhaustiveness check で表現する
 - オブジェクト/配列はイミュータブルに扱う（`readonly`, `Readonly<T>`, `as const`）
 - 引数が 3 つ以上 or オプション引数がある場合はオプションオブジェクトパターンを使う
-- 公開 API は戻り値型を明示する。内部実装は型推論に任せる
-- 非同期処理は `async/await` を使う。Promise チェーン (`.then`) より優先する
 - 目安: 1 ファイル 300 行以内（最大 800 行）
 
 ## ES2025 モダン機能
@@ -52,7 +29,6 @@ paths:
 
 - エラーメッセージは英語で書く
 - 例外は握り潰さず、`cause` チェーンで元のエラーを保持する
-- ユーザー入力は Zod 等のスキーマバリデーションで検証する
 
 ## テスト
 
