@@ -155,7 +155,7 @@ WSL2 では `powershell.exe` をフルパスで指定し、PATH 汚染を防止�
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -Command \"[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null; $xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $texts = $xml.GetElementsByTagName('text'); $texts[0].AppendChild($xml.CreateTextNode('Claude Code')) > $null; $texts[1].AppendChild($xml.CreateTextNode('Action needed')) > $null; $toast = [Windows.UI.Notifications.ToastNotification]::new($xml); [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show($toast)\""
+        "command": "/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -Command \"[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]; $t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $n = $t.GetElementsByTagName('text'); $n.Item(0).InnerText = 'Claude Code'; $n.Item(1).InnerText = 'Action needed'; [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show([Windows.UI.Notifications.ToastNotification]::new($t))\""
       }]
     }]
   }
