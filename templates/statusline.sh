@@ -108,11 +108,11 @@ fi
 RATE_5H_INT=$(printf "%.0f" "$RATE_5H" 2>/dev/null || echo 0)
 [[ "$RATE_5H_INT" =~ ^[0-9]+$ ]] || RATE_5H_INT=0
 
-# Git stats: file count, lines added, lines removed (all from same source)
-GIT_NUMSTAT=$(timeout 2 git diff --numstat HEAD 2>/dev/null)
+# Git stats: file count, lines added, lines removed (tracked files only, same source)
+GIT_NUMSTAT=$(timeout 2 git diff --numstat HEAD 2>/dev/null | head -n 10000)
 GIT_FILES=$(printf '%s' "$GIT_NUMSTAT" | grep -c .)
-GIT_ADDED=$(printf '%s' "$GIT_NUMSTAT" | awk '{s+=$1} END {printf "%d", s+0}')
-GIT_REMOVED=$(printf '%s' "$GIT_NUMSTAT" | awk '{s+=$2} END {printf "%d", s+0}')
+GIT_ADDED=$(printf '%s' "$GIT_NUMSTAT" | awk '$1 != "-" {s+=$1} END {printf "%d", s+0}')
+GIT_REMOVED=$(printf '%s' "$GIT_NUMSTAT" | awk '$2 != "-" {s+=$2} END {printf "%d", s+0}')
 [[ "$GIT_FILES" =~ ^[0-9]+$ ]] || GIT_FILES=0
 [[ "$GIT_ADDED" =~ ^[0-9]+$ ]] || GIT_ADDED=0
 [[ "$GIT_REMOVED" =~ ^[0-9]+$ ]] || GIT_REMOVED=0
@@ -130,7 +130,11 @@ printf '%s │ %s %s%% │ $%s.%s │ 5h:%s%%' \
 # Line 2: 🌳 Branch Nfiles +A/-R (only when branch exists)
 if [ -n "$BRANCH" ]; then
   printf '\n🌳 %s' "$BRANCH"
-  [ "$GIT_FILES" -gt 0 ] 2>/dev/null && printf ' %s files +%s/-%s' "$GIT_FILES" "$GIT_ADDED" "$GIT_REMOVED"
+  if [ "$GIT_FILES" -gt 0 ] 2>/dev/null; then
+    printf ' %s files' "$GIT_FILES"
+    { [ "$GIT_ADDED" -gt 0 ] || [ "$GIT_REMOVED" -gt 0 ]; } 2>/dev/null && \
+      printf ' +%s/-%s' "$GIT_ADDED" "$GIT_REMOVED"
+  fi
 fi
 
 printf '\n'
