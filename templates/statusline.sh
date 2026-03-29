@@ -2,29 +2,50 @@
 # Claude Code Status Line
 # Reads JSON from stdin (provided by Claude Code), outputs a formatted status bar.
 # Two-line layout:
-#   Line 1: 🤖 model [agent] [style] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~M.D.hAM
+#   Line 1: 🤖 model [agent] [style] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 #   Line 2: 🌳 branch Nfiles +A/-R (only when git branch exists)
-# Rate limits shown only when >= 20%, colored yellow >= 50%, red >= 80%.
+# Rate limits: 5h always shown, 7d shown >= 20%. Yellow >= 50%, red >= 80%.
 # Context bar turns red-background at >= 90%.
 
-export PATH="/usr/local/bin:/usr/bin:/bin"
+# --- Environment hardening ---
+# Include /mingw64/bin for Git Bash (Git for Windows) compatibility
+if [ -d "/mingw64/bin" ]; then
+  export PATH="/mingw64/bin:/usr/local/bin:/usr/bin:/bin"
+else
+  export PATH="/usr/local/bin:/usr/bin:/bin"
+fi
+# Clear git env vars to prevent repo/config redirection attacks
+unset GIT_DIR GIT_WORK_TREE GIT_CONFIG GIT_CONFIG_GLOBAL GIT_EXEC_PATH GIT_EXTERNAL_DIFF 2>/dev/null
+
+# timeout fallback: use timeout if available, otherwise run without it
+_timeout() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$@"
+  else
+    # skip the first arg (duration) and run the rest directly
+    shift
+    "$@"
+  fi
+}
 
 # Read stdin with timeout (5s) and size limit (64KB) to prevent hang and memory exhaustion
-INPUT=$(timeout 5 head -c 65536 2>/dev/null) || INPUT=""
+INPUT=$(_timeout 5 head -c 65536 2>/dev/null) || INPUT=""
 
 # Flatten to single line (pure bash, no fork)
 INPUT="${INPUT//$'\n'/}"
 INPUT="${INPUT//$'\r'/}"
 
-# Sanitize: strip control characters and ANSI escape sequence remnants from external values
-# tr removes control chars (including ESC 0x1B) and C1 chars (0x80-0x9F),
-# sed removes CSI parameter remnants like [31m
+# Sanitize: strip control characters and ANSI CSI remnants from external values
+# tr removes C0 (0x00-0x1F), DEL (0x7F), C1 (0x80-0x9F) in byte mode (LC_ALL=C).
+# sed removes CSI parameter remnants (e.g., [31m [0K) using typical SGR/cursor terminators only,
+# avoiding false positives on legitimate text like "[JIRA-123]".
 sanitize() {
-  printf '%s' "$1" | tr -d '\000-\037\177\200-\237' | sed 's/\[[0-9;]*[a-zA-Z]//g'
+  LC_ALL=C printf '%s' "$1" | tr -d '\000-\037\177\200-\237' | sed 's/\[[0-9;]*[mGHJKsu]//g'
 }
 
 # Pure bash JSON value extractor (no fork, no jq dependency)
 # Uses parameter expansion only. No eval.
+# LIMITATION: Cannot handle values containing commas or nested objects.
 # IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_val() {
   [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || return 1
@@ -40,6 +61,9 @@ json_val() {
 
 # Pure bash nested JSON value extractor (no fork)
 # Usage: json_nested_val "five_hour" "used_percentage"
+# LIMITATION: Assumes no nested sub-objects within parent. Scope is defined
+# by the first "}" after the parent key. If parent contains nested objects,
+# child keys after the inner "}" will not be found.
 # IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_nested_val() {
   [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || return 1
@@ -48,7 +72,7 @@ json_nested_val() {
   local child_key="\"$2\""
   local rest="${INPUT#*$parent_key}"
   [[ "$rest" == "$INPUT" ]] && return 1
-  rest="${rest%\}*}"  # limit to parent object scope (last }, not first)
+  rest="${rest%%\}*}"  # scope to parent object (first }). See LIMITATION above.
   local inner="${rest#*$child_key}"
   [[ "$inner" == "$rest" ]] && return 1
   inner="${inner#*:}"
@@ -69,18 +93,19 @@ ensure_num() {
 }
 
 # Format Unix epoch to local time
-# Usage: format_reset_time "epoch"              → "6PM"
-#        format_reset_time "epoch" '+%-m.%-d.%-I%p'  → "3.19.3AM"
+# Usage: format_reset_time "epoch"             → "6PM"
+#        format_reset_time "epoch" '+%^a.%-I%p' → "MON.3PM"
+# fmt argument must be a literal format string starting with "+".
 format_reset_time() {
   local epoch="${1%.*}"  # truncate decimal part
   local fmt="${2:-+%-I%p}"
   [[ "$epoch" =~ ^[0-9]+$ ]] && [ "$epoch" -gt 0 ] 2>/dev/null || return
   [[ "$fmt" == +* ]] || return 1  # format must start with +
-  date -d "@$epoch" "$fmt" 2>/dev/null || date -r "$epoch" "$fmt" 2>/dev/null
+  LC_TIME=C date -d "@$epoch" "$fmt" 2>/dev/null || LC_TIME=C date -r "$epoch" "$fmt" 2>/dev/null
 }
 
 # Format rate limit section with conditional display and color
-# Usage: format_rate_section "$RATE_INT" "$RESET_TIME" "5h"
+# Usage: format_rate_section "$RATE_INT" "$RESET_TIME" "5h" [min_pct]
 # Displays nothing if rate < min_pct (default 20%). Pass 0 to always show.
 format_rate_section() {
   local rate_int="$1" reset_time="$2" label="$3" min_pct="${4:-20}"
@@ -120,15 +145,16 @@ RATE_5H=${RATE_5H:-0}
 RATE_7D=${RATE_7D:-0}
 
 # --- Git data (single timeout for branch + numstat) ---
+# git trusts the CWD repo (.git/config). core.fsmonitor is disabled to prevent
+# arbitrary code execution from malicious repositories.
 
 if [ -z "$BRANCH" ]; then
-  # Single timeout for branch + numstat. git trusts the CWD repo (.git/config).
   # head -n 10001: 1 branch line + up to 10000 numstat lines
-  GIT_DATA=$(timeout 2 sh -c '
-    b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  GIT_DATA=$(_timeout 2 sh -c '
+    b=$(git -c core.fsmonitor= rev-parse --abbrev-ref HEAD 2>/dev/null)
     [ "$b" = "HEAD" ] && b=""  # detached HEAD → empty
     printf "B:%s\n" "$b"
-    git diff --numstat HEAD 2>/dev/null
+    git -c core.fsmonitor= diff --numstat HEAD 2>/dev/null
   ' 2>/dev/null | head -n 10001)
   BRANCH=$(sanitize "${GIT_DATA%%$'\n'*}")
   BRANCH="${BRANCH#B:}"
@@ -138,7 +164,7 @@ if [ -z "$BRANCH" ]; then
     GIT_NUMSTAT=""
   fi
 else
-  GIT_NUMSTAT=$(timeout 2 git diff --numstat HEAD 2>/dev/null | head -n 10000)
+  GIT_NUMSTAT=$(_timeout 2 git -c core.fsmonitor= diff --numstat HEAD 2>/dev/null | head -n 10000)
 fi
 
 # Git stats: file count, lines added, lines removed (tracked files only)
@@ -194,11 +220,11 @@ RATE_7D_INT=$(printf "%.0f" "$RATE_7D" 2>/dev/null || echo 0)
 [[ "$RATE_7D_INT" =~ ^[0-9]+$ ]] || RATE_7D_INT=0
 
 RESET_5H=$(format_reset_time "$RATE_5H_RESETS")
-RESET_7D=$(format_reset_time "$RATE_7D_RESETS" '+%-m.%-d.%-I%p')
+RESET_7D=$(format_reset_time "$RATE_7D_RESETS" '+%^a.%-I%p')
 
 # --- Output ---
 
-# Line 1: 🤖 Model [Agent] [Style] │ Bar PCT% │ $Cost │ 5h:N% ~reset │ 7d:N% ~M.D.hAM
+# Line 1: 🤖 Model [Agent] [Style] │ Bar PCT% │ $Cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 LINE1="🤖 ${MODEL}"
 [ -n "$AGENT_NAME" ] && LINE1+=" ${AGENT_NAME}"
 [ -n "$OUTPUT_STYLE" ] && LINE1+=" [${OUTPUT_STYLE}]"
