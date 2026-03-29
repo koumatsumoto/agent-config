@@ -1,8 +1,9 @@
 #!/bin/bash
 # Claude Code Status Line
 # Reads JSON from stdin (provided by Claude Code), outputs a formatted status bar.
-# Displays: model name, context usage (colored progress bar), session cost,
-#           5h rate limit with reset time, git branch with file stats.
+# Two-line layout:
+#   Line 1: 🤖 model [agent] [style] │ bar pct% │ $cost │ 5h:rate% ~reset
+#   Line 2: 🌳 branch Nfiles +A/-R (only when git branch exists)
 
 export PATH="/usr/local/bin:/usr/bin:/bin"
 
@@ -15,7 +16,7 @@ INPUT=$(printf '%s' "$INPUT" | tr -d '\n\r')
 # Sanitize: strip control characters and ANSI escape sequence remnants from external values
 # tr removes control chars (including ESC 0x1B), sed removes CSI parameter remnants like [31m
 sanitize() {
-  printf '%s' "$1" | tr -d '\000-\037\177' | sed 's/\[[0-9;]*[a-zA-Z]//g'
+  printf '%s' "$1" | tr -d '\000-\037\177\200-\237' | sed 's/\[[0-9;]*[a-zA-Z]//g'
 }
 
 # Simple JSON value extractor (no jq dependency)
@@ -23,6 +24,7 @@ sanitize() {
 # Uses printf (not echo) to avoid backslash expansion.
 # IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_val() {
+  [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || return 1
   printf '%s' "$INPUT" | grep -o "\"$1\"[[:space:]]*:[^,}]*" | head -1 | sed 's/.*://;s/^[[:space:]]*//;s/[[:space:]]*$//;s/"//g'
 }
 
@@ -30,6 +32,8 @@ json_val() {
 # Usage: json_nested_val "five_hour" "used_percentage"
 # IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_nested_val() {
+  [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || return 1
+  [[ "$2" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || return 1
   local parent="$1"
   local key="$2"
   printf '%s' "$INPUT" | grep -o "\"$parent\"[^}]*" | grep -o "\"$key\"[[:space:]]*:[^,}]*" | head -1 | sed 's/.*://;s/^[[:space:]]*//;s/[[:space:]]*$//;s/"//g'
@@ -38,7 +42,7 @@ json_nested_val() {
 # Ensure value is numeric, fallback to 0
 ensure_num() {
   local val="$1"
-  if [[ "$val" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+  if [[ "$val" =~ ^[0-9]{1,10}\.?[0-9]{0,4}$ ]]; then
     printf '%s' "$val"
   else
     printf '0'
@@ -59,7 +63,11 @@ RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
 RATE_5H_RESETS=$(ensure_num "$(json_nested_val "five_hour" "resets_at")")
 LINES_ADDED=$(ensure_num "$(json_val "total_lines_added")")
 LINES_REMOVED=$(ensure_num "$(json_val "total_lines_removed")")
+# JSON branch (worktree session only); fall back to git for normal sessions
 BRANCH=$(sanitize "$(json_val "branch")")
+[ -z "$BRANCH" ] && BRANCH=$(sanitize "$(timeout 2 git branch --show-current 2>/dev/null)")
+AGENT_NAME=$(sanitize "$(json_nested_val "agent" "name")")
+OUTPUT_STYLE=$(sanitize "$(json_nested_val "output_style" "name")")
 
 MODEL=${MODEL:-"?"}
 CONTEXT_PCT=${CONTEXT_PCT:-0}
@@ -108,18 +116,20 @@ RATE_5H_INT=$(printf "%.0f" "$RATE_5H" 2>/dev/null || echo 0)
 GIT_FILES=$(timeout 2 git diff --numstat HEAD 2>/dev/null | wc -l | tr -d ' ')
 [[ "$GIT_FILES" =~ ^[0-9]+$ ]] || GIT_FILES=0
 
-# Output: Model │ Bar PCT% │ $Cost │ 5h:Rate% ~ResetTime │ Branch Nfiles +A/-R
-printf '%s │ %b %s%% │ $%s.%s │ 5h:%s%%' \
-  "$MODEL" "$BAR" "$PCT_INT" "${COST_INT:-0}" "${COST_DEC:-00}" "$RATE_5H_INT"
-
-# Reset time (only if available)
+# Line 1: 🤖 Model [Agent] [Style] │ Bar PCT% │ $Cost │ 5h:Rate% ~Reset
 RESET_TIME=$(format_reset_time "$RATE_5H_RESETS")
+
+LINE1="🤖 ${MODEL}"
+[ -n "$AGENT_NAME" ] && LINE1+=" ${AGENT_NAME}"
+[ -n "$OUTPUT_STYLE" ] && LINE1+=" [${OUTPUT_STYLE}]"
+printf '%s │ %s %s%% │ $%s.%s │ 5h:%s%%' \
+  "$LINE1" "$BAR" "$PCT_INT" "${COST_INT:-0}" "${COST_DEC:-00}" "$RATE_5H_INT"
 [ -n "$RESET_TIME" ] && printf ' ~%s' "$RESET_TIME"
 
-# Branch + changed file count + diff lines
+# Line 2: 🌳 Branch Nfiles +A/-R (only when branch exists)
 if [ -n "$BRANCH" ]; then
-  printf ' │ %s' "$BRANCH"
-  [ "$GIT_FILES" -gt 0 ] 2>/dev/null && printf ' %sfiles' "$GIT_FILES"
+  printf '\n🌳 %s' "$BRANCH"
+  [ "$GIT_FILES" -gt 0 ] 2>/dev/null && printf ' %s files' "$GIT_FILES"
   { [ "$LINES_ADDED" -gt 0 ] || [ "$LINES_REMOVED" -gt 0 ]; } 2>/dev/null && \
     printf ' +%s/-%s' "$LINES_ADDED" "$LINES_REMOVED"
 fi
