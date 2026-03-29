@@ -1,7 +1,8 @@
 #!/bin/bash
 # Claude Code Status Line
 # Reads JSON from stdin (provided by Claude Code), outputs a formatted status bar.
-# Displays: model name, context usage (colored progress bar), session cost, git branch.
+# Displays: model name, context usage (colored progress bar), session cost,
+#           5h rate limit with reset time, git branch with file stats.
 
 export PATH="/usr/local/bin:/usr/bin:/bin"
 
@@ -44,44 +45,31 @@ ensure_num() {
   fi
 }
 
+# Format Unix epoch to local time (e.g., "10AM", "2PM")
+format_reset_time() {
+  local epoch="${1%.*}"  # truncate decimal part (e.g., 1711699200.0 -> 1711699200)
+  [[ "$epoch" =~ ^[0-9]+$ ]] && [ "$epoch" -gt 0 ] 2>/dev/null || return
+  date -d "@$epoch" '+%-I%p' 2>/dev/null || date -r "$epoch" '+%-I%p' 2>/dev/null
+}
+
 MODEL=$(sanitize "$(json_val "display_name")")
 CONTEXT_PCT=$(ensure_num "$(json_nested_val "context_window" "used_percentage")")
-CONTEXT_USED=$(ensure_num "$(json_nested_val "context_window" "current_usage")")
-CONTEXT_TOTAL=$(ensure_num "$(json_nested_val "context_window" "context_window_size")")
 COST=$(ensure_num "$(json_val "total_cost_usd")")
 RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
+RATE_5H_RESETS=$(ensure_num "$(json_nested_val "five_hour" "resets_at")")
+LINES_ADDED=$(ensure_num "$(json_val "total_lines_added")")
+LINES_REMOVED=$(ensure_num "$(json_val "total_lines_removed")")
 BRANCH=$(sanitize "$(json_val "branch")")
 
 MODEL=${MODEL:-"?"}
 CONTEXT_PCT=${CONTEXT_PCT:-0}
-CONTEXT_USED=${CONTEXT_USED:-0}
-CONTEXT_TOTAL=${CONTEXT_TOTAL:-0}
 COST=${COST:-0}
 RATE_5H=${RATE_5H:-0}
-
-# Format token count (e.g., 350000 -> 350K, 1000000 -> 1.0M)
-format_tokens() {
-  local t="$1"
-  t="${t%.*}"  # truncate decimal part
-  [[ "$t" =~ ^[0-9]+$ ]] || t=0
-  if [ "$t" -ge 1000000 ] 2>/dev/null; then
-    local m
-    local r
-    m=$((t / 1000000))
-    r=$(( (t % 1000000) / 100000 ))
-    printf '%s' "${m}.${r}M"
-  elif [ "$t" -ge 1000 ] 2>/dev/null; then
-    printf '%s' "$((t / 1000))K"
-  else
-    printf '%s' "$t"
-  fi
-}
-
-USED_FMT=$(format_tokens "$CONTEXT_USED")
-TOTAL_FMT=$(format_tokens "$CONTEXT_TOTAL")
+LINES_ADDED=${LINES_ADDED:-0}
+LINES_REMOVED=${LINES_REMOVED:-0}
 
 # Progress bar with color (green < 50%, yellow < 80%, red >= 80%)
-BAR_WIDTH=20
+BAR_WIDTH=10
 PCT_INT=$(printf "%.0f" "$CONTEXT_PCT" 2>/dev/null || echo 0)
 [[ "$PCT_INT" =~ ^[0-9]+$ ]] || PCT_INT=0
 FILLED=$(( PCT_INT * BAR_WIDTH / 100 ))
@@ -116,12 +104,24 @@ fi
 RATE_5H_INT=$(printf "%.0f" "$RATE_5H" 2>/dev/null || echo 0)
 [[ "$RATE_5H_INT" =~ ^[0-9]+$ ]] || RATE_5H_INT=0
 
-# Output using printf — %b for the color bar, %s for sanitized text values
-printf '%s  │  %b %s%% (%s/%s)  │  $%s.%s  │  5h:%s%%' \
-  "$MODEL" "$BAR" "$PCT_INT" "$USED_FMT" "$TOTAL_FMT" "${COST_INT:-0}" "${COST_DEC:-00}" "$RATE_5H_INT"
+# Git changed file count (working tree + staged)
+GIT_FILES=$(timeout 2 git diff --numstat HEAD 2>/dev/null | wc -l | tr -d ' ')
+[[ "$GIT_FILES" =~ ^[0-9]+$ ]] || GIT_FILES=0
 
+# Output: Model │ Bar PCT% │ $Cost │ 5h:Rate% ~ResetTime │ Branch Nfiles +A/-R
+printf '%s │ %b %s%% │ $%s.%s │ 5h:%s%%' \
+  "$MODEL" "$BAR" "$PCT_INT" "${COST_INT:-0}" "${COST_DEC:-00}" "$RATE_5H_INT"
+
+# Reset time (only if available)
+RESET_TIME=$(format_reset_time "$RATE_5H_RESETS")
+[ -n "$RESET_TIME" ] && printf ' ~%s' "$RESET_TIME"
+
+# Branch + changed file count + diff lines
 if [ -n "$BRANCH" ]; then
-  printf '  │  %s' "$BRANCH"
+  printf ' │ %s' "$BRANCH"
+  [ "$GIT_FILES" -gt 0 ] 2>/dev/null && printf ' %sfiles' "$GIT_FILES"
+  { [ "$LINES_ADDED" -gt 0 ] || [ "$LINES_REMOVED" -gt 0 ]; } 2>/dev/null && \
+    printf ' +%s/-%s' "$LINES_ADDED" "$LINES_REMOVED"
 fi
 
 printf '\n'
