@@ -61,8 +61,6 @@ CONTEXT_PCT=$(ensure_num "$(json_nested_val "context_window" "used_percentage")"
 COST=$(ensure_num "$(json_val "total_cost_usd")")
 RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
 RATE_5H_RESETS=$(ensure_num "$(json_nested_val "five_hour" "resets_at")")
-LINES_ADDED=$(ensure_num "$(json_val "total_lines_added")")
-LINES_REMOVED=$(ensure_num "$(json_val "total_lines_removed")")
 # JSON branch (worktree session only); fall back to git for normal sessions
 BRANCH=$(sanitize "$(json_val "branch")")
 [ -z "$BRANCH" ] && BRANCH=$(sanitize "$(timeout 2 git branch --show-current 2>/dev/null)")
@@ -73,8 +71,6 @@ MODEL=${MODEL:-"?"}
 CONTEXT_PCT=${CONTEXT_PCT:-0}
 COST=${COST:-0}
 RATE_5H=${RATE_5H:-0}
-LINES_ADDED=${LINES_ADDED:-0}
-LINES_REMOVED=${LINES_REMOVED:-0}
 
 # Progress bar with color (green < 50%, yellow < 80%, red >= 80%)
 BAR_WIDTH=10
@@ -112,9 +108,14 @@ fi
 RATE_5H_INT=$(printf "%.0f" "$RATE_5H" 2>/dev/null || echo 0)
 [[ "$RATE_5H_INT" =~ ^[0-9]+$ ]] || RATE_5H_INT=0
 
-# Git changed file count (working tree + staged)
-GIT_FILES=$(timeout 2 git diff --numstat HEAD 2>/dev/null | wc -l | tr -d ' ')
+# Git stats: file count, lines added, lines removed (all from same source)
+GIT_NUMSTAT=$(timeout 2 git diff --numstat HEAD 2>/dev/null)
+GIT_FILES=$(printf '%s' "$GIT_NUMSTAT" | grep -c .)
+GIT_ADDED=$(printf '%s' "$GIT_NUMSTAT" | awk '{s+=$1} END {printf "%d", s+0}')
+GIT_REMOVED=$(printf '%s' "$GIT_NUMSTAT" | awk '{s+=$2} END {printf "%d", s+0}')
 [[ "$GIT_FILES" =~ ^[0-9]+$ ]] || GIT_FILES=0
+[[ "$GIT_ADDED" =~ ^[0-9]+$ ]] || GIT_ADDED=0
+[[ "$GIT_REMOVED" =~ ^[0-9]+$ ]] || GIT_REMOVED=0
 
 # Line 1: 🤖 Model [Agent] [Style] │ Bar PCT% │ $Cost │ 5h:Rate% ~Reset
 RESET_TIME=$(format_reset_time "$RATE_5H_RESETS")
@@ -129,9 +130,7 @@ printf '%s │ %s %s%% │ $%s.%s │ 5h:%s%%' \
 # Line 2: 🌳 Branch Nfiles +A/-R (only when branch exists)
 if [ -n "$BRANCH" ]; then
   printf '\n🌳 %s' "$BRANCH"
-  [ "$GIT_FILES" -gt 0 ] 2>/dev/null && printf ' %s files' "$GIT_FILES"
-  { [ "$LINES_ADDED" -gt 0 ] || [ "$LINES_REMOVED" -gt 0 ]; } 2>/dev/null && \
-    printf ' +%s/-%s' "$LINES_ADDED" "$LINES_REMOVED"
+  [ "$GIT_FILES" -gt 0 ] 2>/dev/null && printf ' %s files +%s/-%s' "$GIT_FILES" "$GIT_ADDED" "$GIT_REMOVED"
 fi
 
 printf '\n'
