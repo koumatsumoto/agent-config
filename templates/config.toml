@@ -19,10 +19,9 @@ sandbox_mode = "workspace-write"
 model_reasoning_effort = "medium"
 
 [tui]
-# Closest built-in Codex equivalent to the Claude Code status bar:
-# model + context + git branch + current directory.
-# Codex does not currently expose session cost via config.toml status items.
-status_line = ["model-with-reasoning", "context-remaining", "git-branch", "current-dir"]
+# Synced from the current interactive /statusline selection.
+# Shows model/git/current dir plus context, 5h limit, and token counters.
+status_line = ["model-with-reasoning", "git-branch", "current-dir", "model-name", "context-used", "five-hour-limit", "used-tokens", "total-input-tokens", "total-output-tokens"]
 
 [notice.model_migrations]
 gpt-5-codex = "gpt-5.4"
