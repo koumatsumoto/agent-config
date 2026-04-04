@@ -1,6 +1,6 @@
 # agent-config
 
-Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理するための構成です。
+Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理するリポジトリです。
 
 ## 対応CLI
 
@@ -9,22 +9,22 @@ Claude Code と OpenAI Codex CLI の設定を同じリポジトリで管理す�
 
 ## 運用ポリシー
 
-- **編集元は Claude-first**: このリポジトリ内の `templates/` 配下 (`CLAUDE.md` / `agents/` / `rules/` / `skills/`) を編集する
-- Codex 側の `~/.codex/AGENTS.md` は反映先。**直接編集しない**
-- 二重管理を避けるため、インストール時はリンク優先（必要ならコピーへフォールバック）
-- サブエージェントは最小構成を維持し、不要になったものは削除する
-- 1 タスク 1 主担当を基本にし、独立検証のみ並列化する
-- Codex CLI は `agents/` を直接読まないため、`AGENTS.md` / `rules` / `skills` を正とする
+- 編集元は `templates/` 配下。反映先の `~/.claude/` と `~/.codex/` は直接編集しない
+- Codex 側は `AGENTS.md` を正とし、互換のため `CLAUDE.md` も fallback 対象にする
+- Claude 側は `CLAUDE.md` を正とし、`templates/CLAUDE.md` は Claude Code 専用方針として保つ
+- ターミナル運用を前提に、共通方針は「最小限の確認で前進」「差分と検証を重視」「client 標準機能を優先」で揃える
+- インストールはコピー方式で行い、既存ファイルは `*.bak` に退避する
 
 ## ディレクトリ構造
 
 - `templates/` - デプロイ対象のテンプレート群
-  - `CLAUDE.md` - 共通エージェント方針（Claude と Codex AGENTS で共用）
+  - `CLAUDE.md` - Claude Code 専用の共通エージェント方針
+  - `AGENTS.md` - Codex CLI 向けの共通エージェント方針
   - `rules/` - ルール定義
   - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
   - `keybindings.json` - キーバインド設定（Shift+Enter で改行）
   - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・5hレート制限・ブランチ）
-  - `config.toml` - Codex CLI 用の最小設定テンプレート
+  - `config.toml` - Codex CLI 用の terminal-first 設定テンプレート
 - `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
 - `docs/` - プロジェクトドキュメント
@@ -47,7 +47,7 @@ bash install.sh
   - `keybindings.json`（`templates/keybindings.json` から反映）
   - `statusline.sh`（`templates/statusline.sh` から反映、`chmod 700`）
 - `~/.codex/`:
-  - `AGENTS.md`（`templates/CLAUDE.md` から反映）
+  - `AGENTS.md`（`templates/AGENTS.md` から反映）
   - `config.toml`（`templates/config.toml` から反映）
 - `~/.agents/`:
   - `skills/`（`templates/skills/` から反映）
@@ -84,23 +84,24 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 ./scripts/pack-md.sh -i README.md
 ```
 
-## OS別メモ
+## Codex 設定方針
 
-- Ubuntu/Linux:
-  - 通常は symlink で反映される
-- Windows (Git Bash):
-  - シンボリックリンク権限が不足する環境では自動でコピーへフォールバック
+- デフォルトは `workspace-write + on-request`
+- `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `live_web` profile へ分離
+- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
+- profile を分けて `deep`、`readonly`、`live_web`、`fast` を切り替える
+- `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保つ
 
 ## 反映先マッピング
 
 | Repository Source | Destination |
 | --- | --- |
 | `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/keybindings.json` | `~/.claude/keybindings.json` |
 | `templates/statusline.sh` | `~/.claude/statusline.sh` |
-| `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/skills/` | `~/.agents/skills/` |
 
