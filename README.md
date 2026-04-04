@@ -51,9 +51,6 @@ bash install.sh
   - `config.toml`（`templates/config.toml` から反映）
 - `~/.agents/`:
   - `skills/`（`templates/skills/` から反映）
-- シェル設定:
-  - `~/.bashrc`, `~/.zshrc`, `~/.profile` に managed block を追加
-  - `VISUAL` / `EDITOR` を `code --wait` に設定
 
 `install.sh` は引数なしで、Claude/Codex の両方を一括反映します。
 
@@ -63,7 +60,6 @@ bash install.sh
 
 - **ステータスライン** (`statusline.sh`): モデル名・コンテキスト使用率（色付きプログレスバー）・セッションコスト・5時間レート制限・Git ブランチを常時表示
 - **キーバインド** (`keybindings.json`): `Shift+Enter` で改行
-- **外部エディタ**: `VISUAL` / `EDITOR` を `code --wait` に設定し、Codex / Claude Code のプロンプトエディタを VS Code で開けるようにする
 
 ステータスラインを有効にするには `settings.json` に以下を追加（パスは自分の環境に合わせる）:
 
@@ -78,6 +74,22 @@ bash install.sh
 ```
 
 通知フック、Output Styles、permissions のセキュリティハードニング等の詳細は `docs/claude-code-terminal-customization.md` を参照。
+
+### 外部エディタを VS Code にする
+
+Codex CLI / Claude Code の prompt editor を VS Code で開きたい場合は、シェル側で `VISUAL` または `EDITOR` を設定する。`code` コマンドが使える前提で、`--wait` を付ける。
+
+```bash
+export VISUAL="code --wait"
+export EDITOR="code --wait"
+```
+
+永続化する場合は、利用中のシェル設定ファイルに追記する:
+
+- `bash`: `~/.bashrc`
+- `zsh`: `~/.zshrc`
+
+反映後はターミナルを開き直すか、設定ファイルを `source` してから CLI を起動する。
 
 ## Markdown 軽量化
 
@@ -95,7 +107,7 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
 - profile を分けて `deep`、`readonly`、`live_web`、`fast` を切り替える
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保つ
-- 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ね、`install.sh` で `code --wait` を設定する
+- 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねる
 
 ## 反映先マッピング
 
