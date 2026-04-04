@@ -75,6 +75,22 @@ bash install.sh
 
 通知フック、Output Styles、permissions のセキュリティハードニング等の詳細は `docs/claude-code-terminal-customization.md` を参照。
 
+### 外部エディタを VS Code にする
+
+Codex CLI / Claude Code の prompt editor を VS Code で開きたい場合は、シェル側で `VISUAL` または `EDITOR` を設定する。`code` コマンドが使える前提で、`--wait` を付ける。
+
+```bash
+export VISUAL="code --wait"
+export EDITOR="code --wait"
+```
+
+永続化する場合は、利用中のシェル設定ファイルに追記する:
+
+- `bash`: `~/.bashrc`
+- `zsh`: `~/.zshrc`
+
+反映後はターミナルを開き直すか、設定ファイルを `source` してから CLI を起動する。
+
 ## Markdown 軽量化
 
 AI に渡す前の Markdown から余分な空白やテーブルのパディングを減らしたい場合は `scripts/pack-md.sh` を使います。
@@ -91,6 +107,7 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
 - profile を分けて `deep`、`readonly`、`live_web`、`fast` を切り替える
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保つ
+- 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねる
 
 ## 反映先マッピング
 

@@ -71,6 +71,15 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 `Shift+Enter` で改行を設定すると、複数行入力が容易になる。送信キー（デフォルト `Enter`）はそのまま維持するのが一般的。
 
+`chat:externalEditor` (`Ctrl+G`) を VS Code で使いたい場合は、Claude Code を起動するシェルで `VISUAL` または `EDITOR` を設定する。
+
+```bash
+export VISUAL="code --wait"
+export EDITOR="code --wait"
+```
+
+`bash` なら `~/.bashrc`、`zsh` なら `~/.zshrc` に追記してからシェルを再起動する。
+
 ## 3. Output Styles
 
 `/config` → Output style で選択するか、カスタムスタイルを作成する。
