@@ -50,11 +50,17 @@ install_executable() {
   chmod 700 "$dest"
 }
 
+install_template_file() {
+  local name="$1"
+  local dest_dir="$2"
+  install_item "$REPO_ROOT/templates/$name" "$dest_dir/$name"
+}
+
 echo "Install Claude + Codex configuration"
-install_item "$REPO_ROOT/templates/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+install_template_file "CLAUDE.md" "$HOME/.claude"
 install_item "$REPO_ROOT/templates/rules" "$HOME/.claude/rules"
 install_item "$REPO_ROOT/templates/skills" "$HOME/.claude/skills"
-install_item "$REPO_ROOT/templates/keybindings.json" "$HOME/.claude/keybindings.json"
+install_template_file "keybindings.json" "$HOME/.claude"
 chmod 600 "$HOME/.claude/keybindings.json" || echo "WARN: failed to set permissions on keybindings.json" >&2
 install_executable "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statusline.sh"
 
@@ -62,8 +68,8 @@ install_executable "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statuslin
 chmod 700 "$HOME/.codex/" 2>/dev/null || true
 chmod 700 "$HOME/.agents/" 2>/dev/null || true
 
-install_item "$REPO_ROOT/templates/AGENTS.md" "$HOME/.codex/AGENTS.md"
-install_item "$REPO_ROOT/templates/config.toml" "$HOME/.codex/config.toml"
+install_template_file "AGENTS.md" "$HOME/.codex"
+install_template_file "config.toml" "$HOME/.codex"
 install_item "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
 
 # ~/.claude/ permissions already set at script start (umask 077 + chmod 700)
