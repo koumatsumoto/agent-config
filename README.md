@@ -11,14 +11,14 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
 
 - 編集元は `templates/` 配下。反映先の `~/.claude/` と `~/.codex/` は直接編集しない
 - Codex 側は `AGENTS.md` を正とし、互換のため `CLAUDE.md` も fallback 対象にする
-- Claude 側は `CLAUDE.md` を正とする
+- Claude 側は `CLAUDE.md` を正とし、`templates/CLAUDE.md` は Claude Code 専用方針として保つ
 - ターミナル運用を前提に、共通方針は「最小限の確認で前進」「差分と検証を重視」「client 標準機能を優先」で揃える
 - インストールはコピー方式で行い、既存ファイルは `*.bak` に退避する
 
 ## ディレクトリ構造
 
 - `templates/` - デプロイ対象のテンプレート群
-  - `CLAUDE.md` - Claude Code 向けの共通エージェント方針
+  - `CLAUDE.md` - Claude Code 専用の共通エージェント方針
   - `AGENTS.md` - Codex CLI 向けの共通エージェント方針
   - `rules/` - ルール定義
   - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
