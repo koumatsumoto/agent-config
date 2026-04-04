@@ -28,3 +28,4 @@ projects/
 # ===== OS固有 =====
 .DS_Store
 Thumbs.db
+.codex

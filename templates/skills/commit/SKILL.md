@@ -58,5 +58,5 @@ feat(auth): JWT トークンのリフレッシュ機能を追加
 
 - `git add -A` / `git add .` は使わない（必ず個別にファイルを指定する）
 - `git commit --no-verify` は使わない（pre-commit hook をバイパスしない）
-- push はユーザーが明示した場合のみ実行する
+- push は他のスキルや明示的な指示で求められた場合のみ実行する
 - `--force` / `-f` push はしない（ユーザーが指示しても確認を求める）
