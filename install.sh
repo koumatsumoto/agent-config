@@ -62,7 +62,7 @@ install_executable "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statuslin
 chmod 700 "$HOME/.codex/" 2>/dev/null || true
 chmod 700 "$HOME/.agents/" 2>/dev/null || true
 
-install_item "$REPO_ROOT/templates/CLAUDE.md" "$HOME/.codex/AGENTS.md"
+install_item "$REPO_ROOT/templates/AGENTS.md" "$HOME/.codex/AGENTS.md"
 install_item "$REPO_ROOT/templates/config.toml" "$HOME/.codex/config.toml"
 install_item "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
 

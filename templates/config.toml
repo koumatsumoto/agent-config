@@ -1,27 +1,41 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
 # OpenAI Codex CLI base configuration managed by agent-config.
-# Copy/link this file to ~/.codex/config.toml via scripts/install.sh.
+# Copy this file to ~/.codex/config.toml via install.sh.
 
-# Primary model used by Codex CLI.
 model = "gpt-5.4"
-
-# Approval policy:
-# - untrusted
-# - on-failure
-# - on-request
-# - never
-approval_policy = "on-request"
-
-# Sandbox mode:
-# - read-only
-# - workspace-write
-# - danger-full-access
-sandbox_mode = "workspace-write"
 model_reasoning_effort = "medium"
+personality = "pragmatic"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+project_doc_fallback_filenames = ["CLAUDE.md"]
 
 [tui]
-# Synced from the current interactive /statusline selection.
-# Shows model/git/current dir plus context, 5h limit, and token counters.
-status_line = ["model-with-reasoning", "git-branch", "current-dir", "model-name", "context-used", "five-hour-limit", "used-tokens", "total-input-tokens", "total-output-tokens"]
+alternate_screen = "never"
+notifications = true
+notification_method = "auto"
+show_tooltips = false
+animations = false
+status_line = ["git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens"]
+
+[history]
+persistence = "save-all"
+max_bytes = 50000000
+
+[profiles.deep]
+model_reasoning_effort = "high"
+
+[profiles.readonly]
+approval_policy = "never"
+sandbox_mode = "read-only"
+
+[profiles.live_web]
+web_search = "live"
+
+[profiles.fast]
+service_tier = "fast"
+model_reasoning_effort = "medium"
 
 [notice.model_migrations]
 gpt-5-codex = "gpt-5.4"
