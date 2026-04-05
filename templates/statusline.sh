@@ -2,7 +2,7 @@
 # Claude Code Status Line
 # Reads JSON from stdin (provided by Claude Code), outputs a formatted status bar.
 # Two-line layout:
-#   Line 1: 🤖 model [agent] [style] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
+#   Line 1: 🤖 model [agent] [style] [effort] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 #   Line 2: 🌳 branch Nfiles +A/-R (only when git branch exists)
 # Rate limits: 5h always shown, 7d shown >= 20%. Yellow >= 50%, red >= 80%.
 # Context bar turns red-background at >= 90%.
@@ -61,9 +61,8 @@ json_val() {
 
 # Pure bash nested JSON value extractor (no fork)
 # Usage: json_nested_val "five_hour" "used_percentage"
-# LIMITATION: Assumes no nested sub-objects within parent. Scope is defined
-# by the first "}" after the parent key. If parent contains nested objects,
-# child keys after the inner "}" will not be found.
+# LIMITATION: No scoping — searches for child key anywhere after parent key.
+# Works when child key is unique or appears first within the parent object.
 # IMPORTANT: Arguments must be literal strings only. Do not pass external input.
 json_nested_val() {
   [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || return 1
@@ -72,7 +71,9 @@ json_nested_val() {
   local child_key="\"$2\""
   local rest="${INPUT#*$parent_key}"
   [[ "$rest" == "$INPUT" ]] && return 1
-  rest="${rest%%\}*}"  # scope to parent object (first }). See LIMITATION above.
+  # Scoping removed: %%\}* broke when parent contained nested objects (e.g.,
+  # context_window.current_usage). First match of child_key after parent is used.
+  # For reliable parsing, the jq-based extraction path is preferred.
   local inner="${rest#*$child_key}"
   [[ "$inner" == "$rest" ]] && return 1
   inner="${inner#*:}"
@@ -85,7 +86,7 @@ json_nested_val() {
 # Ensure value is numeric, fallback to 0
 ensure_num() {
   local val="$1"
-  if [[ "$val" =~ ^[0-9]{1,10}\.?[0-9]{0,4}$ ]]; then
+  if [[ "$val" =~ ^[0-9]{1,10}\.?[0-9]{0,10}$ ]]; then
     printf '%s' "$val"
   else
     printf '0'
@@ -126,17 +127,66 @@ format_rate_section() {
 
 # --- Data extraction ---
 
-MODEL=$(sanitize "$(json_val "display_name")")
-CONTEXT_PCT=$(ensure_num "$(json_nested_val "context_window" "used_percentage")")
-COST=$(ensure_num "$(json_val "total_cost_usd")")
-RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
-RATE_5H_RESETS=$(ensure_num "$(json_nested_val "five_hour" "resets_at")")
-RATE_7D=$(ensure_num "$(json_nested_val "seven_day" "used_percentage")")
-RATE_7D_RESETS=$(ensure_num "$(json_nested_val "seven_day" "resets_at")")
-# JSON branch (worktree session only); git fallback handled below
-BRANCH=$(sanitize "$(json_val "branch")")
-AGENT_NAME=$(sanitize "$(json_nested_val "agent" "name")")
-OUTPUT_STYLE=$(sanitize "$(json_nested_val "output_style" "name")")
+# Primary: jq (single fork, reliable JSON parsing for nested objects)
+if command -v jq >/dev/null 2>&1; then
+  JQ_OUT=$(printf '%s' "$INPUT" | jq -r '[
+    (.model.display_name // ""),
+    ((.context_window.used_percentage // 0) | tostring),
+    ((.cost.total_cost_usd // 0) | tostring),
+    ((.rate_limits.five_hour.used_percentage // 0) | tostring),
+    ((.rate_limits.five_hour.resets_at // 0) | tostring),
+    ((.rate_limits.seven_day.used_percentage // 0) | tostring),
+    ((.rate_limits.seven_day.resets_at // 0) | tostring),
+    (.output_style.name // ""),
+    (.agent.name // ""),
+    (.worktree.branch // "")
+  ] | @tsv' 2>/dev/null)
+
+  if [ -n "$JQ_OUT" ]; then
+    IFS=$'\t' read -r MODEL CONTEXT_PCT COST RATE_5H RATE_5H_RESETS RATE_7D RATE_7D_RESETS OUTPUT_STYLE AGENT_NAME BRANCH <<< "$JQ_OUT"
+    # Apply same defenses as bash fallback path
+    MODEL=$(sanitize "$MODEL")
+    AGENT_NAME=$(sanitize "$AGENT_NAME")
+    OUTPUT_STYLE=$(sanitize "$OUTPUT_STYLE")
+    BRANCH=$(sanitize "$BRANCH")
+    CONTEXT_PCT=$(ensure_num "$CONTEXT_PCT")
+    COST=$(ensure_num "$COST")
+    RATE_5H=$(ensure_num "$RATE_5H")
+    RATE_5H_RESETS=$(ensure_num "$RATE_5H_RESETS")
+    RATE_7D=$(ensure_num "$RATE_7D")
+    RATE_7D_RESETS=$(ensure_num "$RATE_7D_RESETS")
+  fi
+fi
+
+# Fallback: pure bash extraction (for systems without jq)
+if [ -z "$MODEL" ]; then
+  MODEL=$(sanitize "$(json_val "display_name")")
+  CONTEXT_PCT=$(ensure_num "$(json_nested_val "context_window" "used_percentage")")
+  COST=$(ensure_num "$(json_val "total_cost_usd")")
+  RATE_5H=$(ensure_num "$(json_nested_val "five_hour" "used_percentage")")
+  RATE_5H_RESETS=$(ensure_num "$(json_nested_val "five_hour" "resets_at")")
+  RATE_7D=$(ensure_num "$(json_nested_val "seven_day" "used_percentage")")
+  RATE_7D_RESETS=$(ensure_num "$(json_nested_val "seven_day" "resets_at")")
+  # JSON branch (worktree session only); git fallback handled below
+  BRANCH=$(sanitize "$(json_val "branch")")
+  AGENT_NAME=$(sanitize "$(json_nested_val "agent" "name")")
+  OUTPUT_STYLE=$(sanitize "$(json_nested_val "output_style" "name")")
+fi
+
+# Effort level: not in statusline JSON, read from settings.json
+SETTINGS_FILE="${HOME}/.claude/settings.json"
+if [ -f "$SETTINGS_FILE" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    EFFORT_LEVEL=$(jq -r '.effortLevel // empty' "$SETTINGS_FILE" 2>/dev/null)
+  fi
+  if [ -z "$EFFORT_LEVEL" ]; then
+    EFFORT_LEVEL=$(grep -o '"effortLevel" *: *"[^"]*"' "$SETTINGS_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/".*//')
+  fi
+fi
+# Capitalize first letter
+if [ -n "$EFFORT_LEVEL" ]; then
+  EFFORT_LEVEL="$(printf '%s' "${EFFORT_LEVEL:0:1}" | tr '[:lower:]' '[:upper:]')${EFFORT_LEVEL:1}"
+fi
 
 MODEL=${MODEL:-"?"}
 CONTEXT_PCT=${CONTEXT_PCT:-0}
@@ -224,10 +274,11 @@ RESET_7D=$(format_reset_time "$RATE_7D_RESETS" '+%^a.%-I%p')
 
 # --- Output ---
 
-# Line 1: 🤖 Model [Agent] [Style] │ Bar PCT% │ $Cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
+# Line 1: 🤖 Model [Agent] [Style] [Effort] │ Bar PCT% │ $Cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 LINE1="🤖 ${MODEL}"
 [ -n "$AGENT_NAME" ] && LINE1+=" ${AGENT_NAME}"
 [ -n "$OUTPUT_STYLE" ] && LINE1+=" [${OUTPUT_STYLE}]"
+[ -n "$EFFORT_LEVEL" ] && LINE1+=" [${EFFORT_LEVEL}]"
 printf '%s │ %s %s%% │ $%s.%s' \
   "$LINE1" "$BAR" "$PCT_INT" "${COST_INT:-0}" "${COST_DEC:-00}"
 format_rate_section "$RATE_5H_INT" "$RESET_5H" "5h" 0    # always show
