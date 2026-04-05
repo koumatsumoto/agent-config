@@ -52,7 +52,7 @@ bash install.sh
 - `~/.agents/`:
   - `skills/`（`templates/skills/` から反映）
 
-`install.sh` は引数なしで、Claude/Codex の両方を一括反映します。
+`install.sh` は引数なしで、Claude/Codex の両方を一括反映し、最後に `scripts/verify-install.sh` で配置結果を検証します。
 
 ## ターミナルカスタマイズ
 
@@ -103,13 +103,31 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 ## Codex 設定方針
 
 - デフォルトは `workspace-write + on-request`
-- `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `live_web` profile へ分離
+- `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `research` profile を基本に使う
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- profile を分けて `deep`、`readonly`、`live_web`、`fast` を切り替える
+- 互換性のため既存 profile (`deep`、`readonly`、`live_web`、`fast`) を残しつつ、用途別 profile (`research`、`review`、`quick`) を追加する
 - status line は組み込み項目のみを使い、モデル・Git・コンテキスト・5h 制限・トークン totals を常時確認できるようにする
 - 5h 制限のリセット時刻は内部イベントでは取得できるが、`codex-cli 0.118.0` の `tui.status_line` には専用表示項目がないため常時表示は未対応
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保つ
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねる
+- `templates/AGENTS.md` に Codex 固有の profile 選択、最新確認、レビュー基準を明示する
+
+### 推奨 profile
+
+- default: 通常の実装
+- `research`: 最新情報や外部仕様の確認
+- `review`: 読み取り専用のレビューと監査
+- `quick`: 軽い修正や定型作業
+
+## 検証
+
+インストール結果を単独で確認したい場合は以下を使います。
+
+```bash
+bash scripts/verify-install.sh
+```
+
+このスクリプトは、配置済みファイルが `templates/` と一致しているか、必要なパーミッションが維持されているかを確認します。
 
 ## 反映先マッピング
 

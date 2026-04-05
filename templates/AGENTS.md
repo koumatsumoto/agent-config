@@ -4,34 +4,37 @@
 
 ## 主要原則
 
-1. **Clarify First**: ユーザの指示は曖昧であることを前提とする。作業前に積極的に質問し、仕様の見落としがないことを確認してから着手する
-2. **Working Code First**: まず動くコードを素早く書き、ユーザに提示する。動いてから改善する
-3. **Refactor for Maintainability**: プログラムは成長する。動くコードが確認できたらリファクタリングし、保守性を確保する
-4. **Review Thoroughly**: 作業が終わったら必ず多角的にレビューする。最初の仕様に立ち返り、見落としがないか入念に確認する
+1. **Clarify, Then Commit**: 不明点が成果物に影響する場合は先に確認する。影響が軽微なら前提を明示して前進する
+2. **Use The Right Profile First**: 作業前に profile を選ぶ。通常実装は default、最新確認は `research`、レビューは `review`、高速な軽作業は `quick`
+3. **Verify Freshness Explicitly**: 最新情報、価格、仕様、法令、外部 API、ニュース性のある内容は cached search に頼らず `research` profile で確認する
+4. **Working Code First**: まず動く変更を作り、確認後に整える
+5. **Review Thoroughly**: 作業後は最初の依頼に立ち返ってレビューし、見落としを潰す
 
-## ワークフロー
+## Codex CLI 運用
 
-### 1. 仕様の詳細化
+### Profile の使い分け
 
-- ユーザの指示は曖昧であることを前提とする。何度でも質問し、仕様を詳細化する
-- 複雑な作業では Plan Mode で計画を作成してから着手する
+- default: `workspace-write + on-request + cached web`。通常の開発と調査
+- `research`: `workspace-write + on-request + live web + high reasoning`。最新確認や外部仕様調査
+- `review`: `read-only + never + cached web + high reasoning`。レビュー、監査、影響調査
+- `quick`: `workspace-write + on-request + cached web + fast tier`。定型修正や軽い確認
+- `readonly`: 読み取り専用で安全にコードベースを探索したいとき
 
-### 2. 実装
+### 調査ルール
 
-- まず動くコードを書く。完璧を目指さず、素早くユーザに提示する
-- 独立したタスクは並列実行し、効率的に作業を進める
+- 最新性が少しでも重要なら live web で一次情報を確認する
+- 既知のリポジトリ内情報は web より先にローカルファイルを読む
+- 外部仕様を参照したら、判断と事実を分けて要約する
 
-### 3. リファクタリング
+### 実装ルール
 
-- 動くコードが確認できたらリファクタリングする
-- 保守性・可読性・拡張性を意識し、将来の変更に備える
+- まず小さく動く差分を作り、その後に保守性を整える
+- 独立した調査や読み取りは並列化する
+- 破壊的操作、権限変更、外部書き込みは必要性を説明してから進める
+- 変更前後で確認手段を持つ。可能ならテスト、無理なら差分と静的確認を残す
 
-### 4. レビュー
+### レビューと完了
 
-- `/km:review` で包括的レビューを実行する（intent/code/quality/doc-review を自動判定・並列実行）
-- 個別に実行したい場合: `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を直接呼び出す
-- IMPORTANT: 最初の仕様に立ち返り、見落としがないか入念に確認する
-
-### 5. 完了
-
+- 実装後は `/km:review` を基準に確認する
+- 個別に実行したい場合: `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review`
 - レビューと検証が完了したら `/km:commit` でコミットする
