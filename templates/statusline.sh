@@ -2,7 +2,7 @@
 # Claude Code Status Line
 # Reads JSON from stdin (provided by Claude Code), outputs a formatted status bar.
 # Two-line layout:
-#   Line 1: 🤖 model [agent] [style] [effort] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
+#   Line 1: 🤖 model [agent] [style] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 #   Line 2: 🌳 branch Nfiles +A/-R (only when git branch exists)
 # Rate limits: 5h always shown, 7d shown >= 20%. Yellow >= 50%, red >= 80%.
 # Context bar turns red-background at >= 90%.
@@ -173,20 +173,6 @@ if [ -z "$MODEL" ]; then
   OUTPUT_STYLE=$(sanitize "$(json_nested_val "output_style" "name")")
 fi
 
-# Effort level: not in statusline JSON, read from settings.json
-SETTINGS_FILE="${HOME}/.claude/settings.json"
-if [ -f "$SETTINGS_FILE" ]; then
-  if command -v jq >/dev/null 2>&1; then
-    EFFORT_LEVEL=$(jq -r '.effortLevel // empty' "$SETTINGS_FILE" 2>/dev/null)
-  fi
-  if [ -z "$EFFORT_LEVEL" ]; then
-    EFFORT_LEVEL=$(grep -o '"effortLevel" *: *"[^"]*"' "$SETTINGS_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/".*//')
-  fi
-fi
-# Capitalize first letter
-if [ -n "$EFFORT_LEVEL" ]; then
-  EFFORT_LEVEL="$(printf '%s' "${EFFORT_LEVEL:0:1}" | tr '[:lower:]' '[:upper:]')${EFFORT_LEVEL:1}"
-fi
 
 MODEL=${MODEL:-"?"}
 CONTEXT_PCT=${CONTEXT_PCT:-0}
@@ -274,11 +260,10 @@ RESET_7D=$(format_reset_time "$RATE_7D_RESETS" '+%^a.%-I%p')
 
 # --- Output ---
 
-# Line 1: 🤖 Model [Agent] [Style] [Effort] │ Bar PCT% │ $Cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
+# Line 1: 🤖 Model [Agent] [Style] │ Bar PCT% │ $Cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 LINE1="🤖 ${MODEL}"
 [ -n "$AGENT_NAME" ] && LINE1+=" ${AGENT_NAME}"
 [ -n "$OUTPUT_STYLE" ] && LINE1+=" [${OUTPUT_STYLE}]"
-[ -n "$EFFORT_LEVEL" ] && LINE1+=" [${EFFORT_LEVEL}]"
 printf '%s │ %s %s%% │ $%s.%s' \
   "$LINE1" "$BAR" "$PCT_INT" "${COST_INT:-0}" "${COST_DEC:-00}"
 format_rate_section "$RATE_5H_INT" "$RESET_5H" "5h" 0    # always show
