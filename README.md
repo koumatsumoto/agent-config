@@ -106,6 +106,8 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 - `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `live_web` profile へ分離
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
 - profile を分けて `deep`、`readonly`、`live_web`、`fast` を切り替える
+- status line は組み込み項目のみを使い、モデル・Git・コンテキスト・5h 制限・トークン totals を常時確認できるようにする
+- 5h 制限のリセット時刻は内部イベントでは取得できるが、`codex-cli 0.118.0` の `tui.status_line` には専用表示項目がないため常時表示は未対応
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保つ
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねる
 
