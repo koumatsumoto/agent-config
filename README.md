@@ -23,7 +23,7 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
   - `rules/` - ルール定義
   - `skills/` - スキル定義（スラッシュコマンド + 参照スキル。Claude / Codex で共用）
   - `keybindings.json` - キーバインド設定（Shift+Enter で改行）
-  - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・5hレート制限・ブランチ）
+  - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・5h/7dレート制限・ブランチ。jq 推奨、bash fallback 対応）
   - `config.toml` - Codex CLI 用の terminal-first 設定テンプレート
 - `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
@@ -58,7 +58,7 @@ bash install.sh
 
 `install.sh` は以下のターミナルカスタマイズ設定も反映します:
 
-- **ステータスライン** (`statusline.sh`): モデル名・コンテキスト使用率（色付きプログレスバー）・セッションコスト・5時間レート制限・Git ブランチを常時表示
+- **ステータスライン** (`statusline.sh`): モデル名・コンテキスト使用率（色付きプログレスバー）・セッションコスト・5h/7dレート制限・Git ブランチを常時表示。jq 推奨（bash fallback あり）
 - **キーバインド** (`keybindings.json`): `Shift+Enter` で改行
 
 ステータスラインを有効にするには `settings.json` に以下を追加（パスは自分の環境に合わせる）:

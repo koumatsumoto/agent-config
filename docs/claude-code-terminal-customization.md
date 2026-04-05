@@ -28,17 +28,27 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 テンプレートの `templates/statusline.sh` を `~/.claude/statusline.sh` にコピーして使用する（`install.sh` で自動反映）。
 
+### 依存関係
+
+- **jq（推奨）**: primary パーサーとして使用。ネストされた JSON を正確にパースする。未インストールの場合は bash のみで動作する（fallback）
+- **bash 4+**: fallback パーサー、プログレスバー表示、カラー出力で使用
+
 ### スクリプトに渡される JSON フィールド
 
 |フィールド|説明|
 |---|---|
 |`model.display_name`|モデル名|
 |`context_window.used_percentage`|コンテキスト使用率|
-|`context_window.current_usage`|現在の使用トークン数|
+|`context_window.current_usage`|現在の使用トークン数（ネストオブジェクト）|
 |`context_window.context_window_size`|コンテキストウィンドウサイズ|
-|`cost.total_cost_usd`|セッションコスト|
-|`worktree.branch`|Git ブランチ名|
+|`cost.total_cost_usd`|セッションコスト（小数5桁以上の場合あり）|
 |`rate_limits.five_hour.used_percentage`|5時間レート制限の使用率|
+|`rate_limits.five_hour.resets_at`|5時間レート制限のリセット時刻（Unix epoch）|
+|`rate_limits.seven_day.used_percentage`|7日間レート制限の使用率|
+|`rate_limits.seven_day.resets_at`|7日間レート制限のリセット時刻（Unix epoch）|
+|`output_style.name`|出力スタイル名|
+|`agent.name`|エージェント名|
+|`worktree.branch`|Git ブランチ名（worktree セッション時）|
 
 ### セキュリティ上の注意
 
@@ -326,12 +336,23 @@ Windows 上で Claude Code を使用する場合、環境に応じた考慮が�
 - パスの形式が POSIX 風（`/c/Users/...`）になるが、`powershell.exe` 等の Windows バイナリは `C:/WINDOWS/...` のネイティブパスでも動作する
 - `chmod` はファイルシステムが NTFS の場合に制限がある。`install.sh` は `chmod` 失敗時に警告を出力する
 - `~/.claude/` は `C:/Users/<user>/.claude/` に対応する
+- **jq のインストール**: Git Bash には jq が含まれないため、`statusline.sh` の jq パスを有効にするには別途インストールが必要。未インストールでも bash fallback で動作するが、ネストされた JSON のパースに制限がある
+  ```bash
+  # Scoop (推奨)
+  scoop install jq
+  # または Chocolatey
+  choco install jq
+  ```
 
 **WSL2:**
 - `/mnt/c/` 経由で Windows ファイルシステムにアクセス可能。Bash コマンドで Windows 側のファイルを読み書きできる
 - フックで Windows プロセス（powershell.exe 等）を起動すると、Windows 側から `\\wsl$\` 経由で WSL2 ファイルシステムにアクセス可能
 - サンドボックスの `allowRead` / `allowWrite` で `/mnt/c/` へのアクセスを制限することを推奨
+- **jq のインストール**: 多くの WSL2 ディストリビューションではデフォルトで利用可能。未インストールの場合:
+  ```bash
+  sudo apt install jq
+  ```
 
 **共通:**
 - 通知フックでは `powershell.exe` をフルパスで指定し PATH 汚染を防止する（Git Bash: `C:/WINDOWS/...`、WSL2: `/mnt/c/WINDOWS/...`）
-- `statusline.sh` は bash スクリプトのため、Git Bash / WSL2 のどちらでも動作する
+- `statusline.sh` は jq（推奨）+ bash fallback の二段構成。Git Bash / WSL2 のどちらでも動作する
