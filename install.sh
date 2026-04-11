@@ -56,39 +56,41 @@ install_template_file() {
   install_item "$REPO_ROOT/templates/$name" "$dest_dir/$name"
 }
 
-set_tree_permissions() {
-  local root="$1"
-  local dir_mode="$2"
-  local file_mode="$3"
-  local executable_path="${4:-}"
-  local path
+sync_template_tree() {
+  local src_root="$1"
+  local dest_root="$2"
+  local dir_mode="$3"
+  local file_mode="$4"
+  local rel_path
+  local src_path
+  local dest_path
 
-  [[ -e "$root" ]] || return 0
+  mkdir -p "$dest_root"
+  chmod "$dir_mode" "$dest_root" 2>/dev/null || true
 
-  while IFS= read -r path; do
-    if [[ -d "$path" ]]; then
-      chmod "$dir_mode" "$path" 2>/dev/null || true
-    elif [[ -f "$path" ]]; then
-      if [[ -n "$executable_path" && "$path" == "$executable_path" ]]; then
-        chmod 700 "$path" 2>/dev/null || true
-      else
-        chmod "$file_mode" "$path" 2>/dev/null || true
-      fi
+  while IFS= read -r rel_path; do
+    src_path="$src_root/$rel_path"
+    dest_path="$dest_root/$rel_path"
+
+    if [[ -d "$src_path" ]]; then
+      mkdir -p "$dest_path"
+      chmod "$dir_mode" "$dest_path" 2>/dev/null || true
+    elif [[ -f "$src_path" ]]; then
+      install_item "$src_path" "$dest_path"
+      chmod "$file_mode" "$dest_path" 2>/dev/null || true
     fi
-  done < <(find "$root" \( -type d -o -type f \) | sort)
+  done < <(cd "$src_root" && find . -mindepth 1 \( -type d -o -type f \) | sed 's#^\./##' | sort)
 }
 
 echo "Install Claude + Codex configuration"
 install_template_file "CLAUDE.md" "$HOME/.claude"
-install_item "$REPO_ROOT/templates/rules" "$HOME/.claude/rules"
-install_item "$REPO_ROOT/templates/skills" "$HOME/.claude/skills"
+sync_template_tree "$REPO_ROOT/templates/rules" "$HOME/.claude/rules" "700" "600"
+sync_template_tree "$REPO_ROOT/templates/skills" "$HOME/.claude/skills" "700" "600"
 install_template_file "keybindings.json" "$HOME/.claude"
 install_executable "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statusline.sh"
 chmod 700 "$HOME/.claude" 2>/dev/null || true
 chmod 600 "$HOME/.claude/CLAUDE.md" 2>/dev/null || true
 chmod 600 "$HOME/.claude/keybindings.json" 2>/dev/null || echo "WARN: failed to set permissions on keybindings.json" >&2
-set_tree_permissions "$HOME/.claude/rules" "700" "600"
-set_tree_permissions "$HOME/.claude/skills" "700" "600"
 
 # Harden other deployment directories (umask 077 covers new dirs, chmod for existing)
 chmod 700 "$HOME/.codex/" 2>/dev/null || true
@@ -96,10 +98,9 @@ chmod 700 "$HOME/.agents/" 2>/dev/null || true
 
 install_template_file "AGENTS.md" "$HOME/.codex"
 install_template_file "config.toml" "$HOME/.codex"
-install_item "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
+sync_template_tree "$REPO_ROOT/templates/skills" "$HOME/.agents/skills" "700" "600"
 chmod 600 "$HOME/.codex/AGENTS.md" 2>/dev/null || true
 chmod 600 "$HOME/.codex/config.toml" 2>/dev/null || true
-set_tree_permissions "$HOME/.agents/skills" "700" "600"
 
 # ~/.claude/ permissions already set at script start (umask 077 + chmod 700)
 echo "Verify deployed files"

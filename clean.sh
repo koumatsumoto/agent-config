@@ -16,14 +16,15 @@ remove_item() {
 }
 
 # Note: The following are intentionally NOT removed by clean.sh:
-#   - ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.codex/config.toml
-#     (users may have added custom content to these files)
-#   - ~/.claude/ directory permissions (chmod 700 applied by install.sh)
-#     (the directory may contain credentials and other sensitive files)
+#   - ~/.claude/, ~/.codex/, ~/.agents/ directory permissions
+#     (these directories may contain credentials and other sensitive files)
 echo "Clean Claude + Codex configuration"
+remove_item "$HOME/.claude/CLAUDE.md"
 remove_item "$HOME/.claude/rules"
 remove_item "$HOME/.claude/skills"
 remove_item "$HOME/.claude/keybindings.json"
 remove_item "$HOME/.claude/statusline.sh"
+remove_item "$HOME/.codex/AGENTS.md"
+remove_item "$HOME/.codex/config.toml"
 remove_item "$HOME/.agents/skills"
 echo "done"
