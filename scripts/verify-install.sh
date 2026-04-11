@@ -62,6 +62,7 @@ check_managed_tree() {
     record_failure "missing: $dest_root"
     return
   fi
+  check_mode "$dest_root" "$dir_mode"
 
   while IFS= read -r rel_path; do
     src_path="$src_root/$rel_path"
