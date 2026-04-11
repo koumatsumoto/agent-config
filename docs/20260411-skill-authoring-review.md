@@ -61,9 +61,9 @@
 
 ## 採用した改善方針
 
-1. `km:review` を唯一のレビュー入口として残し、下位 review skill は manual-only に寄せる
-2. `km:commit` と `km:github-workflow` を明示的起動専用にする
-3. Codex 向けに `agents/openai.yaml` を追加し、Claude 側の `disable-model-invocation: true` と整合させる
+1. `km:review` を既定のレビュー入口として残し、下位 review skill は manual-only に寄せる
+2. `km:commit` と `km:github-workflow` は自然言語要求から起動しうる workflow skill として維持する
+3. Codex 向けに `agents/openai.yaml` を追加し、Claude 側の manual-only 設定と「暗黙起動を抑える」という目的を揃える
 4. 各 skill から背景説明を削り、success criteria / stop conditions / output requirements を前に出す
 5. README と共通ガイドラインにも manual-only / orchestrator-first を反映する
 
@@ -72,13 +72,13 @@
 ### 維持したもの
 
 - `km:review` の orchestrator 設計
+- `km:review` を auto-invocable な既定入口として残す判断
 - `quality-review/quality-patterns.md` への詳細委譲
 - report-format を skill ごとに持つ構成
 
 ### 変更したもの
 
 - review subskills の自動起動
-- side-effect skill の自動起動
 - 各 skill の導入文と workflow 記述
 - README / AGENTS / CLAUDE での skill 利用方針
 
@@ -94,4 +94,10 @@
 - 自動起動ノイズの削減
 - `km:review` へのルーティング一貫性
 - skill 本体の可読性向上
-- Claude / Codex 間の invocation policy の整合
+- Claude / Codex 間で「暗黙起動を抑える目的」を共有しつつ、実装差異を明示できる
+
+## 実装差異の注意
+
+- Claude の `disable-model-invocation: true` は、モデルからの自動起動を止めるだけでなく、その skill を常時コンテキストから外す
+- Codex の `allow_implicit_invocation: false` は、暗黙選択を止める metadata であり、明示起動や skill metadata の扱いは Claude と同一ではない
+- そのため両者は「同じ機能」ではなく、「暗黙起動を抑える」という目的が近い設定として扱う

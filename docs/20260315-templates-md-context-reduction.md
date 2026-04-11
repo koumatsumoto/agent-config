@@ -1,6 +1,6 @@
 # templates 配下 Markdown のコンテキスト削減方針
 
-> 2026-04-11 更新: skill の invocation policy と横断評価は [20260411-skill-authoring-review.md](./20260411-skill-authoring-review.md) を正とする。この文書は主に context 削減の観点を残す。
+> 2026-04-11 更新: skill の invocation policy と横断評価は [20260411-skill-authoring-review.md](./20260411-skill-authoring-review.md) を正とする。この文書は主に context 削減の観点を残す。運用判断では新文書を優先し、この文書は補助資料として扱う。
 
 `templates/skills/` 配下の Markdown を、精度を維持しながらコンテキスト負荷を下げるための方針。最新の Claude Code skill 運用と `docs/claude-code-best-practices-2026.md` を前提とする。
 

@@ -35,7 +35,7 @@ disable-model-invocation: true
 Quick の優先観点:
 
 - `test`: 保守性、信頼性、危険な緩和
-- `config / chore`: セキュリティ、信頼性、性能、互換性
+- `config / chore`: セキュリティ、信頼性、性能、互換性、安全性、柔軟性
 
 ## Phase 2: 品質特性レビュー
 

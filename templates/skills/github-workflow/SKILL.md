@@ -1,7 +1,6 @@
 ---
 name: km:github-workflow
-description: Runs the branch-review-commit-push-PR workflow for a GitHub repository. Use only when the user explicitly asks for branch work, a PR, or end-to-end GitHub delivery.
-disable-model-invocation: true
+description: Runs the branch-review-commit-push-PR workflow for a GitHub repository. Use when the user asks for a branch, a PR, or end-to-end GitHub delivery.
 ---
 
 # GitHub Workflow
@@ -32,6 +31,7 @@ GitHub 管理リポジトリで、ブランチ作成から PR 作成までを完
 |作業ブランチ + 未コミット変更あり|Phase 2|
 |作業ブランチ + 未 push コミットあり|Phase 3|
 |push 済みで PR 未作成|Phase 3 の PR 作成|
+|push 済みで既存 PR あり|Phase 3 の PR 更新確認|
 
 無関係な未コミット変更や別件ブランチの疑いがあれば、先にユーザーへ確認する。
 
@@ -52,7 +52,7 @@ GitHub 管理リポジトリで、ブランチ作成から PR 作成までを完
 
 8. `/km:commit` でコミットする
 9. ブランチを push する
-10. GitHub で PR を作成する
+10. 既存 PR があれば再利用し、なければ GitHub で PR を作成する
 11. PR URL、変更要約、見てほしい論点を共有する
 
 ## Decision Rules

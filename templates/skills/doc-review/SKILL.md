@@ -79,4 +79,6 @@ disable-model-invocation: true
 - `MEDIUM`: 整合性不足、曖昧さ、更新漏れ
 - `LOW`: 微小改善
 
+明確な事実誤認ではなくても、構造上の違和感や読者を迷わせる構成問題が実害を持つ場合は `MEDIUM` として報告する。
+
 `CRITICAL` または `HIGH` があればコミットをブロックする。出力形式は `report-format.md` を参照。

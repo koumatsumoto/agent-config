@@ -12,6 +12,7 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
 - 編集元は `templates/` 配下。反映先の `~/.claude/` と `~/.codex/` は直接編集しない
 - Codex 側は `AGENTS.md` を正とし、互換のため `CLAUDE.md` も fallback 対象にする
 - Claude 側は `CLAUDE.md` を正とし、`templates/CLAUDE.md` は Claude Code 専用方針として保つ
+- Clarify 方針は client ごとに分ける。Codex 側は前進優先、Claude 側は確認強めを維持する
 - ターミナル運用を前提に、共通方針は「最小限の確認で前進」「差分と検証を重視」「client 標準機能を優先」で揃える
 - インストールはテンプレート管理対象のみを同期し、上書き対象ファイルは `*.bak` に退避する
 
@@ -192,13 +193,13 @@ bash clean.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | 包括的レビューオーケストレーター（intent/code/quality/doc-review を自動判定・並列実行） |
+| `km:review` | 既定のレビュー入口。変更種別と会話コンテキストに応じて intent/code/quality/doc-review を選別して統合する |
 | `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（個別レビュー用、明示起動のみ） |
 | `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー（明示起動のみ） |
 | `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー（明示起動のみ） |
 | `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー（明示起動のみ） |
-| `km:commit` | Conventional Commits 形式で git commit（明示起動のみ） |
-| `km:github-workflow` | ブランチ作成、レビュー、commit、push、PR 作成までの GitHub ワークフロー（明示起動のみ） |
+| `km:commit` | Conventional Commits 形式で git commit |
+| `km:github-workflow` | ブランチ作成、レビュー、commit、push、PR 作成までの GitHub ワークフロー |
 
 ## ライセンス
 

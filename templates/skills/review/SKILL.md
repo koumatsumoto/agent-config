@@ -5,7 +5,7 @@ description: Reviews uncommitted changes end-to-end. Use when the user asks to r
 
 # Review
 
-未コミット変更を対象に、intent/code/quality/doc-review をルーティングして統合するレビューオーケストレーター。
+未コミット変更を対象に、intent/code/quality/doc-review をルーティングして統合するレビューオーケストレーター。レビュー系ではこれを既定の入口とし、下位 review skill は targeted review 用に扱う。
 
 ## Success Criteria
 
@@ -25,7 +25,7 @@ description: Reviews uncommitted changes end-to-end. Use when the user asks to r
 
 `git diff --name-only` と `git diff --stat` で変更を把握し、以下を決める:
 
-- 変更タイプ: `feat` / `fix` / `refactor` / `test` / `config`
+- 変更タイプ: `feat` / `fix` / `refactor` / `test` / `config` / `chore`
 - 構成: `has_code` / `has_docs`
 - 会話コンテキスト: 自己レビューか、第三者変更のレビューか
 - 深度: `Full` / `Focused` / `Quick`
@@ -39,7 +39,7 @@ description: Reviews uncommitted changes end-to-end. Use when the user asks to r
 |コードのみ（自己開発）|実行|実行|実行|更新必要性だけ確認|
 |コードのみ（他者変更）|スキップ|実行|実行|更新必要性だけ確認|
 |ドキュメントのみ|スキップ|スキップ|スキップ|実行|
-|test / config のみ|スキップ|Quick|Quick|スキップ|
+|test / config / chore のみ|スキップ|Quick|Quick|スキップ|
 
 ## Phase 2: intent-review
 
@@ -68,10 +68,18 @@ intent-review の出力は以下の構造を維持する:
 
 実行ルール:
 
-- `code-review`: 設計、明確なバグ、規約乖離を確認する
-- `quality-review`: ISO/IEC 25010:2023 ベースの品質特性を確認する
-- `doc-review`: docs が変わるときだけ実行する
-- コードのみ変更では、フル doc-review はせず「更新必要性」だけを確認する
+- `intent-review`: `intent-review/SKILL.md` を読む
+- `code-review`: `code-review/SKILL.md` を読んで担当範囲だけ実行する
+- `quality-review`: `quality-review/SKILL.md` と `quality-review/quality-patterns.md` を読んで担当範囲だけ実行する
+- `doc-review`: docs が変わるときだけ `doc-review/SKILL.md` を読んで実行する
+- 並列実行できる環境では `code-review` / `quality-review` / `doc-review` を並列化する
+- 各下位レビューは「重大度ごとの件数サマリー + 個別問題報告」で返させる
+
+コードのみ変更では、フル doc-review はせず、少なくとも以下を確認する:
+
+- パブリック API、CLI、設定、インターフェースの変更があるか
+- `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
+- 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 
 下位レビューには Phase 1 をやり直させず、担当範囲だけを見させる。根拠の弱い推測、未変更行への一般論、単なる好みは報告させない。
 

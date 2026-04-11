@@ -42,5 +42,6 @@
 ### Skill 運用
 
 - レビューは下位 skill を並べて呼ぶより `/km:review` を優先する
-- 副作用のある skill（`/km:commit`, `/km:github-workflow`）は明示的に呼び出す前提で扱う
+- 下位 review skill は targeted review 用として扱い、`/km:review` が既定のレビュー入口になる
+- `km:commit` と `km:github-workflow` はユーザーの自然言語要求から起動しうる workflow skill として残す
 - skill を更新するときは `description` に trigger 条件を書き、詳細は supporting files に逃がす

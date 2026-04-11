@@ -39,5 +39,6 @@
 ## Skill 運用
 
 - レビュー系は `/km:review` を入口にし、個別 skill はターゲットが明確なときだけ使う
-- `/km:commit` と `/km:github-workflow` は副作用を伴うため明示的起動前提で扱う
+- 下位 review skill は targeted review 用に寄せ、`/km:review` を既定入口として残す
+- `/km:commit` と `/km:github-workflow` はユーザーの自然言語要求から起動しうる workflow skill として扱う
 - skill を更新する場合は SKILL 本体を概要に保ち、詳細な例や参照情報は別ファイルに分離する

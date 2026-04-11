@@ -1,8 +1,7 @@
 ---
 name: km:commit
-description: Creates a Conventional Commits git commit for the current changes. Use only when the user explicitly asks to commit or save the work.
+description: Creates a Conventional Commits git commit for the current changes. Use when the user asks to commit, save, or record the work.
 argument-hint: "[message]"
-disable-model-invocation: true
 ---
 
 # Commit
