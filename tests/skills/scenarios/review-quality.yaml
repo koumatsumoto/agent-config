@@ -1,0 +1,37 @@
+version: 1
+scenarios:
+  - id: review-quality-blocking
+    title: High-severity finding should block commit
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      injected_issue: "unvalidated external input reaches SQL query"
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+        - blocking decision
+      expected_blocking: BLOCKED
+      minimum_findings:
+        - severity: HIGH
+          area: security_or_quality
+
+  - id: review-quality-doc-update-check
+    title: Code-only public API change should recommend docs update
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/routes.ts
+        - src/api/schema.ts
+      change_type: feat
+      conversation_context: true
+      public_interface_changed: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - doc update recommendation
+      notes:
+        - full doc-review is not required, but update necessity must be surfaced

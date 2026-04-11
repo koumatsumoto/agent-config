@@ -1,0 +1,43 @@
+version: 1
+scenarios:
+  - id: trigger-review-default
+    title: Review request should prefer km:review as the default entry point
+    prompt: "この変更レビューして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+        - templates/skills/code-review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
+      notes:
+        - review subskills may be used as children after km:review decides routing
+
+  - id: trigger-commit-natural-language
+    title: Natural language commit request should still trigger km:commit
+    prompt: "この変更をコミットして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:commit
+      notes:
+        - the user should not need to type /km:commit explicitly
+
+  - id: trigger-github-workflow-natural-language
+    title: Natural language PR request should still trigger km:github-workflow
+    prompt: "この作業をPRまでやって"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+        - README.md
+      conversation_context: true
+    expected:
+      primary_skill: km:github-workflow
+      notes:
+        - branch creation or reuse may be part of the workflow

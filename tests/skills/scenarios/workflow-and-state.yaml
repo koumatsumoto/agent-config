@@ -1,0 +1,34 @@
+version: 1
+scenarios:
+  - id: workflow-existing-pr
+    title: GitHub workflow should reuse an existing PR on the branch
+    prompt: "このブランチをPRまで更新して"
+    context:
+      git_branch: docs/refresh-template-skills
+      has_uncommitted_changes: false
+      has_unpushed_commits: false
+      upstream_set: true
+      existing_pr: true
+    expected:
+      primary_skill: km:github-workflow
+      required_behavior:
+        - detect existing PR
+        - avoid duplicate PR creation
+        - report the existing PR URL or reuse path
+
+  - id: docs-policy-drift
+    title: Documentation should match the actual invocation policy
+    prompt: "変更はない。説明文書だけ確認したい"
+    context:
+      changed_files:
+        - README.md
+        - templates/AGENTS.md
+        - templates/CLAUDE.md
+        - templates/skills/commit/SKILL.md
+        - templates/skills/github-workflow/SKILL.md
+      conversation_context: false
+    expected:
+      primary_skill: km:doc-review
+      required_checks:
+        - README descriptions match skill invocation behavior
+        - AGENTS and CLAUDE explain exceptions such as km:review default entrypoint

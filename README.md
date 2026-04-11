@@ -27,6 +27,7 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
   - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・5h/7dレート制限・ブランチ。jq 推奨、bash fallback 対応）
   - `config.toml` - Codex CLI 用の terminal-first 設定テンプレート
 - `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
+- `tests/` - 回帰テスト資産
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
 - `docs/` - プロジェクトドキュメント
 - `.claude/` - プロジェクト固有の Claude 設定
@@ -135,6 +136,21 @@ bash scripts/verify-install.sh
 `bash install.sh` は最後にこの検証を実行し、missing / drift / mode drift が 1 件でもあれば非ゼロ終了します。テンプレート管理対象をローカル変更した場合は `templates/` 側を更新してから再インストールしてください。
 
 既知の制限として、テンプレートから削除された古い skill / rule はインストール先から自動削除されません。不要なファイルは手動で整理してください。
+
+skill 用の回帰テスト資産が壊れていないかは以下で確認できます。
+
+```bash
+bash scripts/verify-skill-tests.sh
+```
+
+ケース一覧確認や手動 run sheet 生成には以下を使います。
+
+```bash
+python3 scripts/run-skill-tests.py list
+python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4
+python3 scripts/run-skill-tests.py summary --run-file tests/skills/runs/2026-04-11-smoke.md
+python3 scripts/run-skill-tests.py validate-run --run-file tests/skills/runs/2026-04-11-smoke.md
+```
 
 ## 反映先マッピング
 
