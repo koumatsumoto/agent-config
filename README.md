@@ -212,7 +212,7 @@ bash clean.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | 既定のレビュー入口。変更種別と会話コンテキストに応じて intent/code/quality/doc-review を選別して統合する |
+| `km:review` | 既定のレビュー入口。変更種別と会話コンテキストに応じて intent/code/quality/expert/doc-review を選別して統合する |
 | `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（個別レビュー用、明示起動のみ） |
 | `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー（明示起動のみ） |
 | `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー（明示起動のみ） |

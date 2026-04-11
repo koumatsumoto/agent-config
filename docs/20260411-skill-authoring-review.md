@@ -29,7 +29,7 @@
 
 - 手順は numbered steps で書き、停止条件と成功条件を明示する
 - `context: fork` や subagent は、明示的タスクがあるときだけ使う
-- side effect のある skill は手動起動前提にする
+- side effect のある skill は手動起動前提にする（ただし commit / github-workflow のような workflow skill は例外とし、auto-invocable を維持する）
 
 ### 4. 出力契約
 
@@ -63,7 +63,7 @@
 
 1. `km:review` を既定のレビュー入口として残し、下位 review skill は manual-only に寄せる
 2. `km:commit` と `km:github-workflow` は自然言語要求から起動しうる workflow skill として維持する
-3. Codex 向けに `agents/openai.yaml` を追加し、Claude 側の manual-only 設定と「暗黙起動を抑える」という目的を揃える
+3. review subskill 4 種（code-review, quality-review, doc-review, intent-review）に Codex 向け `agents/openai.yaml` を追加し、Claude 側の `disable-model-invocation` と「暗黙起動を抑える」という目的を揃える。workflow skill（commit, github-workflow）は auto-invocable を維持する
 4. 各 skill から背景説明を削り、success criteria / stop conditions / output requirements を前に出す
 5. README と共通ガイドラインにも manual-only / orchestrator-first を反映する
 

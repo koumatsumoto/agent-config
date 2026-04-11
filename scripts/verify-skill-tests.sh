@@ -136,6 +136,30 @@ def main() -> int:
     gitkeep = runs_dir / ".gitkeep"
     check(gitkeep.is_file(), f"missing: {gitkeep}")
 
+    # --- orphan scenario detection ---
+    manifest_scenario_ids: set[str] = set()
+    for case in cases:
+        file_rel = case.get("file")
+        scenario_id = case.get("scenario_id")
+        if isinstance(file_rel, str) and isinstance(scenario_id, str):
+            manifest_scenario_ids.add(f"{file_rel}:{scenario_id}")
+
+    for scenario_file in scenarios_dir.glob("*.yaml"):
+        data = load_yaml(scenario_file)
+        if not isinstance(data, dict):
+            continue
+        scenarios = data.get("scenarios")
+        if not isinstance(scenarios, list):
+            continue
+        rel = f"scenarios/{scenario_file.name}"
+        for scenario in scenarios:
+            if not isinstance(scenario, dict):
+                continue
+            sid = scenario.get("id")
+            if isinstance(sid, str):
+                key = f"{rel}:{sid}"
+                check(key in manifest_scenario_ids, f"orphan scenario: {sid} in {rel} not referenced by manifest")
+
     # --- agents/openai.yaml contract ---
     skills_root = root.parent.parent / "templates" / "skills"
     if skills_root.is_dir():

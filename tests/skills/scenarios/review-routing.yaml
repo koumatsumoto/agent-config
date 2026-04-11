@@ -54,6 +54,9 @@ scenarios:
       child_skills:
         - km:code-review
         - km:quality-review
+      child_skills_skipped:
+        - km:intent-review
+        - km:doc-review
       review_depth: Quick
       expert_review: skipped
       notes:
@@ -74,6 +77,48 @@ scenarios:
         - km:quality-review
       child_skills_skipped:
         - km:intent-review
+        - km:doc-review
       expert_review: executed
+      additional_checks:
+        - code-only doc update necessity check is performed
       notes:
         - output should state a concrete skip reason instead of guessing intent
+
+  - id: review-routing-code-and-docs-self
+    title: Code + docs change with conversation context should run all 5 reviews
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - docs/api.md
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      child_skills:
+        - km:intent-review
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
+      expert_review: executed
+      notes:
+        - most complex routing path with all 5 review axes active
+
+  - id: review-routing-code-and-docs-third-party
+    title: Code + docs change without conversation context should skip intent-review
+    prompt: "この差分をレビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - docs/api.md
+      change_type: feat
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      child_skills:
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
+      child_skills_skipped:
+        - km:intent-review
+      expert_review: executed

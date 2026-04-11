@@ -28,7 +28,11 @@ scenarios:
         - templates/skills/github-workflow/SKILL.md
       conversation_context: false
     expected:
-      primary_skill: km:doc-review
+      primary_skill: km:review
+      child_skills:
+        - km:doc-review
       required_checks:
         - README descriptions match skill invocation behavior
         - AGENTS and CLAUDE explain exceptions such as km:review default entrypoint
+      notes:
+        - km:doc-review is manual-only, so km:review must be the entry point

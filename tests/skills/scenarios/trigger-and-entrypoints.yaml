@@ -54,3 +54,33 @@ scenarios:
       notes:
         - generic implementation requests should go through normal coding flow
         - km:github-workflow requires explicit PR or delivery intent
+
+  - id: trigger-code-review-should-route-through-orchestrator
+    title: Natural language code review request should use km:review, not km:code-review
+    prompt: "コードレビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+      notes:
+        - km:code-review has disable-model-invocation so must route through orchestrator
+
+  - id: trigger-quality-review-should-route-through-orchestrator
+    title: Natural language quality review request should use km:review, not km:quality-review
+    prompt: "品質レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+      notes:
+        - km:quality-review has disable-model-invocation so must route through orchestrator

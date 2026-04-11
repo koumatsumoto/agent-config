@@ -107,3 +107,41 @@ scenarios:
       expert_review: skipped
       notes:
         - per routing table, test-only changes skip expert review same as config/chore
+
+  - id: review-quality-expert-executed-for-large-fix
+    title: Expert review should execute for large fix changes exceeding threshold
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - src/api/auth.ts
+        - src/api/routes.ts
+        - src/lib/session.ts
+        - src/lib/crypto.ts
+        - src/lib/validator.ts
+        - src/db/queries.ts
+        - src/db/migrations.ts
+        - src/utils/logger.ts
+        - src/utils/parser.ts
+        - src/config/settings.ts
+      change_type: fix
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      expert_review: executed
+      notes:
+        - 11 files exceeds the 10-file threshold, so expert review must execute
+
+  - id: review-quality-expert-optional-for-small-fix
+    title: Expert review may be skipped for small fix changes under threshold
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      change_type: fix
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      expert_review: optional
+      notes:
+        - 1 file is well under the 10-file threshold, so expert review may be skipped
