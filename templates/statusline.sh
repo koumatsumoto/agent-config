@@ -4,7 +4,7 @@
 # Two-line layout:
 #   Line 1: 🤖 model [agent] [style] │ bar pct% │ $cost │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 #   Line 2: 🌳 branch Nfiles +A/-R (only when git branch exists)
-# Rate limits: 5h always shown, 7d shown >= 20%. Yellow >= 50%, red >= 80%.
+# Rate limits: 5h/7d always shown. Yellow >= 50%, red >= 80%.
 # Context bar turns red-background at >= 90%.
 
 # --- Environment hardening ---
@@ -267,7 +267,7 @@ LINE1="🤖 ${MODEL}"
 printf '%s │ %s %s%% │ $%s.%s' \
   "$LINE1" "$BAR" "$PCT_INT" "${COST_INT:-0}" "${COST_DEC:-00}"
 format_rate_section "$RATE_5H_INT" "$RESET_5H" "5h" 0    # always show
-format_rate_section "$RATE_7D_INT" "$RESET_7D" "7d"      # show >= 20%
+format_rate_section "$RATE_7D_INT" "$RESET_7D" "7d" 0    # always show
 
 # Line 2: 🌳 Branch Nfiles +A/-R (only when branch exists)
 if [ -n "$BRANCH" ]; then
