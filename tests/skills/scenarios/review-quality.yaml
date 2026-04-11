@@ -90,3 +90,20 @@ scenarios:
       expert_review: skipped
       notes:
         - per routing table, config/chore changes skip expert review
+
+  - id: review-quality-expert-skipped-for-test
+    title: Expert review should be skipped for test-only changes
+    prompt: "テストの変更をレビューして"
+    context:
+      changed_files:
+        - tests/api/users.test.ts
+        - tests/lib/auth.test.ts
+      change_type: test
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+      expert_review: skipped
+      notes:
+        - per routing table, test-only changes skip expert review same as config/chore

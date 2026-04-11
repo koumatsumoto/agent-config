@@ -52,6 +52,10 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-expert-skipped-for-config
     tags: [quality, expert, routing]
+  - id: review-quality-expert-skipped-for-test
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-skipped-for-test
+    tags: [quality, expert, routing]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr
