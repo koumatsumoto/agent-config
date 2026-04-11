@@ -28,6 +28,15 @@ max_bytes = 50000000
 [profiles.deep]
 model_reasoning_effort = "high"
 
+[profiles.research]
+model_reasoning_effort = "high"
+web_search = "live"
+
+[profiles.review]
+approval_policy = "never"
+sandbox_mode = "read-only"
+model_reasoning_effort = "high"
+
 [profiles.readonly]
 approval_policy = "never"
 sandbox_mode = "read-only"
@@ -36,6 +45,10 @@ sandbox_mode = "read-only"
 web_search = "live"
 
 [profiles.fast]
+service_tier = "fast"
+model_reasoning_effort = "medium"
+
+[profiles.quick]
 service_tier = "fast"
 model_reasoning_effort = "medium"
 

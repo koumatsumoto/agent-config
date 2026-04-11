@@ -73,4 +73,7 @@ install_template_file "config.toml" "$HOME/.codex"
 install_item "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
 
 # ~/.claude/ permissions already set at script start (umask 077 + chmod 700)
+echo "Verify deployed files"
+bash "$REPO_ROOT/scripts/verify-install.sh"
+
 echo "done"
