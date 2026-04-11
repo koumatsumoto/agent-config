@@ -35,12 +35,19 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
 ---
 ### 第三者専門家レビュー
+CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 0
 
 #### セキュリティ専門家
-- ...
+CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 0
+
+## MEDIUM: [問題タイトル] [confirmed]
+**場所**: src/api/auth.ts:28
+**問題**: ...
+**修正**: ...
 
 #### シニア QA アーキテクト
-- ...
+CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
+（指摘なし）
 ---
 ### Doc Review
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1

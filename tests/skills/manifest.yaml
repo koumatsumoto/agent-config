@@ -40,6 +40,18 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-doc-update-check
     tags: [quality, docs]
+  - id: review-quality-expert-severity-format
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-severity-format
+    tags: [quality, expert, blocking]
+  - id: review-quality-evaluation-summary
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-evaluation-summary
+    tags: [quality, summary]
+  - id: review-quality-expert-skipped-for-config
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-skipped-for-config
+    tags: [quality, expert, routing]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr

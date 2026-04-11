@@ -17,6 +17,7 @@ scenarios:
         - km:quality-review
       child_skills_skipped:
         - km:doc-review
+      expert_review: executed
       additional_checks:
         - code-only doc update necessity check is performed
 
@@ -37,6 +38,7 @@ scenarios:
         - km:intent-review
         - km:code-review
         - km:quality-review
+      expert_review: skipped
 
   - id: review-routing-config-chore
     title: Config or chore only change should use Quick path
@@ -53,6 +55,7 @@ scenarios:
         - km:code-review
         - km:quality-review
       review_depth: Quick
+      expert_review: skipped
       notes:
         - config/chore should not fall through an undefined type
 

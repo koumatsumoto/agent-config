@@ -35,3 +35,58 @@ scenarios:
         - doc update recommendation
       notes:
         - full doc-review is not required, but update necessity must be surfaced
+
+  - id: review-quality-expert-severity-format
+    title: Expert review findings must use severity format and participate in blocking
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/auth.ts
+        - src/lib/session.ts
+      injected_issue: "session token stored in localStorage without encryption"
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - expert review section with severity summary per expert
+        - individual expert findings with severity, location, and confidence
+        - expert HIGH/CRITICAL reflected in integrated blocking decision
+      expected_blocking: BLOCKED
+      notes:
+        - expert findings must use the same CRITICAL/HIGH/MEDIUM/LOW format as code-review and quality-review
+        - expert severity counts must be included in the integrated summary totals
+
+  - id: review-quality-evaluation-summary
+    title: Quality evaluation summary with 9 characteristics must be present
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - src/lib/validation.ts
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - quality evaluation summary table with 9 characteristics
+        - each characteristic rated as PASS, WARN, FAIL, or SKIP
+      notes:
+        - the 9-characteristic table is mandatory regardless of whether quality issues are found
+        - WARN maps to MEDIUM or below, FAIL maps to HIGH or above
+
+  - id: review-quality-expert-skipped-for-config
+    title: Expert review should be skipped for config/chore changes
+    prompt: "この設定変更をレビューして"
+    context:
+      changed_files:
+        - config/settings.toml
+      change_type: config
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+      expert_review: skipped
+      notes:
+        - per routing table, config/chore changes skip expert review
