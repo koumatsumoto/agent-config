@@ -4,69 +4,77 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 failures=0
+checks=0
+
+record_failure() {
+  local message="$1"
+  echo "$message"
+  failures=$((failures + 1))
+}
+
+record_check() {
+  checks=$((checks + 1))
+}
 
 check_file() {
   local src="$1"
   local dest="$2"
+  record_check
 
   if [[ ! -e "$dest" ]]; then
-    echo "missing: $dest"
-    failures=$((failures + 1))
+    record_failure "missing: $dest"
     return
   fi
 
-  if diff -rq "$src" "$dest" >/dev/null 2>&1; then
-    echo "ok: $dest"
-  else
-    echo "drift: $dest"
-    failures=$((failures + 1))
+  if ! diff -rq "$src" "$dest" >/dev/null 2>&1; then
+    record_failure "drift: $dest"
   fi
 }
 
 check_mode() {
   local path="$1"
   local expected="$2"
+  record_check
 
   if [[ ! -e "$path" ]]; then
-    echo "missing: $path"
-    failures=$((failures + 1))
+    record_failure "missing: $path"
     return
   fi
 
   local actual
   actual="$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path" 2>/dev/null || echo '?')"
-  if [[ "$actual" == "$expected" ]]; then
-    echo "mode ok: $path ($actual)"
-  else
-    echo "mode drift: $path (expected $expected, got $actual)"
-    failures=$((failures + 1))
+  if [[ "$actual" != "$expected" ]]; then
+    record_failure "mode drift: $path (expected $expected, got $actual)"
   fi
 }
 
-check_tree_modes() {
-  local root="$1"
-  local dir_mode="$2"
-  local file_mode="$3"
-  local executable_path="${4:-}"
-  local path
+check_managed_tree_modes() {
+  local src_root="$1"
+  local dest_root="$2"
+  local dir_mode="$3"
+  local file_mode="$4"
+  local executable_path="${5:-}"
+  local rel_path
+  local dest_path
 
-  if [[ ! -e "$root" ]]; then
-    echo "missing: $root"
-    failures=$((failures + 1))
+  record_check
+  if [[ ! -e "$dest_root" ]]; then
+    record_failure "missing: $dest_root"
     return
   fi
 
-  while IFS= read -r path; do
-    if [[ -d "$path" ]]; then
-      check_mode "$path" "$dir_mode"
-    elif [[ -f "$path" ]]; then
-      if [[ -n "$executable_path" && "$path" == "$executable_path" ]]; then
-        check_mode "$path" "700"
+  while IFS= read -r rel_path; do
+    dest_path="$dest_root/$rel_path"
+    if [[ -d "$src_root/$rel_path" ]]; then
+      check_mode "$dest_path" "$dir_mode"
+    elif [[ -f "$src_root/$rel_path" ]]; then
+      if [[ -n "$executable_path" && "$dest_path" == "$executable_path" ]]; then
+        check_mode "$dest_path" "700"
       else
-        check_mode "$path" "$file_mode"
+        check_mode "$dest_path" "$file_mode"
       fi
     fi
-  done < <(find "$root" \( -type d -o -type f \) | sort)
+  done < <(cd "$src_root" && find . -mindepth 1 \( -type d -o -type f \) | sed 's#^\./##' | sort)
 }
 
 echo "Verify Claude + Codex configuration"
@@ -80,13 +88,23 @@ check_file "$REPO_ROOT/templates/AGENTS.md" "$HOME/.codex/AGENTS.md"
 check_file "$REPO_ROOT/templates/config.toml" "$HOME/.codex/config.toml"
 check_file "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
 
-check_tree_modes "$HOME/.claude" "700" "600" "$HOME/.claude/statusline.sh"
-check_tree_modes "$HOME/.codex" "700" "600"
-check_tree_modes "$HOME/.agents" "700" "600"
+check_mode "$HOME/.claude" "700"
+check_mode "$HOME/.claude/CLAUDE.md" "600"
+check_mode "$HOME/.claude/keybindings.json" "600"
+check_mode "$HOME/.claude/statusline.sh" "700"
+check_managed_tree_modes "$REPO_ROOT/templates/rules" "$HOME/.claude/rules" "700" "600"
+check_managed_tree_modes "$REPO_ROOT/templates/skills" "$HOME/.claude/skills" "700" "600"
+
+check_mode "$HOME/.codex" "700"
+check_mode "$HOME/.codex/AGENTS.md" "600"
+check_mode "$HOME/.codex/config.toml" "600"
+
+check_mode "$HOME/.agents" "700"
+check_managed_tree_modes "$REPO_ROOT/templates/skills" "$HOME/.agents/skills" "700" "600"
 
 if [[ "$failures" -gt 0 ]]; then
-  echo "verify failed: $failures issue(s)"
+  echo "verify failed: $failures issue(s) across $checks check(s)"
   exit 1
 fi
 
-echo "verify ok"
+echo "verify ok: $checks check(s)"
