@@ -90,8 +90,12 @@ def print_dry_run(cases: list[dict]) -> int:
     for idx, case in enumerate(cases, start=1):
         print(f"\n[{idx}] {case['id']}: {case['title']}")
         print(f"  prompt: {case['prompt']}")
-        primary = case.get("expected", {}).get("primary_skill", "(none)")
+        expected = case.get("expected", {})
+        primary = expected.get("primary_skill", "(none)")
         print(f"  expected primary skill: {primary}")
+        should_not_trigger = expected.get("should_not_trigger", [])
+        if should_not_trigger:
+            print(f"  should not trigger: {', '.join(should_not_trigger)}")
         tags = ", ".join(case.get("tags", []))
         if tags:
             print(f"  tags: {tags}")
@@ -133,6 +137,7 @@ def scaffold_run(cases: list[dict], label: str, client: str, model: str, branch:
                 f"- Category: `passed | trigger_failure | routing_failure | quality_failure | workflow_failure | doc_drift`",
                 f"- Prompt: {case['prompt']}",
                 f"- Expected Primary Skill: {case.get('expected', {}).get('primary_skill', '')}",
+                f"- Should Not Trigger: {', '.join(case.get('expected', {}).get('should_not_trigger', []))}",
                 "- Actual:",
                 "- Pass/Fail:",
                 "- Notes:",

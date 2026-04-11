@@ -137,7 +137,7 @@ def main() -> int:
     check(gitkeep.is_file(), f"missing: {gitkeep}")
 
     # --- agents/openai.yaml contract ---
-    skills_root = root.parent / "templates" / "skills"
+    skills_root = root.parent.parent / "templates" / "skills"
     if skills_root.is_dir():
         # Manual-only skills MUST have agents/openai.yaml with allow_implicit_invocation: false
         manual_only = ["code-review", "quality-review", "intent-review", "doc-review"]
