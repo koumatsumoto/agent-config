@@ -36,5 +36,11 @@
 ### レビューと完了
 
 - 実装後は `/km:review` を基準に確認する
-- 個別に実行したい場合: `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review`
+- 個別に実行したい場合だけ `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を使う
 - レビューと検証が完了したら `/km:commit` でコミットする
+
+### Skill 運用
+
+- レビューは下位 skill を並べて呼ぶより `/km:review` を優先する
+- 副作用のある skill（`/km:commit`, `/km:github-workflow`）は明示的に呼び出す前提で扱う
+- skill を更新するときは `description` に trigger 条件を書き、詳細は supporting files に逃がす

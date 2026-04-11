@@ -1,57 +1,53 @@
 ---
 name: km:review
-description: Comprehensive review orchestrator that coordinates intent-review, code-review, quality-review, and doc-review based on change type and context. Use when the user requests any kind of review, says "レビューして", "チェックして", "変更を確認して", "問題ないか見て", or after completing code changes.
+description: Reviews uncommitted changes end-to-end. Use when the user asks to review or check changes, or before commit. Prefer this skill over running review subskills one by one.
 ---
 
 # Review
 
-未コミット変更を対象に、意図検証・設計実装・品質特性・ドキュメントの4軸で包括的なレビューを行うオーケストレーター。
+未コミット変更を対象に、intent/code/quality/doc-review をルーティングして統合するレビューオーケストレーター。
 
-intent-review はメインコンテキストで実行し（会話履歴へのアクセスが必要なため）、その結果をサブエージェントに橋渡しして code-review / quality-review / doc-review を並列実行する。
+## Success Criteria
 
-|レビュー|観点|実行方式|
-|---------|------|---------|
-|`/km:intent-review`|要件充足・意図の検証|メインコンテキスト（条件付き）|
-|`/km:code-review`|設計・バグ・コード品質|サブエージェント（並列）|
-|`/km:quality-review`|ISO/IEC 25010:2023 の9品質特性を Tier 運用で確認|サブエージェント（並列）|
-|`/km:doc-review`|構造整合性・横断整合性・正確性|サブエージェント（並列）|
+- 変更の種類に応じて必要なレビューだけを走らせる
+- 下位レビューに同じ仕事を重複させない
+- `CRITICAL` / `HIGH`、または intent-review の `HIGH` を見逃さずにブロックする
+- 統合レポートは重複を減らし、次に何を直すべきかが分かる形にする
 
 ## Workflow
 
-1. Phase 1: 変更把握・ルーティング
-2. Phase 2: 意図検証（メインコンテキスト、条件付き）
-3. Phase 3: 並列レビュー実行（サブエージェント）
-4. Phase 4: 結果統合・コミット判定
+1. Phase 1: 変更把握とルーティング
+2. Phase 2: intent-review 実行可否の判定
+3. Phase 3: 必要な下位レビューの実行
+4. Phase 4: 結果統合とコミット判定
 
-## Phase 1: 変更把握・ルーティング
+## Phase 1: 変更把握とルーティング
 
-`git diff --name-only` で変更ファイルを収集し、以下を判定する:
+`git diff --name-only` と `git diff --stat` で変更を把握し、以下を決める:
 
-1. **変更タイプ**: feat / fix / refactor / test / config
-2. **変更の構成**: コード変更あり (`has_code`) / ドキュメント変更あり (`has_docs`)
-3. **コンテキスト有無**: 今回の変更が会話内で開発されたものか（自己レビュー）、外部からのコードか（他者レビュー）
-4. **変更規模**: 変更行数、ファイル数
+- 変更タイプ: `feat` / `fix` / `refactor` / `test` / `config`
+- 構成: `has_code` / `has_docs`
+- 会話コンテキスト: 自己レビューか、第三者変更のレビューか
+- 深度: `Full` / `Focused` / `Quick`
 
-判定結果に基づき、実行するレビューを決定する:
+実行方針:
 
 |変更の構成|intent-review|code-review|quality-review|doc-review|
 |---|---|---|---|---|
-|コード + ドキュメント（自己開発）|メインで実行|サブエージェント|サブエージェント|サブエージェント|
-|コード + ドキュメント（他者コード）|スキップ|サブエージェント|サブエージェント|サブエージェント|
-|コードのみ（自己開発）|メインで実行|サブエージェント|サブエージェント|ドキュメント更新チェックのみ|
-|コードのみ（他者コード）|スキップ|サブエージェント|サブエージェント|ドキュメント更新チェックのみ|
-|ドキュメントのみ|スキップ|実行しない|実行しない|サブエージェントで実行|
-|テスト/config のみ|スキップ|サブエージェント(Quick)|サブエージェント(Quick)|実行しない|
+|コード + ドキュメント（自己開発）|実行|実行|実行|実行|
+|コード + ドキュメント（他者変更）|スキップ|実行|実行|実行|
+|コードのみ（自己開発）|実行|実行|実行|更新必要性だけ確認|
+|コードのみ（他者変更）|スキップ|実行|実行|更新必要性だけ確認|
+|ドキュメントのみ|スキップ|スキップ|スキップ|実行|
+|test / config のみ|スキップ|Quick|Quick|スキップ|
 
-## Phase 2: 意図検証（メインコンテキスト、条件付き）
+## Phase 2: intent-review
 
-会話コンテキストが存在する場合（自分が開発した変更のレビュー時）のみ実行する。
+会話履歴から要求を復元できる場合のみ `intent-review/SKILL.md` を使う。復元できない場合は推測せず、`intent-review skipped: no usable conversation context` と記録する。
 
-1. `intent-review/SKILL.md` を Read する
-2. SKILL.md の指示に従い、要求の復元と充足判定を行う
-3. 結果を以下の構造化形式で保持する（Phase 3 でサブエージェントに橋渡しするため）:
+intent-review の出力は以下の構造を維持する:
 
-```
+```md
 ### 要求リスト
 1. [明示的] ...
 2. [合意] ...
@@ -60,52 +56,32 @@ intent-review はメインコンテキストで実行し（会話履歴へのア
 - ...
 ```
 
-会話コンテキストがない場合（他者のコードをレビューする場合）は、この Phase をスキップし「コンテキストなし: intent-review スキップ」と記録して Phase 3 に進む。
+この構造化結果は、下位レビューの偽陽性フィルタリングに渡す。
 
-## Phase 3: 並列レビュー実行
+## Phase 3: 下位レビュー
 
-Phase 1 の結果に基づき、サブエージェントを `run_in_background: true` で並列起動する。
+下位レビューには次の共通コンテキストを渡す:
 
-### サブエージェントへの共通コンテキスト
+- 変更ファイル一覧
+- 変更タイプとレビュー深度
+- intent-review の構造化結果（存在する場合のみ）
 
-全サブエージェントのプロンプトに以下を含める:
-- 変更ファイル一覧、変更タイプ、レビュー深度
-- Phase 2 の intent-review 結果（実行された場合のみ）— 要求リストと合意事項。サブエージェントはこれを偽陽性フィルタリングの「意図的な変更」判定に使用する
+実行ルール:
 
-### Code Review サブエージェント
+- `code-review`: 設計、明確なバグ、規約乖離を確認する
+- `quality-review`: ISO/IEC 25010:2023 ベースの品質特性を確認する
+- `doc-review`: docs が変わるときだけ実行する
+- コードのみ変更では、フル doc-review はせず「更新必要性」だけを確認する
 
-- `code-review/SKILL.md` を Read し、Phase 1 を除くレビューを実行するよう指示
-- 結果は「重大度ごとの件数サマリー + 個別問題報告」で返すこと
-
-### Quality Review サブエージェント
-
-- `quality-review/SKILL.md` と `quality-review/quality-patterns.md` を Read し、Phase 1 を除くレビューを実行するよう指示
-- 品質特性は ISO/IEC 25010:2023 の 9 特性を前提とし、Tier 1 は常時、Tier 2/3 は変更タイプと変更内容に応じて適用すること
-- `Quick` 指定時は quality-review 側で定義された優先観点に絞って確認し、根拠の弱い推測は報告しないこと
-- 結果は「重大度ごとの件数サマリー + 個別問題報告」で返すこと
-
-### Doc Review サブエージェント（ドキュメント変更がある場合）
-
-- `doc-review/SKILL.md` を Read し、Phase 1 を除くレビューを実行するよう指示
-- 結果は「重大度ごとの件数サマリー + 個別問題報告」で返すこと
-
-### ドキュメント更新チェック（コードのみ変更の場合）
-
-フル doc-review は実行せず、メインコンテキストで簡易チェックを行う:
-- 変更がパブリック API やインターフェースに影響するか
-- README.md、CLAUDE.md、docs/ 内のファイルに関連する記述があるか
-- 該当する場合、「ドキュメント更新推奨」として統合レポートに含める
-
-サブエージェントに渡すスキルファイルのパスは、このスキルと同階層のディレクトリを使う。パスが見つからない場合は `~/.claude/skills/` を参照する。
+下位レビューには Phase 1 をやり直させず、担当範囲だけを見させる。根拠の弱い推測、未変更行への一般論、単なる好みは報告させない。
 
 ## Phase 4: 結果統合
 
-全レビュー結果が揃ったら、統合サマリーを生成する。
+統合時のルール:
 
-1. **サブエージェント結果の収集**: バックグラウンドで実行中のサブエージェントの完了を待つ
-2. **重複指摘のフラグ付け**: code-review と quality-review で同一ファイル・近接行の類似指摘がある場合、重複の可能性を注記する
-3. **コミット判定**: いずれかのレビューで CRITICAL または HIGH が検出された場合、全体を BLOCKED とする
+1. 重大度ごとの件数を合算する
+2. 同一ファイル・近接行の類似指摘は重複の可能性を注記する
+3. `CRITICAL` / `HIGH`、または intent-review の `HIGH` があれば `BLOCKED` とする
+4. docs 更新推奨がある場合は末尾に独立セクションで追加する
 
-## 報告
-
-全レビュー結果を統合サマリーにまとめ、コミット判定を行う。出力形式は `report-format.md` を参照。
+出力形式は `report-format.md` を参照。

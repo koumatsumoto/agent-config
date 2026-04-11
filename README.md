@@ -193,11 +193,12 @@ bash clean.sh
 | スキル | 説明 |
 | --- | --- |
 | `km:review` | 包括的レビューオーケストレーター（intent/code/quality/doc-review を自動判定・並列実行） |
-| `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（コンテキストがない場合はスキップ） |
-| `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー |
-| `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー |
-| `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー |
-| `km:commit` | Conventional Commits 形式で git commit |
+| `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（個別レビュー用、明示起動のみ） |
+| `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー（明示起動のみ） |
+| `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー（明示起動のみ） |
+| `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー（明示起動のみ） |
+| `km:commit` | Conventional Commits 形式で git commit（明示起動のみ） |
+| `km:github-workflow` | ブランチ作成、レビュー、commit、push、PR 作成までの GitHub ワークフロー（明示起動のみ） |
 
 ## ライセンス
 
