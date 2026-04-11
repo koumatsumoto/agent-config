@@ -2,7 +2,7 @@
 
 `templates/skills/` を 2026-04-11 時点の一次情報で見直した記録。対象は Claude Code / Codex 共用スキル。
 
-## 調査対象
+## 調査対象（2026-04-11 参照）
 
 - Anthropic: [Extend Claude with skills](https://code.claude.com/docs/en/slash-commands)
 - Anthropic: [Create custom subagents](https://code.claude.com/docs/en/sub-agents)

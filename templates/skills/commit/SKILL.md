@@ -63,5 +63,4 @@ feat(auth): add refresh token flow
 
 - `git add -A` / `git add .` は使わない
 - `git commit --no-verify` は使わない
-- push はこのスキルでは行わない
-- `--force` / `-f` push はしない
+- push はこのスキルのスコープ外

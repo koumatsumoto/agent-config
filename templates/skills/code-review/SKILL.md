@@ -8,6 +8,10 @@ disable-model-invocation: true
 
 未コミット変更を対象に、設計・実装・規約準拠の観点でレビューする。要件充足は `/km:intent-review`、品質特性は `/km:quality-review` の責務。
 
+## レビューの目的
+
+開発者は目の前の実装に集中し、設計上の問題・明らかなバグ・プロジェクト規約との乖離が視野外になりやすい。このスキルの最大の価値は Phase 2（設計・実装の確認）にある。Phase 3 でプロジェクト固有の規約への準拠を確認する。
+
 ## Success Criteria
 
 - diff から裏づけられる設計問題とバグを優先して拾う
@@ -25,13 +29,13 @@ disable-model-invocation: true
 
 `git diff --name-only` で変更ファイルを集める。docs-only なら本スキルは使わない。
 
-|変更タイプ|レビュー深度|
-|---|---|
-|feat|Full|
-|fix|Focused|
-|refactor|Full|
-|test|Quick|
-|config / chore|Quick|
+|変更タイプ|Phase 2（設計・実装）|Phase 3（規約・可読性）|
+|---|---|---|
+|feat|Full|Full|
+|fix|Focused|Focused|
+|refactor|Full|Focused|
+|test|Skip|Quick|
+|config / chore|Skip|Quick|
 
 ## Phase 2: 設計・実装
 
@@ -77,4 +81,6 @@ disable-model-invocation: true
 - `MEDIUM`: 設計不整合、保守性低下、テスト不足
 - `LOW`: 小さな改善
 
-`CRITICAL` または `HIGH` があればコミットをブロックする。出力形式は `report-format.md` を参照。
+`CRITICAL` または `HIGH` があればコミットをブロックする。検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザーに判断を委ねる。
+
+出力形式は `report-format.md` を参照。
