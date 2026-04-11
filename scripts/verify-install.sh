@@ -26,7 +26,7 @@ check_file() {
     return
   fi
 
-  if ! diff -rq "$src" "$dest" >/dev/null 2>&1; then
+  if ! diff -q "$src" "$dest" >/dev/null 2>&1; then
     record_failure "drift: $dest"
   fi
 }
@@ -48,13 +48,13 @@ check_mode() {
   fi
 }
 
-check_managed_tree_modes() {
+check_managed_tree() {
   local src_root="$1"
   local dest_root="$2"
   local dir_mode="$3"
   local file_mode="$4"
-  local executable_path="${5:-}"
   local rel_path
+  local src_path
   local dest_path
 
   record_check
@@ -64,15 +64,13 @@ check_managed_tree_modes() {
   fi
 
   while IFS= read -r rel_path; do
+    src_path="$src_root/$rel_path"
     dest_path="$dest_root/$rel_path"
-    if [[ -d "$src_root/$rel_path" ]]; then
+    if [[ -d "$src_path" ]]; then
       check_mode "$dest_path" "$dir_mode"
-    elif [[ -f "$src_root/$rel_path" ]]; then
-      if [[ -n "$executable_path" && "$dest_path" == "$executable_path" ]]; then
-        check_mode "$dest_path" "700"
-      else
-        check_mode "$dest_path" "$file_mode"
-      fi
+    elif [[ -f "$src_path" ]]; then
+      check_file "$src_path" "$dest_path"
+      check_mode "$dest_path" "$file_mode"
     fi
   done < <(cd "$src_root" && find . -mindepth 1 \( -type d -o -type f \) | sed 's#^\./##' | sort)
 }
@@ -80,27 +78,24 @@ check_managed_tree_modes() {
 echo "Verify Claude + Codex configuration"
 
 check_file "$REPO_ROOT/templates/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
-check_file "$REPO_ROOT/templates/rules" "$HOME/.claude/rules"
-check_file "$REPO_ROOT/templates/skills" "$HOME/.claude/skills"
 check_file "$REPO_ROOT/templates/keybindings.json" "$HOME/.claude/keybindings.json"
 check_file "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statusline.sh"
 check_file "$REPO_ROOT/templates/AGENTS.md" "$HOME/.codex/AGENTS.md"
 check_file "$REPO_ROOT/templates/config.toml" "$HOME/.codex/config.toml"
-check_file "$REPO_ROOT/templates/skills" "$HOME/.agents/skills"
 
 check_mode "$HOME/.claude" "700"
 check_mode "$HOME/.claude/CLAUDE.md" "600"
 check_mode "$HOME/.claude/keybindings.json" "600"
 check_mode "$HOME/.claude/statusline.sh" "700"
-check_managed_tree_modes "$REPO_ROOT/templates/rules" "$HOME/.claude/rules" "700" "600"
-check_managed_tree_modes "$REPO_ROOT/templates/skills" "$HOME/.claude/skills" "700" "600"
+check_managed_tree "$REPO_ROOT/templates/rules" "$HOME/.claude/rules" "700" "600"
+check_managed_tree "$REPO_ROOT/templates/skills" "$HOME/.claude/skills" "700" "600"
 
 check_mode "$HOME/.codex" "700"
 check_mode "$HOME/.codex/AGENTS.md" "600"
 check_mode "$HOME/.codex/config.toml" "600"
 
 check_mode "$HOME/.agents" "700"
-check_managed_tree_modes "$REPO_ROOT/templates/skills" "$HOME/.agents/skills" "700" "600"
+check_managed_tree "$REPO_ROOT/templates/skills" "$HOME/.agents/skills" "700" "600"
 
 if [[ "$failures" -gt 0 ]]; then
   echo "verify failed: $failures issue(s) across $checks check(s)"

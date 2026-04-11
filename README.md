@@ -13,7 +13,7 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
 - Codex 側は `AGENTS.md` を正とし、互換のため `CLAUDE.md` も fallback 対象にする
 - Claude 側は `CLAUDE.md` を正とし、`templates/CLAUDE.md` は Claude Code 専用方針として保つ
 - ターミナル運用を前提に、共通方針は「最小限の確認で前進」「差分と検証を重視」「client 標準機能を優先」で揃える
-- インストールはコピー方式で行い、既存ファイルは `*.bak` に退避する
+- インストールはテンプレート管理対象のみを同期し、上書き対象ファイルは `*.bak` に退避する
 
 ## ディレクトリ構造
 
@@ -53,6 +53,8 @@ bash install.sh
   - `skills/`（`templates/skills/` から反映）
 
 `install.sh` は引数なしで、Claude/Codex の両方を一括反映し、最後に `scripts/verify-install.sh` で配置結果を検証します。
+
+`templates/rules/`、`templates/skills/` の同期はテンプレート管理対象パス単位で行います。`~/.claude/rules/`、`~/.claude/skills/`、`~/.agents/skills/` にある追加ローカルファイルは保持されます。
 
 ## ターミナルカスタマイズ
 
@@ -127,9 +129,11 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 bash scripts/verify-install.sh
 ```
 
-このスクリプトは、配置済みファイルが `templates/` と一致しているか、配置先ディレクトリと配下のファイルモードが期待どおりかを確認します。
+このスクリプトは、テンプレート管理対象のファイル内容とファイルモードが期待どおりかを確認します。追加ローカルファイルは drift 扱いしません。
 
-`bash install.sh` は最後にこの検証を実行し、missing / drift / mode drift が 1 件でもあれば非ゼロ終了します。`~/.claude/`、`~/.codex/`、`~/.agents/skills/` をテンプレート管理下に置く前提なので、意図的なローカル変更がある場合は `templates/` 側を更新してから再インストールしてください。
+`bash install.sh` は最後にこの検証を実行し、missing / drift / mode drift が 1 件でもあれば非ゼロ終了します。テンプレート管理対象をローカル変更した場合は `templates/` 側を更新してから再インストールしてください。
+
+既知の制限として、テンプレートから削除された古い skill / rule はインストール先から自動削除されません。不要なファイルは手動で整理してください。
 
 ## 反映先マッピング
 
@@ -161,8 +165,28 @@ bash scripts/verify-install.sh
 
 ## 既存ファイルの保護
 
-`install.sh` は同名ファイル/ディレクトリが既に存在する場合、
-`*.bak` へ退避してから置換します（単一世代。再実行時は前回のバックアップが上書きされる）。
+`install.sh` は上書きするテンプレート管理対象ファイルごとに `*.bak` へ退避してから置換します。バックアップは単一世代で、再実行時は前回のバックアップが上書きされます。
+
+従来のような `skills/` ディレクトリ全体のスナップショット退避ではなく、バックアップ粒度はファイル単位です。
+
+## クリーンアップ
+
+設定を退避しながら削除したい場合は以下を使います。
+
+```bash
+bash clean.sh
+```
+
+このスクリプトは以下を `*.bak` に退避してから削除します。
+
+- `~/.claude/CLAUDE.md`
+- `~/.claude/rules/`
+- `~/.claude/skills/`
+- `~/.claude/keybindings.json`
+- `~/.claude/statusline.sh`
+- `~/.codex/AGENTS.md`
+- `~/.codex/config.toml`
+- `~/.agents/skills/`
 
 ## スキル一覧
 
