@@ -1,30 +1,33 @@
 ---
 name: km:review
-description: Reviews uncommitted changes end-to-end. Use when the user asks to review or check changes, or before commit. Prefer this skill over running review subskills one by one.
+description: Reviews uncommitted changes end-to-end. Use when the user says "レビューして", "チェックして", "変更を確認して", "問題ないか見て", or asks to review or check changes, or before commit. Prefer this skill over running review subskills one by one.
 ---
 
 # Review
 
-未コミット変更を対象に、意図検証・設計実装・品質特性・ドキュメントの 4 軸で包括的なレビューを行うオーケストレーター。レビュー系ではこれを既定の入口とし、下位 review skill は targeted review 用に扱う。
+未コミット変更を対象に、意図検証・設計実装・品質特性・第三者診断・ドキュメントの 5 軸で包括的なレビューを行うオーケストレーター。レビュー系ではこれを既定の入口とし、下位 review skill は targeted review 用に扱う。
 
 ## レビューの目的
 
-開発者は目の前の実装に集中するため、要件との乖離・設計上の問題・品質特性の見落とし・ドキュメントとの不整合が視野外になりやすい。このスキルは 4 つの専門レビューを統合的に実行し、コミット前に問題を検出する。
+開発者は目の前の実装に集中するため、要件との乖離・設計上の問題・品質特性の見落とし・ドキュメントとの不整合が視野外になりやすい。このスキルは複数の専門レビューと第三者診断を統合的に実行し、コミット前に問題を検出する。
 
 ## Success Criteria
 
 - 変更の種類に応じて必要なレビューだけを走らせる
 - 下位レビューに同じ仕事を重複させない
 - `CRITICAL` / `HIGH`、または intent-review の `HIGH` を見逃さずにブロックする
+- 第三者専門家によるゼロベース診断で内部レビューの盲点を補う
 - 統合レポートは重複を減らし、次に何を直すべきかが分かる形にする
 - 検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザーに判断を委ねる
 
 ## Workflow
 
 1. Phase 1: 変更把握とルーティング
-2. Phase 2: intent-review 実行可否の判定
-3. Phase 3: 必要な下位レビューの実行
-4. Phase 4: 結果統合とコミット判定
+2. Phase 2: intent-review（メインコンテキスト）
+3. Phase 3: code-review + quality-review（サブエージェント並列）
+4. Phase 4: 第三者専門家レビュー（サブエージェント並列）
+5. Phase 5: doc-review（Phase 3-4 の結果を踏まえて）
+6. Phase 6: 結果統合とコミット判定
 
 ## Phase 1: 変更把握とルーティング
 
@@ -37,14 +40,14 @@ description: Reviews uncommitted changes end-to-end. Use when the user asks to r
 
 実行方針:
 
-|変更の構成|intent-review|code-review|quality-review|doc-review|
-|---|---|---|---|---|
-|コード + ドキュメント（自己開発）|実行|実行|実行|実行|
-|コード + ドキュメント（他者変更）|スキップ|実行|実行|実行|
-|コードのみ（自己開発）|実行|実行|実行|更新必要性だけ確認|
-|コードのみ（他者変更）|スキップ|実行|実行|更新必要性だけ確認|
-|ドキュメントのみ|スキップ|スキップ|スキップ|実行|
-|test / config / chore のみ|スキップ|Quick|Quick|スキップ|
+|変更の構成|intent|code|quality|expert|doc|
+|---|---|---|---|---|---|
+|コード + ドキュメント（自己開発）|実行|実行|実行|実行|実行|
+|コード + ドキュメント（他者変更）|スキップ|実行|実行|実行|実行|
+|コードのみ（自己開発）|実行|実行|実行|実行|更新必要性だけ確認|
+|コードのみ（他者変更）|スキップ|実行|実行|実行|更新必要性だけ確認|
+|ドキュメントのみ|スキップ|スキップ|スキップ|スキップ|実行|
+|test / config / chore のみ|スキップ|Quick|Quick|スキップ|スキップ|
 
 ## Phase 2: intent-review
 
@@ -52,7 +55,7 @@ description: Reviews uncommitted changes end-to-end. Use when the user asks to r
 
 intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定義されたフォーマットに従う。この結果は Phase 3 でサブエージェントに橋渡しし、偽陽性フィルタリングの「合意済み設計判断」判定に使用する。
 
-## Phase 3: 下位レビュー
+## Phase 3: code-review + quality-review
 
 ### サブエージェントへの共通コンテキスト
 
@@ -64,29 +67,57 @@ intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定�
 ### 実行ルール
 
 - `code-review`: `code-review/SKILL.md` を Read し、Phase 1 を除くレビューを実行する
-- `quality-review`: `quality-review/SKILL.md` と `quality-review/quality-patterns.md` を Read し、Phase 1 を除くレビューを実行する
-- `doc-review`: docs が変わるときだけ `doc-review/SKILL.md` を Read して実行する
-- 並列実行の方が効果的な規模の変更では、サブエージェント（`run_in_background: true`）で `code-review` / `quality-review` / `doc-review` を並列起動する。小規模な変更ではメインコンテキストで逐次実行してもよい
+- `quality-review`: `quality-review/SKILL.md` と `quality-review/quality-checklist.md` を Read し、Phase 1 を除くレビューを実行する。判断に迷ったら `quality-review/reference/` 配下の該当ファイルを参照する
+- 並列実行の方が効果的な規模の変更では、サブエージェント（`run_in_background: true`）で並列起動する。小規模な変更ではメインコンテキストで逐次実行してもよい
 - 各下位レビューは「重大度ごとの件数サマリー + 個別問題報告」で返させる
 
-### コードのみ変更でのドキュメント確認
+## Phase 4: 第三者専門家レビュー
 
-フル doc-review は実行せず、少なくとも以下を確認する:
+チーム内部のレビュー（Phase 3）とは独立した、ゼロベースの第三者診断を行う。目的は、内部レビューの前提知識や慣れに起因する盲点を補うこと。
 
-- パブリック API、CLI、設定、インターフェースの変更があるか
-- `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
-- 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
+### 専門家の構成
 
-下位レビューには Phase 1 をやり直させず、担当範囲だけを見させる。根拠の弱い推測、未変更行への一般論、単なる好みは報告させない。
+デフォルトは 2 名のサブエージェントで実施する:
 
-## Phase 4: 結果統合
+1. **セキュリティ専門家**: 攻撃者の視点でコードを診断する。認証・認可の抜け穴、インジェクション経路、情報漏えい、暗号の不適切な使用を重点的に確認する
+2. **シニア QA アーキテクト**: システムが適切に動作するかの視点で診断する。エッジケース、異常系の振る舞い、状態遷移の整合性、通常見落とされがちな境界条件や競合状態を重点的に確認する
+
+ユーザーが `--experts "perf,a11y"` 等で指定した場合は、追加の専門家（性能エンジニア、アクセシビリティ専門家など）を増やせる。
+
+### 専門家への提供情報
+
+各専門家には**コード差分と変更ファイル一覧のみ**を渡す。以下は意図的に提供しない:
+
+- intent-review の結果（要求背景）
+- code-review / quality-review の結果
+- 会話履歴や作業コンテキスト
+
+これにより、チーム内部の前提知識に染まらない独立した診断が得られる。
+
+### 出力
+
+各専門家は自身の専門分野に特化した所見を報告する。Phase 3 の結果と重複してもよい — クロスバリデーションとして価値がある。
+
+## Phase 5: doc-review
+
+Phase 3-4 の結果を踏まえた上でドキュメントの整合性を検証する。Phase 3-4 で見つかった問題がドキュメントに波及する可能性があるため、ドキュメントレビューは最後に実行する。
+
+- ドキュメント変更がある場合: `doc-review/SKILL.md` を Read してサブエージェントで実行する
+- コードのみ変更の場合: フル doc-review は実行せず、以下を確認する:
+  - パブリック API、CLI、設定、インターフェースの変更があるか
+  - `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
+  - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
+
+## Phase 6: 結果統合
 
 統合時のルール:
 
 1. 重大度ごとの件数を合算する
 2. 同一ファイル・近接行の類似指摘は重複の可能性を注記する
-3. `CRITICAL` / `HIGH`、または intent-review の `HIGH` があれば `BLOCKED` とする
-4. docs 更新推奨がある場合は末尾に独立セクションで追加する
+3. 第三者専門家レビューの所見は独立セクションで報告する
+4. `CRITICAL` / `HIGH`、または intent-review の `HIGH` があれば `BLOCKED` とする
+5. quality-review の品質評価サマリーをそのまま含める
+6. docs 更新推奨がある場合は末尾に独立セクションで追加する
 
 ## 指摘対応の方針
 

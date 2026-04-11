@@ -7,8 +7,12 @@
 
 **変更概要**: feat | コード 450行 (8ファイル) + ドキュメント 80行 (3ファイル)
 **総検出件数**: CRITICAL: 0 / HIGH: 1 / MEDIUM: 3 / LOW: 2
-**コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
+**コミット判定**: BLOCKED（HIGH 以上の問題あり）
 ```
+
+## 品質評価サマリー
+
+quality-review が出力する 9 品質特性ごとの評価テーブルをそのまま含める。
 
 ## 各レビューの詳細
 
@@ -29,6 +33,14 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 ---
 ### Quality Review
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
+---
+### 第三者専門家レビュー
+
+#### セキュリティ専門家
+- ...
+
+#### シニア QA アーキテクト
+- ...
 ---
 ### Doc Review
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
