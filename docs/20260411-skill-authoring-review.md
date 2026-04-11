@@ -73,7 +73,7 @@
 
 - `km:review` の orchestrator 設計
 - `km:review` を auto-invocable な既定入口として残す判断
-- `quality-review/quality-patterns.md` への詳細委譲
+- `quality-review/quality-checklist.md` + `reference/` への詳細委譲
 - report-format を skill ごとに持つ構成
 
 ### 変更したもの
