@@ -76,6 +76,7 @@
 テスト資産そのものが壊れていないかは次で確認できる。
 
 ```bash
+python3 -c "import yaml"
 bash scripts/verify-skill-tests.sh
 ```
 
@@ -84,11 +85,17 @@ bash scripts/verify-skill-tests.sh
 runner は manifest を読んでケース一覧表示、dry-run、手動実行用の run sheet 生成を行う。
 
 ```bash
+python3 -c "import yaml"
 python3 scripts/run-skill-tests.py list
 python3 scripts/run-skill-tests.py dry-run --tag review
-python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4
-python3 scripts/run-skill-tests.py summary --run-file tests/skills/runs/2026-04-11-smoke.md
-python3 scripts/run-skill-tests.py validate-run --run-file tests/skills/runs/2026-04-11-smoke.md
+RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4)
+python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
+```
+
+run sheet を記入した後は、必須項目の検証を行える。
+
+```bash
+python3 scripts/run-skill-tests.py validate-run --run-file "$RUN_FILE"
 ```
 
 現時点の runner は skill 実行そのものを自動化しない。役割は次の 5 つに絞る。
@@ -98,3 +105,14 @@ python3 scripts/run-skill-tests.py validate-run --run-file tests/skills/runs/202
 3. 手動または将来の自動 eval 用の run sheet を生成する
 4. run sheet の記入結果を集計する
 5. run sheet の必須項目を検証する
+
+## 前提
+
+- `python3` が使えること
+- `PyYAML` が使えること
+
+確認コマンド:
+
+```bash
+python3 -c "import yaml"
+```

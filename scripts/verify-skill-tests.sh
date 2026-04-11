@@ -6,6 +6,12 @@ TEST_ROOT="$REPO_ROOT/tests/skills"
 TMP_LABEL="verify-$$"
 TMP_RUN="$TEST_ROOT/runs/$(date +%F)-$TMP_LABEL.md"
 
+cleanup() {
+  rm -f "$TMP_RUN"
+}
+
+trap cleanup EXIT
+
 if [[ ! -d "$TEST_ROOT" ]]; then
   echo "missing: $TEST_ROOT" >&2
   exit 1
@@ -162,4 +168,3 @@ text = text.replace("- Pass/Fail:\n", "- Pass/Fail: Pass\n")
 path.write_text(text)
 PY
 python3 "$REPO_ROOT/scripts/run-skill-tests.py" validate-run --run-file "$TMP_RUN" >/dev/null
-rm -f "$TMP_RUN"

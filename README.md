@@ -140,17 +140,20 @@ bash scripts/verify-install.sh
 skill 用の回帰テスト資産が壊れていないかは以下で確認できます。
 
 ```bash
+python3 -c "import yaml"
 bash scripts/verify-skill-tests.sh
 ```
 
 ケース一覧確認や手動 run sheet 生成には以下を使います。
 
 ```bash
+python3 -c "import yaml"
 python3 scripts/run-skill-tests.py list
-python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4
-python3 scripts/run-skill-tests.py summary --run-file tests/skills/runs/2026-04-11-smoke.md
-python3 scripts/run-skill-tests.py validate-run --run-file tests/skills/runs/2026-04-11-smoke.md
+RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4)
+python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 ```
+
+`validate-run` は run sheet 記入後に使います。
 
 ## 反映先マッピング
 
