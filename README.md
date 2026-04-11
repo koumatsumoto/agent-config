@@ -12,7 +12,8 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
 - 編集元は `templates/` 配下。反映先の `~/.claude/` と `~/.codex/` は直接編集しない
 - Codex 側は `AGENTS.md` を正とし、互換のため `CLAUDE.md` も fallback 対象にする
 - Claude 側は `CLAUDE.md` を正とし、`templates/CLAUDE.md` は Claude Code 専用方針として保つ
-- ターミナル運用を前提に、共通方針は「最小限の確認で前進」「差分と検証を重視」「client 標準機能を優先」で揃える
+- Clarify 方針は client ごとに分ける。Codex 側は前進優先（不明点は前提を明示して前進）、Claude 側は確認優先（影響が大きい不明点は先に質問）
+- ターミナル運用を前提に、共通方針は「差分と検証を重視」「client 標準機能を優先」で揃える
 - インストールはテンプレート管理対象のみを同期し、上書き対象ファイルは `*.bak` に退避する
 
 ## ディレクトリ構造
@@ -26,6 +27,7 @@ Claude Code と OpenAI Codex CLI の共通設定テンプレートを管理す�
   - `statusline.sh` - ステータスライン表示スクリプト（モデル・コンテキスト・コスト・5h/7dレート制限・ブランチ。jq 推奨、bash fallback 対応）
   - `config.toml` - Codex CLI 用の terminal-first 設定テンプレート
 - `scripts/` - ユーティリティスクリプト（pack-md.sh 等）
+- `tests/` - 回帰テスト資産
 - `install.sh` - `~/` 配下へ反映するインストールスクリプト
 - `docs/` - プロジェクトドキュメント
 - `.claude/` - プロジェクト固有の Claude 設定
@@ -135,6 +137,24 @@ bash scripts/verify-install.sh
 
 既知の制限として、テンプレートから削除された古い skill / rule はインストール先から自動削除されません。不要なファイルは手動で整理してください。
 
+skill 用の回帰テスト資産が壊れていないかは以下で確認できます。
+
+```bash
+python3 -c "import yaml"
+bash scripts/verify-skill-tests.sh
+```
+
+ケース一覧確認や手動 run sheet 生成には以下を使います。
+
+```bash
+python3 -c "import yaml"
+python3 scripts/run-skill-tests.py list
+RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4)
+python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
+```
+
+`validate-run` は run sheet 記入後に使います。
+
 ## 反映先マッピング
 
 | Repository Source | Destination |
@@ -192,12 +212,13 @@ bash clean.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | 包括的レビューオーケストレーター（intent/code/quality/doc-review を自動判定・並列実行） |
-| `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（コンテキストがない場合はスキップ） |
-| `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー |
-| `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー |
-| `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー |
+| `km:review` | 既定のレビュー入口。変更種別と会話コンテキストに応じて intent/code/quality/expert/doc-review を選別して統合する |
+| `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（個別レビュー用、明示起動のみ） |
+| `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー（明示起動のみ） |
+| `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー（明示起動のみ） |
+| `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー（明示起動のみ） |
 | `km:commit` | Conventional Commits 形式で git commit |
+| `km:github-workflow` | ブランチ作成、レビュー、commit、push、PR 作成までの GitHub ワークフロー |
 
 ## ライセンス
 

@@ -1,0 +1,94 @@
+version: 1
+suite: skills-regression
+owner: agent-config
+description: Regression and acceptance scenarios for templates/skills.
+
+cases:
+  - id: trigger-review-default
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-review-default
+    tags: [trigger, review]
+  - id: trigger-commit-natural-language
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-commit-natural-language
+    tags: [trigger, workflow]
+  - id: trigger-github-workflow-natural-language
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-github-workflow-natural-language
+    tags: [trigger, workflow]
+  - id: trigger-implementation-should-not-trigger-github-workflow
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-implementation-should-not-trigger-github-workflow
+    tags: [trigger, workflow, negative]
+  - id: trigger-code-review-should-route-through-orchestrator
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-code-review-should-route-through-orchestrator
+    tags: [trigger, review, negative]
+  - id: trigger-quality-review-should-route-through-orchestrator
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-quality-review-should-route-through-orchestrator
+    tags: [trigger, review, negative]
+  - id: review-routing-code-only
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-code-only
+    tags: [routing, review]
+  - id: review-routing-docs-only
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-docs-only
+    tags: [routing, review, docs]
+  - id: review-routing-config-chore
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-config-chore
+    tags: [routing, review, config]
+  - id: review-routing-no-conversation-context
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-no-conversation-context
+    tags: [routing, review, intent]
+  - id: review-routing-code-and-docs-self
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-code-and-docs-self
+    tags: [routing, review, docs]
+  - id: review-routing-code-and-docs-third-party
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-code-and-docs-third-party
+    tags: [routing, review, docs, intent]
+  - id: review-quality-blocking
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-blocking
+    tags: [quality, blocking]
+  - id: review-quality-doc-update-check
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-doc-update-check
+    tags: [quality, docs]
+  - id: review-quality-expert-severity-format
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-severity-format
+    tags: [quality, expert, blocking]
+  - id: review-quality-evaluation-summary
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-evaluation-summary
+    tags: [quality, summary]
+  - id: review-quality-expert-skipped-for-config
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-skipped-for-config
+    tags: [quality, expert, routing]
+  - id: review-quality-expert-skipped-for-test
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-skipped-for-test
+    tags: [quality, expert, routing]
+  - id: review-quality-expert-executed-for-large-fix
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-executed-for-large-fix
+    tags: [quality, expert, routing]
+  - id: review-quality-expert-optional-for-small-fix
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-expert-optional-for-small-fix
+    tags: [quality, expert, routing]
+  - id: workflow-existing-pr
+    file: scenarios/workflow-and-state.yaml
+    scenario_id: workflow-existing-pr
+    tags: [workflow, github]
+  - id: docs-policy-drift
+    file: scenarios/workflow-and-state.yaml
+    scenario_id: docs-policy-drift
+    tags: [docs, policy]

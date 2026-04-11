@@ -1,0 +1,86 @@
+version: 1
+scenarios:
+  - id: trigger-review-default
+    title: Review request should prefer km:review as the default entry point
+    prompt: "この変更レビューして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+        - templates/skills/code-review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
+      notes:
+        - review subskills may be used as children after km:review decides routing
+
+  - id: trigger-commit-natural-language
+    title: Natural language commit request should still trigger km:commit
+    prompt: "この変更をコミットして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:commit
+      notes:
+        - the user should not need to type /km:commit explicitly
+
+  - id: trigger-github-workflow-natural-language
+    title: Natural language PR request should still trigger km:github-workflow
+    prompt: "この作業をPRまでやって"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+        - README.md
+      conversation_context: true
+    expected:
+      primary_skill: km:github-workflow
+      notes:
+        - branch creation or reuse may be part of the workflow
+
+  - id: trigger-implementation-should-not-trigger-github-workflow
+    title: Generic implementation request should NOT trigger km:github-workflow
+    prompt: "この機能を実装して"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      should_not_trigger:
+        - km:github-workflow
+      notes:
+        - generic implementation requests should go through normal coding flow
+        - km:github-workflow requires explicit PR or delivery intent
+
+  - id: trigger-code-review-should-route-through-orchestrator
+    title: Natural language code review request should use km:review, not km:code-review
+    prompt: "コードレビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+      notes:
+        - km:code-review has disable-model-invocation so must route through orchestrator
+
+  - id: trigger-quality-review-should-route-through-orchestrator
+    title: Natural language quality review request should use km:review, not km:quality-review
+    prompt: "品質レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+      notes:
+        - km:quality-review has disable-model-invocation so must route through orchestrator

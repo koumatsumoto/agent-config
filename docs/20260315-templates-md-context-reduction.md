@@ -1,5 +1,7 @@
 # templates 配下 Markdown のコンテキスト削減方針
 
+> 2026-04-11 更新: skill の invocation policy と横断評価は [20260411-skill-authoring-review.md](./20260411-skill-authoring-review.md) を正とする。この文書は主に context 削減の観点を残す。運用判断では新文書を優先し、この文書は補助資料として扱う。
+
 `templates/skills/` 配下の Markdown を、精度を維持しながらコンテキスト負荷を下げるための方針。最新の Claude Code skill 運用と `docs/claude-code-best-practices-2026.md` を前提とする。
 
 ## コンテキストコストモデル
@@ -26,6 +28,8 @@
 | `km:intent-review` | Auto-invocable | orchestrator 経由ではメインコンテキストで実行 |
 | `km:commit` | Auto-invocable | 副作用あり。AI 自動呼び出しを維持（ワークフロー上の利便性） |
 
+> **2026-04 時点の実態**: review subskill 4 種は `disable-model-invocation: true`（manual-only）に変更済み。`km:github-workflow` も追加されている。詳細は [20260411-skill-authoring-review.md](./20260411-skill-authoring-review.md) を参照。
+
 review orchestrator がサブエージェントで code/quality/doc-review を実行する場合、各 SKILL.md は分離コンテキストで消費される。SKILL.md サイズが影響するのは主に単独実行時。
 
 最適化の優先順位はコスト影響度で決まる:
@@ -43,7 +47,7 @@ review orchestrator がサブエージェントで code/quality/doc-review を�
 
 | ファイル | 行数 | 備考 |
 |---|---:|---|
-| `quality-review/quality-patterns.md` | 223 | 最大。詳細パターン集 |
+| `quality-review/quality-patterns.md` | 223 | 最大。詳細パターン集（2026-04 に `quality-checklist.md` + `reference/` 9 ファイルに再構成済み） |
 | `quality-review/SKILL.md` | 162 | 最重量の SKILL.md |
 | `review/SKILL.md` | 149 | オーケストレーション説明 |
 | `doc-review/SKILL.md` | 138 | Phase 説明が長い |
@@ -165,7 +169,7 @@ skill-name/
 
 ### `quality-review/SKILL.md`（162行）
 
-- 8特性の確認の問いが本体の大部分を占める。これは本スキルの中核価値であり、残す
+- 9 品質特性（ISO/IEC 25010:2023）の確認の問いが本体の大部分を占める。これは本スキルの中核価値であり、残す
 - 報告テンプレート（L152-162）と サマリー（L142-150）は code-review と同一構造。分離候補
 - `quality-patterns.md` を読む条件を明示する（現在 L37 にあるが、読むタイミングの条件が不明確）
 

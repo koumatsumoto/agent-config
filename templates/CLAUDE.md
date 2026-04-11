@@ -29,9 +29,16 @@
 ### 4. レビュー
 
 - `/km:review` で包括的レビューを実行する（intent/code/quality/doc-review を自動判定・並列実行）
-- 個別に実行したい場合: `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を直接呼び出す
+- 個別に実行したい場合だけ `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を直接呼び出す
 - IMPORTANT: 最初の仕様に立ち返り、見落としがないか入念に確認する
 
 ### 5. 完了
 
 - レビューと検証が完了したら `/km:commit` でコミットする
+
+## Skill 運用
+
+- レビュー系は `/km:review` を入口にし、個別 skill はターゲットが明確なときだけ使う
+- 下位 review skill は明示起動のみ（manual-only）に寄せ、`/km:review` を既定入口として残す
+- `/km:commit` と `/km:github-workflow` はユーザーの自然言語要求から起動しうる workflow skill として扱う
+- skill を更新する場合は SKILL 本体を概要に保ち、詳細な例や参照情報は別ファイルに分離する

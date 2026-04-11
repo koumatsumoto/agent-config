@@ -1,0 +1,147 @@
+version: 1
+scenarios:
+  - id: review-quality-blocking
+    title: High-severity finding should block commit
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      injected_issue: "unvalidated external input reaches SQL query"
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+        - blocking decision
+      expected_blocking: BLOCKED
+      minimum_findings:
+        - severity: HIGH
+          area: security_or_quality
+
+  - id: review-quality-doc-update-check
+    title: Code-only public API change should recommend docs update
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/routes.ts
+        - src/api/schema.ts
+      change_type: feat
+      conversation_context: true
+      public_interface_changed: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - doc update recommendation
+      notes:
+        - full doc-review is not required, but update necessity must be surfaced
+
+  - id: review-quality-expert-severity-format
+    title: Expert review findings must use severity format and participate in blocking
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/auth.ts
+        - src/lib/session.ts
+      injected_issue: "session token stored in localStorage without encryption"
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - expert review section with severity summary per expert
+        - individual expert findings with severity, location, and confidence
+        - expert HIGH/CRITICAL reflected in integrated blocking decision
+      expected_blocking: BLOCKED
+      notes:
+        - expert findings must use the same CRITICAL/HIGH/MEDIUM/LOW format as code-review and quality-review
+        - expert severity counts must be included in the integrated summary totals
+
+  - id: review-quality-evaluation-summary
+    title: Quality evaluation summary with 9 characteristics must be present
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - src/lib/validation.ts
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - quality evaluation summary table with 9 characteristics
+        - each characteristic rated as PASS, WARN, FAIL, or SKIP
+      notes:
+        - the 9-characteristic table is mandatory regardless of whether quality issues are found
+        - WARN maps to MEDIUM or below, FAIL maps to HIGH or above
+
+  - id: review-quality-expert-skipped-for-config
+    title: Expert review should be skipped for config/chore changes
+    prompt: "この設定変更をレビューして"
+    context:
+      changed_files:
+        - config/settings.toml
+      change_type: config
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+      expert_review: skipped
+      notes:
+        - per routing table, config/chore changes skip expert review
+
+  - id: review-quality-expert-skipped-for-test
+    title: Expert review should be skipped for test-only changes
+    prompt: "テストの変更をレビューして"
+    context:
+      changed_files:
+        - tests/api/users.test.ts
+        - tests/lib/auth.test.ts
+      change_type: test
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+      expert_review: skipped
+      notes:
+        - per routing table, test-only changes skip expert review same as config/chore
+
+  - id: review-quality-expert-executed-for-large-fix
+    title: Expert review should execute for large fix changes exceeding threshold
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - src/api/auth.ts
+        - src/api/routes.ts
+        - src/lib/session.ts
+        - src/lib/crypto.ts
+        - src/lib/validator.ts
+        - src/db/queries.ts
+        - src/db/migrations.ts
+        - src/utils/logger.ts
+        - src/utils/parser.ts
+        - src/config/settings.ts
+      change_type: fix
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      expert_review: executed
+      notes:
+        - 11 files exceeds the 10-file threshold, so expert review must execute
+
+  - id: review-quality-expert-optional-for-small-fix
+    title: Expert review may be skipped for small fix changes under threshold
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      change_type: fix
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      expert_review: optional
+      notes:
+        - 1 file is well under the 10-file threshold, so expert review may be skipped
