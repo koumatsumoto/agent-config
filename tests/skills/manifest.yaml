@@ -16,6 +16,10 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-github-workflow-natural-language
     tags: [trigger, workflow]
+  - id: trigger-implementation-should-not-trigger-github-workflow
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-implementation-should-not-trigger-github-workflow
+    tags: [trigger, workflow, negative]
   - id: review-routing-code-only
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-only

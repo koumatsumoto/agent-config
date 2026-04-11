@@ -136,6 +136,35 @@ def main() -> int:
     gitkeep = runs_dir / ".gitkeep"
     check(gitkeep.is_file(), f"missing: {gitkeep}")
 
+    # --- agents/openai.yaml contract ---
+    skills_root = root.parent / "templates" / "skills"
+    if skills_root.is_dir():
+        # Manual-only skills MUST have agents/openai.yaml with allow_implicit_invocation: false
+        manual_only = ["code-review", "quality-review", "intent-review", "doc-review"]
+        for skill_name in manual_only:
+            oa_path = skills_root / skill_name / "agents" / "openai.yaml"
+            check(oa_path.is_file(), f"missing agents/openai.yaml for manual-only skill: {skill_name}")
+            if oa_path.is_file():
+                oa_data = load_yaml(oa_path)
+                if isinstance(oa_data, dict):
+                    policy = oa_data.get("policy", {})
+                    if isinstance(policy, dict):
+                        check(
+                            policy.get("allow_implicit_invocation") is False,
+                            f"{skill_name}: allow_implicit_invocation must be false",
+                        )
+                    else:
+                        check(False, f"{skill_name}: agents/openai.yaml missing policy section")
+
+        # Workflow skills MUST NOT have agents/openai.yaml (auto-invocable)
+        workflow_skills = ["commit", "github-workflow", "review"]
+        for skill_name in workflow_skills:
+            oa_path = skills_root / skill_name / "agents" / "openai.yaml"
+            check(
+                not oa_path.exists(),
+                f"workflow skill {skill_name} should not have agents/openai.yaml (must stay auto-invocable)",
+            )
+
     if failures:
         print(f"verify failed: {failures} issue(s) across {checks} check(s)")
         return 1

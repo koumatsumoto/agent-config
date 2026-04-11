@@ -1,6 +1,6 @@
 ---
 name: km:commit
-description: Creates a Conventional Commits git commit for the current changes. Use when the user asks to commit, save, or record the work.
+description: Creates a Conventional Commits git commit for the current changes. Use when the user says "コミットして", "変更を保存して", or asks to commit, save, or record the work.
 argument-hint: "[message]"
 ---
 

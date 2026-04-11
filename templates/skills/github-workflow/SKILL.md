@@ -1,6 +1,6 @@
 ---
 name: km:github-workflow
-description: Runs the branch-review-commit-push-PR workflow for a GitHub repository. Use when the user says "PRにして", "PR作って", "PRまでやって", "開発して", "実装して", or asks for a branch, a PR, or end-to-end GitHub delivery.
+description: Runs the branch-review-commit-push-PR workflow for a GitHub repository. Use when the user says "PRにして", "PR作って", "PRまでやって", or asks for a branch, a PR, or end-to-end GitHub delivery.
 ---
 
 # GitHub Workflow

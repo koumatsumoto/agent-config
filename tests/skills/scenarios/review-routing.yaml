@@ -74,5 +74,6 @@ scenarios:
         - km:quality-review
       child_skills_skipped:
         - km:intent-review
+      expert_review: executed
       notes:
         - output should state a concrete skip reason instead of guessing intent

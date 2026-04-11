@@ -60,15 +60,15 @@ Quick の優先観点:
 
 | 特性 | リファレンスファイル |
 |------|---------------------|
-| セキュリティ | `reference/security.md` |
-| 信頼性 | `reference/reliability.md` |
-| 性能効率性 | `reference/performance-efficiency.md` |
-| 保守性 | `reference/maintainability.md` |
-| 互換性 | `reference/compatibility.md` |
-| 安全性 | `reference/safety.md` |
-| 機能適合性 | `reference/functional-suitability.md` |
-| 柔軟性 | `reference/flexibility.md` |
-| インタラクション能力 | `reference/interaction-capability.md` |
+| 機能適合性 | `reference/1-functional-suitability.md` |
+| 性能効率性 | `reference/2-performance-efficiency.md` |
+| 互換性 | `reference/3-compatibility.md` |
+| インタラクション能力 | `reference/4-interaction-capability.md` |
+| 信頼性 | `reference/5-reliability.md` |
+| セキュリティ | `reference/6-security.md` |
+| 保守性 | `reference/7-maintainability.md` |
+| 柔軟性 | `reference/8-flexibility.md` |
+| 安全性 | `reference/9-safety.md` |
 
 特性ごとの判断は次の原則に従う:
 
@@ -103,15 +103,15 @@ Quick の優先観点:
 
 | 特性 | 評価 | 所見 |
 |------|------|------|
-| セキュリティ | PASS / WARN / FAIL | 1-2 文の定性評価 |
-| 信頼性 | PASS / WARN / FAIL | |
+| 機能適合性 | PASS / WARN / FAIL / SKIP | 2-3 文の定性評価 |
 | 性能効率性 | PASS / WARN / FAIL | |
-| 保守性 | PASS / WARN / FAIL | |
 | 互換性 | PASS / WARN / FAIL / SKIP | |
-| 安全性 | PASS / WARN / FAIL / SKIP | |
-| 機能適合性 | PASS / WARN / FAIL / SKIP | |
-| 柔軟性 | PASS / WARN / FAIL / SKIP | |
 | インタラクション能力 | PASS / WARN / FAIL / SKIP | |
+| 信頼性 | PASS / WARN / FAIL | |
+| セキュリティ | PASS / WARN / FAIL | |
+| 保守性 | PASS / WARN / FAIL | |
+| 柔軟性 | PASS / WARN / FAIL / SKIP | |
+| 安全性 | PASS / WARN / FAIL / SKIP | |
 
 - **PASS**: 問題なし。確認した範囲で品質は健全
 - **WARN**: MEDIUM 以下の問題あり。改善の余地がある

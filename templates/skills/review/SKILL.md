@@ -24,10 +24,9 @@ description: Reviews uncommitted changes end-to-end. Use when the user says "レ
 
 1. Phase 1: 変更把握とルーティング
 2. Phase 2: intent-review（メインコンテキスト）
-3. Phase 3: code-review + quality-review（サブエージェント並列）
-4. Phase 4: 第三者専門家レビュー（サブエージェント並列）
-5. Phase 5: doc-review（Phase 3-4 の結果を踏まえて）
-6. Phase 6: 結果統合とコミット判定
+3. Phase 3-4: code-review + quality-review + 第三者専門家レビュー（Phase 2 完了後にサブエージェント同時起動）
+4. Phase 5: doc-review（Phase 3-4 の全サブエージェント完了後に実行）
+5. Phase 6: 結果統合とコミット判定
 
 ## Phase 1: 変更把握とルーティング
 
@@ -55,7 +54,9 @@ description: Reviews uncommitted changes end-to-end. Use when the user says "レ
 
 intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定義されたフォーマットに従う。この結果は Phase 3（偽陽性フィルタリングの「合意済み設計判断」判定）および Phase 4（専門家への要求背景の提供）で使用する。
 
-## Phase 3: code-review + quality-review
+## Phase 3-4: code-review + quality-review + 第三者専門家レビュー
+
+Phase 2 完了後に、以下の全サブエージェントを `run_in_background: true` で同時起動する。Phase 3（内部レビュー）と Phase 4（第三者診断）は互いに独立しており、並列実行で待機時間を削減する。
 
 ### サブエージェントへの共通コンテキスト
 
@@ -64,16 +65,17 @@ intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定�
 - 変更ファイル一覧、変更タイプ、レビュー深度
 - Phase 2 の intent-review 結果（実行された場合のみ）— 要求リストと合意事項。サブエージェントはこれを偽陽性フィルタリングの「意図的な変更」判定に使用する
 
-### 実行ルール
+### code-review + quality-review（内部レビュー）
 
 - `code-review`: `code-review/SKILL.md` を Read し、Phase 1 を除くレビューを実行する
 - `quality-review`: `quality-review/SKILL.md` と `quality-review/quality-checklist.md` を Read し、Phase 1 を除くレビューを実行する。判断に迷ったら `quality-review/reference/` 配下の該当ファイルを参照する
-- 並列実行の方が効果的な規模の変更では、サブエージェント（`run_in_background: true`）で並列起動する。小規模な変更ではメインコンテキストで逐次実行してもよい
 - 各下位レビューは「重大度ごとの件数サマリー + 個別問題報告」で返させる
 
-## Phase 4: 第三者専門家レビュー
+### 第三者専門家レビュー
 
-チーム内部のレビュー（Phase 3）とは独立した、ゼロベースの第三者診断を行う。目的は、内部レビューの前提知識や慣れに起因する盲点を補うこと。
+チーム内部のレビューとは独立した、ゼロベースの第三者診断を行う。目的は、内部レビューの前提知識や慣れに起因する盲点を補うこと。
+
+expert review は feat と refactor で常に実行する。fix は変更規模が小さい場合（目安: 3 ファイル以下かつ 100 行以下）はスキップしてもよい。
 
 ### 専門家の構成
 
@@ -88,7 +90,7 @@ intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定�
 
 - コード差分と変更ファイル一覧
 - 要求背景の要約（Phase 2 の intent-review 結果がある場合。要求リストと合意された設計判断）
-- 既知の設計制約（段階的ロールアウト、意図的な簡略化など、仕様上の前提）
+- 既知の設計制約（会話コンテキストから得られる場合。段階的ロールアウト、意図的な簡略化など、仕様上の前提）
 
 以下は意図的に提供しない:
 
@@ -108,7 +110,7 @@ Phase 3 の結果と重複してもよい — クロスバリデーションと�
 
 ## Phase 5: doc-review
 
-Phase 3-4 の結果を踏まえた上でドキュメントの整合性を検証する。Phase 3-4 で見つかった問題がドキュメントに波及する可能性があるため、ドキュメントレビューは最後に実行する。
+Phase 3-4 の全サブエージェントの完了を確認してから開始する。Phase 3-4 で見つかった問題がドキュメントに波及する可能性があるため、ドキュメントレビューは最後に実行する。
 
 - ドキュメント変更がある場合: `doc-review/SKILL.md` を Read してサブエージェントで実行する
 - コードのみ変更の場合: フル doc-review は実行せず、以下を確認する:

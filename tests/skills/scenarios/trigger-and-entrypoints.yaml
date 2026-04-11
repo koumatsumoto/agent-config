@@ -41,3 +41,16 @@ scenarios:
       primary_skill: km:github-workflow
       notes:
         - branch creation or reuse may be part of the workflow
+
+  - id: trigger-implementation-should-not-trigger-github-workflow
+    title: Generic implementation request should NOT trigger km:github-workflow
+    prompt: "この機能を実装して"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      should_not_trigger:
+        - km:github-workflow
+      notes:
+        - generic implementation requests should go through normal coding flow
+        - km:github-workflow requires explicit PR or delivery intent
