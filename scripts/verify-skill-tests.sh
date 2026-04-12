@@ -183,6 +183,8 @@ def main() -> int:
     agents_md = repo_root / "templates" / "AGENTS.md"
     claude_md = repo_root / "templates" / "CLAUDE.md"
     review_skill = repo_root / "templates" / "skills" / "review" / "SKILL.md"
+    commit_skill = repo_root / "templates" / "skills" / "commit" / "SKILL.md"
+    github_workflow_skill = repo_root / "templates" / "skills" / "github-workflow" / "SKILL.md"
 
     if repo_readme.is_file():
         readme_text = load_text(repo_readme)
@@ -214,6 +216,10 @@ def main() -> int:
     if review_skill.is_file():
         review_text = load_text(review_skill)
         if review_text is not None:
+            check(
+                "run_in_background: true" not in review_text,
+                "review skill should use vendor-neutral wording instead of run_in_background: true",
+            )
             review_lines = review_text.splitlines()
             persona_count = 0
             in_persona_section = False
@@ -228,6 +234,22 @@ def main() -> int:
             check(persona_count == 2, f"review skill should define exactly 2 expert personas, got {persona_count}")
         reviewer_dir = review_skill.parent / "reviewers"
         check(not reviewer_dir.exists(), "review reviewer directory should not exist")
+
+    if commit_skill.is_file():
+        commit_text = load_text(commit_skill)
+        if commit_text is not None:
+            check(
+                "要求が曖昧でコミット実行の意図を確認できない場合は、コミット前にユーザーへ確認する" in commit_text,
+                "commit skill should clarify ambiguous commit requests before acting",
+            )
+
+    if github_workflow_skill.is_file():
+        workflow_text = load_text(github_workflow_skill)
+        if workflow_text is not None:
+            check(
+                "branch 作成 / push / PR 作成の要求が曖昧な場合は、workflow 開始前にユーザーへ確認する" in workflow_text,
+                "github-workflow skill should clarify ambiguous branch/push/PR requests before acting",
+            )
 
     # --- orphan scenario detection ---
     manifest_scenario_ids: set[str] = set()

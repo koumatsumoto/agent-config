@@ -65,5 +65,6 @@ GitHub 管理リポジトリで、ブランチ作成から PR 作成までを完
 ## Safety Rules
 
 - 認証変更、権限付与、remote 変更は勝手に行わない
+- branch 作成 / push / PR 作成の要求が曖昧な場合は、workflow 開始前にユーザーへ確認する
 - `--force` push はしない
 - PR 作成が完了したら主体的な作業は止める

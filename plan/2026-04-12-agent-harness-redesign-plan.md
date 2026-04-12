@@ -36,6 +36,22 @@ Updated: 2026-04-12
 4. docs はファイル単位で「残す / 縮退 / 削除 / 非規範化」を決める
 5. install / verify / tests は既存資産を活かして最小限の補強だけ行う
 
+## Relationship To Modernization Plan
+
+[plan/2026-04-12-agent-harness-modernization-plan.md](./2026-04-12-agent-harness-modernization-plan.md) は、2026-04-12 時点の一次情報を踏まえた補助分析ノートとして扱う。この `redesign-plan` を実行計画の正本とし、modernization 側の知見は低コストで有効なものだけを取り込む。
+
+この計画で取り込むのは次に限定する。
+
+- review skill の vendor-specific な表現を vendor-neutral に整える
+- workflow skill に clarification 方針を明文化する
+- 外部仕様から得た制約を、計画上の参考根拠として残す
+
+この計画で取り込まないもの:
+
+- SKILL.md の overlay 分離
+- `tests/skills/policy.yaml` のような新しい抽象層
+- root instruction にメタな allocation policy を追加すること
+
 ## Non-Goals
 
 今回やらないことを明確にする。
@@ -72,6 +88,22 @@ Updated: 2026-04-12
 
 review persona のような軽量定義は、実害が出るまでインラインのまま維持する。抽象化は保守性改善が明確なときだけ行う。
 
+### 5. Prefer Low-Cost Cleanup Over Preventive Architecture
+
+数行の wording cleanup で済む問題に、新しい配布構造や検証レイヤを導入しない。問題の深刻度と修正コストを比較し、低コストで drift と混乱を下げられる変更を優先する。
+
+## External Constraints (Reference)
+
+2026-04-12 時点で確認した一次情報から、今回の判断に関係する制約だけを抜き出す。
+
+- Claude Code は `CLAUDE.md` に常設の事実を置き、手順や部分的な知識は skill / path-scoped rule に寄せる方針を示している
+- Codex は `AGENTS.md` を root から cwd まで連結して読み込むため、root instruction の肥大化は不利
+- Claude の skill は `disable-model-invocation`, `paths`, `context: fork`, `allowed-tools`, `!` command などの runtime 機能を持つ
+- Codex の skill は `description` と `agents/openai.yaml` による暗黙起動制御を持つが、Claude の inline shell syntax と同一ではない
+- Codex の subagent docs は explicit ask 前提を強く打ち出している
+
+この制約は「新しい抽象化を導入する理由」ではなく、「既存の文言で vendor-specific な表現を減らす理由」として使う。
+
 ## Current-State Diagnosis
 
 ### What Is Already Good
@@ -87,6 +119,8 @@ review persona のような軽量定義は、実害が出るまでインライ�
 #### A. README and templates compete for authority
 
 [README.md](/home/kou/projects/agent-config/README.md) の以下は、README 固有の案内価値よりも runtime contract 寄りである。
+
+注記: 以下の行番号参照は 2026-04-12 時点のスナップショットであり、Phase 1 実装開始時に現行ファイルを再確認する前提とする。
 
 - `## Codex 設定方針`（現行 107-124 行）のうち:
   - 109-117 行: `config.toml` の設計理由。README 固有の価値がある
@@ -132,6 +166,18 @@ review persona のような軽量定義は、実害が出るまでインライ�
 - `docs/20260315-templates-md-context-reduction.md`
 - `docs/20260411-skill-authoring-review.md`
 - `docs/claude-code-terminal-customization.md`
+
+#### F. Some cross-client wording can be cleaned up at very low cost
+
+大きな構造変更は不要だが、数行の vendor-specific な表現は整理した方がよい。
+
+対象:
+
+- [templates/skills/review/SKILL.md](/home/kou/projects/agent-config/templates/skills/review/SKILL.md) の `run_in_background: true`
+- [templates/skills/commit/SKILL.md](/home/kou/projects/agent-config/templates/skills/commit/SKILL.md) の曖昧要求時の clarification 方針
+- [templates/skills/github-workflow/SKILL.md](/home/kou/projects/agent-config/templates/skills/github-workflow/SKILL.md) の曖昧要求時の clarification 方針
+
+ここで直すのは wording と safety rule だけであり、skill 分割や overlay 追加は行わない。
 
 ## Target State
 
@@ -211,6 +257,7 @@ README は次を担わない。
 
 - 本体には internal note を追加しない
 - `### Skill 運用` の intentional duplication は README / 計画 / 検証側で管理する
+- root が既に短いため、allocation policy のような meta-rule は追加しない
 
 削る対象:
 
@@ -231,6 +278,7 @@ README は次を担わない。
 
 - 本体には internal note を追加しない
 - `## Skill 運用` の intentional duplication は README / 計画 / 検証側で管理する
+- root が既に短いため、allocation policy のような meta-rule は追加しない
 
 削る対象:
 
@@ -290,15 +338,32 @@ README は次を担わない。
 - 新しいテスト基盤は作らない
 - 既存の `tests/skills/manifest.yaml`, `tests/skills/scenarios/`, `scripts/verify-skill-tests.sh` に追加する
 
+### G. Apply only low-cost skill wording cleanup
+
+変更対象は 3 点に絞る。
+
+- `templates/skills/review/SKILL.md`
+  - `run_in_background: true` を削り、「Phase 3-4 は独立しているため、可能な限り並列実行する」のような vendor-neutral な文に置き換える
+- `templates/skills/commit/SKILL.md`
+  - Safety Rules に「要求が曖昧なら commit 前に確認する」を追加する
+- `templates/skills/github-workflow/SKILL.md`
+  - Entry Point または Safety Rules に「branch / push / PR の要求が曖昧なら workflow 開始前に確認する」を追加する
+
+やらないこと:
+
+- skill overlay 分離
+- Claude / Codex 別の execution section 追加
+- workflow policy を新しい manifest へ抽出すること
+
 ## Implementation Phases
 
 依存関係を先に固定する。
 
 - Phase 1 は最初に実施する。README / AGENTS / CLAUDE の責務定義が後続フェーズの前提になるため
-- Phase 2 は独立フェーズにしない。review persona の扱いは Phase 1 と Phase 4 の制約条件として扱う
-- Phase 3（docs reduction）は、Phase 1 完了後に実施する
-- Phase 4（verification updates）は Phase 1 と Phase 3 の内容確定後に実施する
-- ただし install 影響確認は Phase 1 の直後にも実施する
+- Phase 2（docs reduction）は Phase 1 完了後に実施する
+- Phase 3（skill wording cleanup + verification）は Phase 1・Phase 2 の内容確定後に実施する
+- review persona の扱いは全フェーズを通じた制約条件として扱い、独立フェーズにしない
+- install 影響確認は Phase 1 の直後にも実施する
 
 ### Phase 1: Responsibility Cleanup
 
@@ -350,16 +415,21 @@ README は次を担わない。
 - 上記 5 ファイルの先頭に reference-only または historical note がある
 - `20260315-templates-md-context-reduction.md` が短い superseded stub になっている
 
-### Phase 3: Verification Updates
+### Phase 3: Targeted Skill Cleanup And Verification Updates
 
 対象:
 
+- [templates/skills/review/SKILL.md](/home/kou/projects/agent-config/templates/skills/review/SKILL.md)
+- [templates/skills/commit/SKILL.md](/home/kou/projects/agent-config/templates/skills/commit/SKILL.md)
+- [templates/skills/github-workflow/SKILL.md](/home/kou/projects/agent-config/templates/skills/github-workflow/SKILL.md)
 - [scripts/verify-skill-tests.sh](/home/kou/projects/agent-config/scripts/verify-skill-tests.sh)
 - [tests/skills/manifest.yaml](/home/kou/projects/agent-config/tests/skills/manifest.yaml)
 - [tests/skills/scenarios/workflow-and-state.yaml](/home/kou/projects/agent-config/tests/skills/scenarios/workflow-and-state.yaml)
 
 作業:
 
+- `review/SKILL.md` の `run_in_background: true` を vendor-neutral な表現に置き換える
+- `commit` / `github-workflow` に clarification 方針を追記する
 - 既存の `docs-policy-drift` ケースを更新し、README から runtime contract を減らした後の期待値に合わせる
 - 必要なら `tests/skills/scenarios/` に 1 ケース追加し、`AGENTS.md` ↔ `CLAUDE.md` の `Skill 運用` 一致を検証する
 - `scripts/verify-skill-tests.sh` に以下の lightweight checks を追加する
@@ -368,12 +438,17 @@ README は次を担わない。
   - `templates/AGENTS.md` と `templates/CLAUDE.md` の `## Skill 運用` セクションから「意図的重複」の注記行を除外し、残りの bullet 群を順序込みで比較する
   - bullet 数は固定値で持たず、抽出した bullet 配列同士の一致で検証する
   - review persona については、`templates/skills/review/SKILL.md` に numbered persona が 2 件あることだけを確認し、新ディレクトリ不在チェックと併用する
+  - `templates/skills/review/SKILL.md` に `run_in_background: true` が残っていない
+  - 必要なら `commit` / `github-workflow` の clarification 文言が存在することを文字列チェックする
 
 完了条件:
 
+- `review/SKILL.md` に harness 固有の `run_in_background: true` が残っていない
+- `commit` / `github-workflow` に曖昧要求時の clarification 方針がある
 - `bash scripts/verify-skill-tests.sh` が新しい責務分離を検証する
 - `tests/skills/manifest.yaml` に docs/policy drift 系ケースが維持または追加されている
 - 追加検証は既存の test harness の中で完結している
+- clarification 方針の検証キーワードは Phase 3 実装時に確定し、`verify-skill-tests.sh` に固定する
 
 ## Test Plan
 
@@ -406,6 +481,10 @@ README は次を担わない。
 - Review:
   - `km:review` の expert persona は 2 つだけ
   - 新しい reviewer directory は追加されていない
+  - `run_in_background: true` のような harness 固有語が残っていない
+- Workflow skills:
+  - `commit` は曖昧要求で clarification する方針を持つ
+  - `github-workflow` は branch / push / PR 要求が曖昧なら clarification する方針を持つ
 - Docs:
   - 参考資料として残す文書には non-normative 注記がある
   - `20260315-templates-md-context-reduction.md` は superseded stub になっている
@@ -435,6 +514,14 @@ Mitigation:
 - 新 persona は追加しない
 - 再検討条件は「persona が増える」「1 persona の定義が大幅に長くなる」のいずれかに限定する
 
+### Risk: Cross-client cleanup expands into structural refactor
+
+Mitigation:
+
+- wording cleanup は `review`, `commit`, `github-workflow` の数行に限定する
+- overlay / manifest / 新ディレクトリは導入しない
+- `templates/` の tree 構造を変えない
+
 ### Risk: Docs still look authoritative
 
 Mitigation:
@@ -450,7 +537,8 @@ Mitigation:
 2. `templates/AGENTS.md` と `templates/CLAUDE.md` の `Skill 運用` 一致を README / 検証側で管理前提にする
 3. install / verify-install がその変更で壊れないことを確認する
 4. docs の file-by-file disposition を反映する
-5. `verify-skill-tests.sh` と `docs-policy-drift` ケースを更新する
+5. `review`, `commit`, `github-workflow` の小さな wording cleanup を入れる
+6. `verify-skill-tests.sh` と `docs-policy-drift` ケースを更新する
 
 理由:
 
