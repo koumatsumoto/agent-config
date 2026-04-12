@@ -59,6 +59,25 @@ scenarios:
         - km:quality-review
       expert_review: skipped
 
+  - id: review-routing-docs-only-quick
+    title: Quick review should use doc-review instead of code-review for docs-only changes
+    prompt: "README を浅くレビューして"
+    context:
+      changed_files:
+        - README.md
+        - docs/setup.md
+      change_type: docs
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      child_skills:
+        - km:doc-review
+      child_skills_skipped:
+        - km:intent-review
+        - km:code-review
+        - km:quality-review
+      expert_review: skipped
+
   - id: review-routing-config-chore
     title: Config or chore only change should keep Quick internal depth in standard level
     prompt: "この設定変更を確認して"
