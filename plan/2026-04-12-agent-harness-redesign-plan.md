@@ -38,7 +38,7 @@ Updated: 2026-04-12
 
 ## Relationship To Modernization Plan
 
-[plan/2026-04-12-agent-harness-modernization-plan.md](/home/kou/projects/agent-config/plan/2026-04-12-agent-harness-modernization-plan.md) は、2026-04-12 時点の一次情報を踏まえた補助分析ノートとして扱う。この `redesign-plan` を実行計画の正本とし、modernization 側の知見は低コストで有効なものだけを取り込む。
+[plan/2026-04-12-agent-harness-modernization-plan.md](./2026-04-12-agent-harness-modernization-plan.md) は、2026-04-12 時点の一次情報を踏まえた補助分析ノートとして扱う。この `redesign-plan` を実行計画の正本とし、modernization 側の知見は低コストで有効なものだけを取り込む。
 
 この計画で取り込むのは次に限定する。
 

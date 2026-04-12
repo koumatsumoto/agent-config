@@ -2,7 +2,7 @@
 
 Updated: 2026-04-12
 
-> Note: この文書は一次情報の補助分析ノート。実行計画の正本は [plan/2026-04-12-agent-harness-redesign-plan.md](/home/kou/projects/agent-config/plan/2026-04-12-agent-harness-redesign-plan.md) とする。ここで挙げた論点のうち、低コストで有効なものだけを redesign-plan に取り込む。
+> Note: この文書は一次情報の補助分析ノート。実行計画の正本は [plan/2026-04-12-agent-harness-redesign-plan.md](./2026-04-12-agent-harness-redesign-plan.md) とする。ここで挙げた論点のうち、低コストで有効なものだけを redesign-plan に取り込む。
 
 ## Purpose
 
