@@ -156,6 +156,7 @@ Updated: 2026-04-12
 
 - ISO の公開ページ上で、`ISO/IEC 25010:2011` は withdrawn、`ISO/IEC 25010:2023` が current な版として案内されている
 - W3C の WCAG Overview 上で、`WCAG 2.2` は 2023-10-05 Recommendation として示され、W3C は最新の WCAG 使用を推奨している
+- OWASP ASVS は Web / API の検証観点を、認証、認可、入力境界、ブラウザ防御の実務レベルで整理している
 - OWASP API Security Top 10 2023 は、`BOLA`、`Unrestricted Resource Consumption`、`Unsafe Consumption of APIs` など、現代 API で見落としやすい観点を整理している
 - Kubernetes documentation は `startup` / `readiness` / `liveness` probe の役割分離を定義している
 - OpenTelemetry documentation は context propagation と telemetry correlation を明示している
