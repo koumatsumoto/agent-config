@@ -28,6 +28,14 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-quality-review-should-route-through-orchestrator
     tags: [trigger, review, negative]
+  - id: trigger-npm-package-security-review-explicit
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-npm-package-security-review-explicit
+    tags: [trigger, review, npm]
+  - id: trigger-generic-review-should-not-trigger-npm-package-security-review
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-generic-review-should-not-trigger-npm-package-security-review
+    tags: [trigger, review, npm, negative]
   - id: review-routing-code-only
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-only
@@ -84,6 +92,22 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-expert-optional-for-small-fix
     tags: [quality, expert, routing]
+  - id: npm-review-no-allow-without-exact-version
+    file: scenarios/review-quality.yaml
+    scenario_id: npm-review-no-allow-without-exact-version
+    tags: [quality, review, npm]
+  - id: npm-review-no-allow-with-ambiguous-repository
+    file: scenarios/review-quality.yaml
+    scenario_id: npm-review-no-allow-with-ambiguous-repository
+    tags: [quality, review, npm]
+  - id: npm-review-reject-on-critical-advisory
+    file: scenarios/review-quality.yaml
+    scenario_id: npm-review-reject-on-critical-advisory
+    tags: [quality, review, npm, blocking]
+  - id: npm-review-report-format-japanese
+    file: scenarios/review-quality.yaml
+    scenario_id: npm-review-report-format-japanese
+    tags: [quality, review, npm]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr
