@@ -32,7 +32,8 @@ scenarios:
       child_skills:
         - km:doc-review
       required_checks:
-        - README descriptions match skill invocation behavior
-        - AGENTS and CLAUDE explain exceptions such as km:review default entrypoint
+        - README keeps Codex config rationale but does not redefine recommended profiles
+        - README skill descriptions do not restate invocation policy
+        - AGENTS and CLAUDE keep the Skill 運用 bullets intentionally identical
       notes:
         - km:doc-review is manual-only, so km:review must be the entry point

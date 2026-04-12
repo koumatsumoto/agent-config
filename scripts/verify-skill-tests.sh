@@ -33,6 +33,7 @@ except Exception as exc:  # pragma: no cover - env-dependent
 root = Path(sys.argv[1])
 failures = 0
 checks = 0
+repo_root = root.parent.parent
 
 
 def check(condition: bool, message: str) -> None:
@@ -52,6 +53,36 @@ def load_yaml(path: Path) -> object:
         print(f"invalid yaml: {path} ({exc})")
         failures += 1
         return None
+
+
+def check_contains(text: str, needle: str, message: str) -> None:
+    check(needle in text, message)
+
+
+def extract_skill_operation_bullets(path: Path) -> list[str] | None:
+    text = path.read_text().splitlines()
+    start = None
+    for heading in ("## Skill 運用", "### Skill 運用"):
+        try:
+            start = text.index(heading)
+            break
+        except ValueError:
+            continue
+    if start is None:
+        return None
+
+    bullets: list[str] = []
+    for line in text[start + 1 :]:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            break
+        if not stripped:
+            continue
+        if "意図的に同一内容" in stripped:
+            continue
+        if stripped.startswith("- "):
+            bullets.append(stripped)
+    return bullets
 
 
 def main() -> int:
@@ -135,6 +166,44 @@ def main() -> int:
 
     gitkeep = runs_dir / ".gitkeep"
     check(gitkeep.is_file(), f"missing: {gitkeep}")
+
+    repo_readme = repo_root / "README.md"
+    agents_md = repo_root / "templates" / "AGENTS.md"
+    claude_md = repo_root / "templates" / "CLAUDE.md"
+    review_skill = repo_root / "templates" / "skills" / "review" / "SKILL.md"
+
+    if repo_readme.is_file():
+        readme_text = repo_readme.read_text()
+        check("### 推奨 profile" not in readme_text, "README should not define recommended profiles")
+        check("既定のレビュー入口" not in readme_text, "README skill list should not define invocation policy")
+        check("明示起動のみ" not in readme_text, "README skill list should not define manual-only policy")
+        check_contains(readme_text, "## Codex 設計メモ", "README missing Codex design notes section")
+        check_contains(readme_text, "`web_search = \"cached\"`", "README missing config rationale for cached web_search")
+        check_contains(readme_text, "`alternate_screen = \"never\"`", "README missing config rationale for alternate_screen")
+
+    if agents_md.is_file() and claude_md.is_file():
+        agents_bullets = extract_skill_operation_bullets(agents_md)
+        claude_bullets = extract_skill_operation_bullets(claude_md)
+        check(agents_bullets is not None, "templates/AGENTS.md missing Skill 運用 section")
+        check(claude_bullets is not None, "templates/CLAUDE.md missing Skill 運用 section")
+        if agents_bullets is not None and claude_bullets is not None:
+            check(agents_bullets == claude_bullets, "templates/AGENTS.md and templates/CLAUDE.md Skill 運用 bullets must match")
+
+    if review_skill.is_file():
+        review_lines = review_skill.read_text().splitlines()
+        persona_count = 0
+        in_persona_section = False
+        for line in review_lines:
+            if line.strip() == "### 専門家の構成":
+                in_persona_section = True
+                continue
+            if in_persona_section and line.startswith("### "):
+                break
+            if in_persona_section and (line.startswith("1. **") or line.startswith("2. **")):
+                persona_count += 1
+        check(persona_count == 2, f"review skill should define exactly 2 expert personas, got {persona_count}")
+        reviewer_dir = review_skill.parent / "reviewers"
+        check(not reviewer_dir.exists(), "review reviewer directory should not exist")
 
     # --- orphan scenario detection ---
     manifest_scenario_ids: set[str] = set()

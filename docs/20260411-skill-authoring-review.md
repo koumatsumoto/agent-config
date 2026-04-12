@@ -1,5 +1,8 @@
 # 2026-04 Skill Authoring Review
 
+> Historical design note. Live policy は `templates/AGENTS.md`、`templates/CLAUDE.md`、`templates/skills/`、`tests/skills/` を正とする。
+
+
 `templates/skills/` を 2026-04-11 時点の一次情報で見直した記録。対象は Claude Code / Codex 共用スキル。
 
 ## 調査対象（2026-04-11 参照）

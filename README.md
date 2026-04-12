@@ -104,24 +104,15 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 ./scripts/pack-md.sh -i README.md
 ```
 
-## Codex 設定方針
+## Codex 設計メモ
 
-- デフォルトは `workspace-write + on-request`
-- `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `research` profile を基本に使う
+- `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `research` profile を使い分ける前提にしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- 互換性のため既存 profile (`deep`、`readonly`、`live_web`、`fast`) を残しつつ、用途別 profile (`research`、`review`、`quick`) を追加する
-- status line は組み込み項目のみを使い、モデル・Git・コンテキスト・5h 制限・トークン totals を常時確認できるようにする
+- 互換性のため既存 profile (`deep`、`readonly`、`live_web`、`fast`) を残しつつ、用途別 profile (`research`、`review`、`quick`) を追加している
+- status line は組み込み項目のみを使い、モデル・Git・コンテキスト・5h 制限・トークン totals を常時確認できるようにしている
 - 5h 制限のリセット時刻は内部イベントでは取得できるが、`codex-cli 0.118.0` の `tui.status_line` には専用表示項目がないため常時表示は未対応
-- `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保つ
-- 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねる
-- `templates/AGENTS.md` に Codex 固有の profile 選択、最新確認、レビュー基準を明示する
-
-### 推奨 profile
-
-- default: 通常の実装
-- `research`: 最新情報や外部仕様の確認
-- `review`: 読み取り専用のレビューと監査
-- `quick`: 軽い修正や定型作業
+- `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
+- profile の運用方針そのものは `templates/AGENTS.md` を参照
 
 ## 検証
 
@@ -168,6 +159,8 @@ python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/skills/` | `~/.agents/skills/` |
 
+注記: `templates/rules/` は現時点では Claude Code 向け markdown rules を指す。OpenAI Codex CLI の `.rules` は別機能であり、このリポジトリではまだ配布対象にしていない。
+
 ## 公式仕様（参照元）
 
 - Claude Code
@@ -212,13 +205,13 @@ bash clean.sh
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | 既定のレビュー入口。変更種別と会話コンテキストに応じて intent/code/quality/expert/doc-review を選別して統合する |
-| `km:intent-review` | 会話履歴に基づく要件・意図の充足確認（個別レビュー用、明示起動のみ） |
-| `km:code-review` | 設計妥当性・バグ検出・コード品質など開発観点のコードレビュー（明示起動のみ） |
-| `km:quality-review` | ISO/IEC 25010 の9品質特性を軸とした品質レビュー（明示起動のみ） |
-| `km:doc-review` | ドキュメントの構造整合性・横断整合性・一次情報検証レビュー（明示起動のみ） |
+| `km:review` | 未コミット変更を対象に複数レビューを統合する包括レビュー |
+| `km:intent-review` | 会話履歴に基づいて要件・意図の充足を確認するレビュー |
+| `km:code-review` | 設計妥当性・バグ検出・コード品質を確認するレビュー |
+| `km:quality-review` | ISO/IEC 25010 を軸に品質特性を確認するレビュー |
+| `km:doc-review` | ドキュメントの整合性と正確性を確認するレビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
-| `km:github-workflow` | ブランチ作成、レビュー、commit、push、PR 作成までの GitHub ワークフロー |
+| `km:github-workflow` | ブランチ作成から PR 作成までの GitHub ワークフロー |
 
 ## ライセンス
 

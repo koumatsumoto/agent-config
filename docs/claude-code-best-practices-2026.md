@@ -1,5 +1,8 @@
 # Claude Code ベストプラクティス 2026
 
+> Reference only. Not a runtime contract. 実際の運用契約は `templates/CLAUDE.md` と `templates/skills/` を正とする。
+
+
 2026年3月時点の公式ドキュメントおよびコミュニティ記事を調査・精査し、CLAUDE.md / Rules / Skills / Subagents / Hooks の設定に関するベストプラクティスを統合整理したリファレンス。
 
 > **最重要原則**: コンテキストウィンドウは公共財である。CLAUDE.md、Rules、Skills はすべてこの有限リソースを共有する。各設定ファイルのすべてのトークンが、会話履歴・ファイル内容・コマンド出力と競合することを常に意識する。

@@ -1,5 +1,8 @@
 # TypeScript 厳格コーディング ベストプラクティス 2026
 
+> Reference only. Not a runtime contract. 実際の運用契約は `templates/rules/` と各テンプレートを正とする。
+
+
 2026年3月時点の TypeScript 5.9 / ES2025 標準を踏まえ、最も厳格に型安全なコードを書くためのリファレンス。
 
 > **前提**: このドキュメントはモダンな書き方のみを扱う。レガシーパターン（`enum`, `namespace`, `any` 等）は§7「アンチパターン」で代替手段とともに記載する。
