@@ -1,86 +1,122 @@
 ---
 name: km:review
-description: Reviews uncommitted changes end-to-end. Use when the user says "レビューして", "チェックして", "変更を確認して", "問題ないか見て", or asks to review or check changes, or before commit. Prefer this skill over running review subskills one by one.
+description: Reviews uncommitted changes end-to-end with selectable depth. Use when the user says "レビューして", "チェックして", "変更を確認して", "問題ないか見て", or asks to review or check changes, or before commit. Prefer this skill over running review subskills one by one.
 ---
 
 # Review
 
-未コミット変更を対象に、意図検証・設計実装・品質特性・第三者診断・ドキュメントの 5 軸で包括的なレビューを行うオーケストレーター。レビュー系ではこれを既定の入口とし、下位 review skill は targeted review 用に扱う。
+未コミット変更を対象に、意図検証・設計実装・品質特性・第三者診断・ドキュメントの観点を統合する review orchestrator。要求されたレビュー強度に応じて `thorough` / `standard` / `quick` を選び、必要な review だけを実行する。
 
 ## レビューの目的
 
-開発者は目の前の実装に集中するため、要件との乖離・設計上の問題・品質特性の見落とし・ドキュメントとの不整合が視野外になりやすい。このスキルは複数の専門レビューと第三者診断を統合的に実行し、コミット前に問題を検出する。
+開発者は目の前の実装に集中するため、要件との乖離・設計上の問題・品質特性の見落とし・ドキュメントとの不整合が視野外になりやすい。このスキルは複数の review を整理して実行し、コミット前の確認コストと見落としのバランスを調整する。
 
 ## Success Criteria
 
-- 変更の種類に応じて必要なレビューだけを走らせる
-- 下位レビューに同じ仕事を重複させない
+- 変更タイプに応じた review 候補を正しく選ぶ
+- 要求されたレベルに応じて review を絞り込む
+- 下位 review に同じ仕事を重複させない
 - `CRITICAL` / `HIGH`、または intent-review の `HIGH` を見逃さずにブロックする
-- 第三者専門家によるゼロベース診断で内部レビューの盲点を補う
-- 統合レポートは重複を減らし、次に何を直すべきかが分かる形にする
-- 検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザーに判断を委ねる
+- レポートは、実行した review とスキップした review の両方が分かる形にする
 
 ## Workflow
 
-1. Phase 1: 変更把握とルーティング
-2. Phase 2: intent-review（メインコンテキスト）
-3. Phase 3-4: code-review + quality-review + 第三者専門家レビュー（Phase 2 完了後にサブエージェント同時起動）
-4. Phase 5: doc-review（Phase 3-4 の全サブエージェント完了後に実行）
-5. Phase 6: 結果統合とコミット判定
+1. Phase 1: 変更把握とレベル選択
+2. Phase 2: intent-review
+3. Phase 3: code-review + quality-review + 第三者専門家レビュー
+4. Phase 4: doc-review
+5. Phase 5: 結果統合とコミット判定
 
-## Phase 1: 変更把握とルーティング
+## Phase 1: 変更把握とレベル選択
 
 `git diff --name-only` と `git diff --stat` で変更を把握し、以下を決める:
 
 - 変更タイプ: `feat` / `fix` / `refactor` / `test` / `config` / `chore`
 - 構成: `has_code` / `has_docs`
 - 会話コンテキスト: この会話内で自分が実装した変更は「自己開発」、会話履歴に実装の経緯がない変更は「他者変更」。判断がつかない場合は自己開発として扱う
-- 深度: `Full` / `Focused` / `Quick`
+- 要求レベル: `thorough` / `standard` / `quick`
+- 下位 review の内部深度: `Full` / `Focused` / `Quick`
 
-実行方針:
+レベルの決め方:
 
-|変更の構成|intent|code|quality|expert\*|doc|
+- `深くレビューして`、`厳しめにレビューして`、`thorough review` など: `thorough`
+- `浅くレビューして`、`軽くレビューして`、`quick review` など: `quick`
+- 指定がない review 依頼: `standard`
+
+### First-pass routing
+
+まず、変更タイプと変更構成だけで review 候補を決める。
+
+|変更の構成|intent|code|quality|expert|doc|
 |---|---|---|---|---|---|
-|コード + ドキュメント（自己開発）|実行|実行|実行|実行|実行|
-|コード + ドキュメント（他者変更）|スキップ|実行|実行|実行|実行|
-|コードのみ（自己開発）|実行|実行|実行|実行|更新必要性だけ確認|
-|コードのみ（他者変更）|スキップ|実行|実行|実行|更新必要性だけ確認|
-|ドキュメントのみ|スキップ|スキップ|スキップ|スキップ|実行|
-|test / config / chore のみ|スキップ|Quick|Quick|スキップ|スキップ|
+|コード + ドキュメント（自己開発）|実行候補|実行候補|実行候補|実行候補|実行候補|
+|コード + ドキュメント（他者変更）|スキップ|実行候補|実行候補|実行候補|実行候補|
+|コードのみ（自己開発）|実行候補|実行候補|実行候補|実行候補|更新必要性だけ確認|
+|コードのみ（他者変更）|スキップ|実行候補|実行候補|実行候補|更新必要性だけ確認|
+|ドキュメントのみ|スキップ|スキップ|スキップ|スキップ|実行候補|
+|test / config / chore のみ|スキップ|実行候補|実行候補|スキップ|スキップ|
 
-\* expert: feat / refactor は常に実行。fix は変更規模が小さい場合（10 ファイル以下かつ 200 行以下）はスキップ可。
+優先順位ルール:
+
+- 変更タイプ routing が先で、レベルはそれを上書きしない
+- レベルは、first-pass で実行候補になった review をさらに絞り込む方向にのみ作用する
+
+代表例:
+
+- docs-only + `standard`: `doc-review` のみ実行
+- docs-only + `thorough`: `doc-review` のみ実行
+- test/config/chore + `thorough`: expert review は追加しない
+- code change + `quick`: `code-review` のみに絞り込む
+
+### Level filter
+
+次に、first-pass の実行候補に対してレベルで絞り込む。
+
+| Level | intent-review | code-review | quality-review | expert review | doc-review |
+|---|---|---|---|---|---|
+| `thorough` | 条件付き実行 | 実行 | 実行 | 実行 | 条件付き実行 |
+| `standard` | 条件付き実行 | 実行 | 実行 | スキップ | 条件付き実行 |
+| `quick` | スキップ | 実行 | スキップ | スキップ | 原則スキップ |
+
+補足:
+
+- この表は、変更タイプ routing が code change の通常 path を返した場合の最大有効化セットを示す。docs-only や test/config/chore では、first-pass routing がこの表より狭い集合を返す
+- `quick` の `code-review` のみという原則は code change path に対して適用する
+- docs-only 変更では `quick` でも `doc-review` を実行する
+- 下位 review が起動された場合、その内部深度は従来どおり変更タイプごとの `Full` / `Focused` / `Quick` テーブルに従う。`standard + test/config/chore` の quality-review も `Quick` のままとする
 
 ## Phase 2: intent-review
 
-会話履歴から要求を復元できる場合のみ、メインコンテキストで `intent-review/SKILL.md` を Read して実行する（会話履歴へのアクセスが必要なため）。復元できない場合は推測せず、`intent-review skipped: no usable conversation context` と記録する。
+`thorough` と `standard` で、かつ会話履歴から要求を復元できる場合のみ、メインコンテキストで `intent-review/SKILL.md` を Read して実行する。復元できない場合は推測せず、`intent-review skipped: no usable conversation context` と記録する。
 
-intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定義されたフォーマットに従う。この結果は Phase 3（偽陽性フィルタリングの「合意済み設計判断」判定）および Phase 4（専門家への要求背景の提供）で使用する。
+intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定義されたフォーマットに従う。この結果は Phase 3 の偽陽性フィルタリングおよび expert review への要求背景共有で使用する。
 
-## Phase 3-4: code-review + quality-review + 第三者専門家レビュー
+## Phase 3: code-review + quality-review + 第三者専門家レビュー
 
-Phase 2 完了後に、以下の全サブエージェントを可能な限り並列で起動する。Phase 3（内部レビュー）と Phase 4（第三者診断）は互いに独立しており、並列実行で待機時間を削減する。
+Phase 2 完了後に、first-pass routing と level filter の結果として必要になった review だけを可能な限り並列で起動する。
 
 ### サブエージェントへの共通コンテキスト
 
 全サブエージェントのプロンプトに以下を含める:
 
-- 変更ファイル一覧、変更タイプ、レビュー深度
+- 変更ファイル一覧、変更タイプ、選択レベル、下位 review の内部深度
 - Phase 2 の intent-review 結果（実行された場合のみ）— 要求リストと合意事項。サブエージェントはこれを偽陽性フィルタリングの「意図的な変更」判定に使用する
 
-### code-review + quality-review（内部レビュー）
+### code-review + quality-review
 
-- `code-review`: `code-review/SKILL.md` と `code-review/report-format.md` を Read し、レビューを実行する
-- `quality-review`: `quality-review/SKILL.md`、`quality-review/quality-checklist.md`、`quality-review/report-format.md` を Read し、レビューを実行する。判断に迷ったら `quality-review/reference/` 配下の該当ファイルを参照する
+- `code-review`: `code-review/SKILL.md` と `code-review/report-format.md` を Read してレビューする
+- `quality-review`: `quality-review/SKILL.md`、`quality-review/quality-checklist.md`、`quality-review/report-format.md` を Read してレビューする。判断に迷ったら `quality-review/reference/` 配下の該当ファイルを参照する
 
-Phase 1（変更把握）はオーケストレーターが実施済みのため、サブエージェントではスキップする。代わりに、共通コンテキストで提供する変更ファイル一覧・変更タイプ・レビュー深度を使用する。
+Phase 1 の変更把握はオーケストレーターが実施済みのため、サブエージェントではスキップする。代わりに、共通コンテキストで提供する変更ファイル一覧・変更タイプ・選択レベル・内部深度を使用する。
 
-- 各下位レビューは「重大度ごとの件数サマリー + 個別問題報告」で返させる
+- 各下位 review は「重大度ごとの件数サマリー + 個別問題報告」で返させる
+- `quality-review` は上記に加えて「品質評価サマリー（9 品質特性ごとの評価テーブル）」も返させる
 
 ### 第三者専門家レビュー
 
-チーム内部のレビューとは独立した、ゼロベースの第三者診断を行う。目的は、内部レビューの前提知識や慣れに起因する盲点を補うこと。
+expert review は `thorough` でのみ実行する。変更タイプ routing が expert review を候補に含める path では、`fix` を含めてサイズ閾値を無視し常時実行する。変更タイプ routing が expert を候補に含めない path（docs-only、test/config/chore）には影響しない。
 
-expert review は feat と refactor で常に実行する。fix は変更規模が小さい場合（目安: 10 ファイル以下かつ 200 行以下）はスキップしてもよい。
+目的は、内部レビューの前提知識や慣れに起因する盲点を補うこと。
 
 ### 専門家の構成
 
@@ -93,8 +129,8 @@ expert review は feat と refactor で常に実行する。fix は変更規模�
 
 各専門家サブエージェントのプロンプトには以下の 3 要素を必ず含める:
 
-1. **ロール定義**: 専門家の役割と重点確認観点（上記の構成を転記する）
-2. **レビュー対象**: コード差分、変更ファイル一覧、要求背景（後述の提供情報）
+1. **ロール定義**: 専門家の役割と重点確認観点
+2. **レビュー対象**: コード差分、変更ファイル一覧、要求背景
 3. **出力形式**: `code-review/report-format.md` と同じ形式で報告させる — 重大度ごとの件数サマリー（CRITICAL / HIGH / MEDIUM / LOW）+ 個別所見（重大度 + 場所 + 問題 + 確信度）
 
 ### 専門家への提供情報
@@ -102,35 +138,33 @@ expert review は feat と refactor で常に実行する。fix は変更規模�
 各専門家には以下を渡す:
 
 - コード差分と変更ファイル一覧
-- 要求背景の要約（Phase 2 の intent-review 結果がある場合。要求リストと合意された設計判断）
-- 既知の設計制約（会話コンテキストから得られる場合。段階的ロールアウト、意図的な簡略化など、仕様上の前提）
+- 要求背景の要約（Phase 2 の intent-review 結果がある場合）
+- 既知の設計制約（会話コンテキストから得られる場合）
 
 以下は意図的に提供しない:
 
 - code-review / quality-review の結果
 - 会話履歴の詳細
 
-要求背景と設計制約を渡すことで偽陽性（「未実装」「異常系不足」の過剰指摘）を防ぎつつ、内部レビューの結論には染まらない独立した診断を得る。Phase 3 の結果と重複してもよい — クロスバリデーションとして価値がある。専門家の所見も Phase 6 の件数合算・blocking 判定の対象となる。
+## Phase 4: doc-review
 
-## Phase 5: doc-review
+コード change を含む場合は、Phase 3 の全サブエージェント完了後に doc 関連の確認を行う。docs-only 変更では doc-review を main review として扱う。
 
-Phase 3-4 の全サブエージェントの完了を確認してから開始する。Phase 3-4 で見つかった問題がドキュメントに波及する可能性があるため、ドキュメントレビューは最後に実行する。
-
-- ドキュメント変更がある場合: `doc-review/SKILL.md` と `doc-review/report-format.md` を Read してサブエージェントで実行する。Phase 3-4 と同様の共通コンテキスト（変更ファイル一覧・変更タイプ・intent-review 結果）も渡す
-- コードのみ変更の場合: フル doc-review は実行せず、オーケストレーター自身がメインコンテキストで以下を確認する:
+- ドキュメント変更がある場合: `doc-review/SKILL.md` と `doc-review/report-format.md` を Read してサブエージェントで実行する。必要なら Phase 3 と同様の共通コンテキストも渡す
+- コードのみ変更の場合: フル doc-review は実行せず、オーケストレーター自身がメインコンテキストで以下を確認する
   - パブリック API、CLI、設定、インターフェースの変更があるか
   - `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
   - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 
-## Phase 6: 結果統合
+## Phase 5: 結果統合
 
 統合時のルール:
 
-1. 全レビュー（Phase 3 の下位レビュー + Phase 4 の専門家レビュー）の重大度ごとの件数を合算する。intent-review は CRITICAL を持たないため、合算時の CRITICAL は常に 0 として扱う
-2. 同一ファイル・近接行の類似指摘は重複の可能性を注記する
-3. 第三者専門家レビューの所見は独立セクションで報告する
+1. 統合サマリーに選択レベルを含める
+2. 全レビュー（Phase 3 の下位レビュー + expert review）の重大度ごとの件数を合算する。intent-review は CRITICAL を持たないため、合算時の CRITICAL は常に 0 として扱う
+3. 同一ファイル・近接行の類似指摘は重複の可能性を注記する
 4. いずれかのレビューで `CRITICAL` または `HIGH` があれば `BLOCKED` とする
-5. quality-review の品質評価サマリーをそのまま含める（quality-review 実行時のみ）
+5. quality-review を実行した場合は、品質評価サマリーをそのまま含める
 6. docs 更新推奨がある場合は末尾に独立セクションで追加する
 7. ルーティングでスキップされたレビューは、セクション見出しと `（スキップ）` を出力する。セクション自体を省略しない
 8. サブエージェントが結果を返さなかった場合は、該当レビューを `（実行失敗）` として記録し、失敗理由を統合レポートに含める

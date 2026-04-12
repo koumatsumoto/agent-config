@@ -38,7 +38,7 @@ scenarios:
 
   - id: review-quality-expert-severity-format
     title: Expert review findings must use severity format and participate in blocking
-    prompt: "レビューして"
+    prompt: "深くレビューして"
     context:
       changed_files:
         - src/api/auth.ts
@@ -109,8 +109,8 @@ scenarios:
         - per routing table, test-only changes skip expert review same as config/chore
 
   - id: review-quality-expert-executed-for-large-fix
-    title: Expert review should execute for large fix changes exceeding threshold
-    prompt: "レビューして"
+    title: Thorough review should execute expert review for large fix changes
+    prompt: "深くレビューして"
     context:
       changed_files:
         - src/api/users.ts
@@ -130,11 +130,11 @@ scenarios:
       primary_skill: km:review
       expert_review: executed
       notes:
-        - 11 files exceeds the 10-file threshold, so expert review must execute
+        - thorough always executes expert review for code changes, including large fix changes
 
-  - id: review-quality-expert-optional-for-small-fix
-    title: Expert review may be skipped for small fix changes under threshold
-    prompt: "レビューして"
+  - id: review-quality-expert-executed-for-small-fix-thorough
+    title: Thorough review should execute expert review even for small fix changes
+    prompt: "深くレビューして"
     context:
       changed_files:
         - src/api/users.ts
@@ -142,9 +142,43 @@ scenarios:
       conversation_context: true
     expected:
       primary_skill: km:review
-      expert_review: optional
+      expert_review: executed
       notes:
-        - 1 file is well under the 10-file threshold, so expert review may be skipped
+        - thorough ignores the old small-fix threshold and still runs expert review
+
+  - id: review-quality-config-standard-quick-depth
+    title: Standard review should keep Quick quality-review depth for config changes
+    prompt: "この設定変更をレビューして"
+    context:
+      changed_files:
+        - config/settings.toml
+      change_type: config
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      required_output:
+        - severity summary
+      review_depth: Quick
+      expert_review: skipped
+      notes:
+        - level selection should not upgrade config-only quality review beyond Quick depth
+
+  - id: review-quality-docs-only-thorough-skips-quality
+    title: Thorough review should not run quality-review for docs-only changes
+    prompt: "README を深くレビューして"
+    context:
+      changed_files:
+        - README.md
+        - docs/setup.md
+      change_type: docs
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      expert_review: skipped
+      should_not_output:
+        - quality evaluation summary table with 9 characteristics
+      notes:
+        - docs-only first-pass routing should keep quality-review out even in thorough level
 
   - id: npm-review-no-allow-without-exact-version
     title: npm package review should not allow when exact version is missing

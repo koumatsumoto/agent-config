@@ -35,7 +35,7 @@
 
 ### レビューと完了
 
-- 実装後は `/km:review` を基準に確認する
+- 実装後は `/km:review` を基準に確認する。必要に応じて深さも指定する
 - 個別に実行したい場合だけ `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を使う
 - レビューと検証が完了したら `/km:commit` でコミットする
 

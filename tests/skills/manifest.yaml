@@ -8,6 +8,14 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-review-default
     tags: [trigger, review]
+  - id: trigger-review-thorough
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-review-thorough
+    tags: [trigger, review]
+  - id: trigger-review-quick
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-review-quick
+    tags: [trigger, review]
   - id: trigger-commit-natural-language
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-commit-natural-language
@@ -44,6 +52,14 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-docs-only
     tags: [routing, review, docs]
+  - id: review-routing-docs-only-thorough
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-docs-only-thorough
+    tags: [routing, review, docs]
+  - id: review-routing-docs-only-quick
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-docs-only-quick
+    tags: [routing, review, docs, quick]
   - id: review-routing-config-chore
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-config-chore
@@ -60,6 +76,14 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-and-docs-third-party
     tags: [routing, review, docs, intent]
+  - id: review-routing-code-and-docs-thorough
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-code-and-docs-thorough
+    tags: [routing, review, docs]
+  - id: review-routing-test-only-quick
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-test-only-quick
+    tags: [routing, review, quick]
   - id: review-quality-blocking
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-blocking
@@ -88,9 +112,17 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-expert-executed-for-large-fix
     tags: [quality, expert, routing]
-  - id: review-quality-expert-optional-for-small-fix
+  - id: review-quality-expert-executed-for-small-fix-thorough
     file: scenarios/review-quality.yaml
-    scenario_id: review-quality-expert-optional-for-small-fix
+    scenario_id: review-quality-expert-executed-for-small-fix-thorough
+    tags: [quality, expert, routing]
+  - id: review-quality-config-standard-quick-depth
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-config-standard-quick-depth
+    tags: [quality, routing, config]
+  - id: review-quality-docs-only-thorough-skips-quality
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-docs-only-thorough-skips-quality
     tags: [quality, expert, routing]
   - id: npm-review-no-allow-without-exact-version
     file: scenarios/review-quality.yaml

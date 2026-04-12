@@ -28,7 +28,7 @@
 
 ### 4. レビュー
 
-- `/km:review` で包括的レビューを実行する（intent/code/quality/doc-review を自動判定・並列実行）
+- `/km:review` でレビュー強度を選べる統合レビューを実行する（無指定は standard）
 - 個別に実行したい場合だけ `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を直接呼び出す
 - IMPORTANT: 最初の仕様に立ち返り、見落としがないか入念に確認する
 
