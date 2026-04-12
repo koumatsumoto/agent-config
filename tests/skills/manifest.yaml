@@ -124,6 +124,26 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-docs-only-thorough-skips-quality
     tags: [quality, expert, routing]
+  - id: review-quality-multiple-surfaces-no-unrelated-findings
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-multiple-surfaces-no-unrelated-findings
+    tags: [quality, routing, surface]
+  - id: review-quality-quick-surface-does-not-force-quality
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-quick-surface-does-not-force-quality
+    tags: [quality, routing, quick, surface]
+  - id: review-quality-tier2-skip-wins-over-surface
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-tier2-skip-wins-over-surface
+    tags: [quality, routing, surface, negative]
+  - id: review-quality-database-surface-trigger
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-database-surface-trigger
+    tags: [quality, routing, database, surface]
+  - id: review-quality-non-ui-change-should-not-report-wcag
+    file: scenarios/review-quality.yaml
+    scenario_id: review-quality-non-ui-change-should-not-report-wcag
+    tags: [quality, routing, accessibility, negative]
   - id: npm-review-no-allow-without-exact-version
     file: scenarios/review-quality.yaml
     scenario_id: npm-review-no-allow-without-exact-version

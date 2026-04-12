@@ -1,45 +1,51 @@
 # 信頼性 (Reliability)
 
-ISO/IEC 25010:2023 の信頼性特性に関する品質リファレンス。副特性ごとに、diff レビューで確認すべきパターンとアンチパターンを示す。
+ISO/IEC 25010:2023 の信頼性に関するリファレンス。タイムアウトやリトライだけでなく、probe の役割分離、縮退運転、可観測性まで含めて「障害時に壊れにくく、追跡しやすいか」を見る。
 
-## 無欠陥性 (Faultlessness)
+## 副特性ごとのアンチパターン + diff シグナル
 
-- 例外の握り潰し: `except Exception: pass`、空 `catch` ブロック → fail-open の原因
-- cause チェーンの欠如: Python `raise ... from` 未使用、TS エラーラッピングで original の `cause` 消失
-- fail-open パターン: 認証・認可チェックがエラー時にアクセス許可にフォールバック
-- 不適切な Result 型: エラー戻り値が `string | null` で型安全でない（TS: neverthrow, Python: returns ライブラリ）
+### 無欠陥性 (Faultlessness)
 
-## 可用性 (Availability)
+- 例外の握り潰し（`except Exception: pass`, 空 `catch`）、fail-open、cause チェーン消失（`raise ... from` なし）
+- `string | null` のような曖昧なエラー戻り値で失敗意味が崩れる
 
-- 単一障害点: 1 つの外部サービス障害でシステム全体が停止する設計
-- ヘルスチェック: Kubernetes readiness/liveness probe の欠如、DB接続チェックのみで依存サービス未確認
-- グレースフルシャットダウン: SIGTERM ハンドリングなし、in-flight リクエストの完了待ちなし
-- コールドスタート: サーバーレス環境で初回リクエストの遅延を考慮していない初期化処理
+### 可用性 (Availability)
 
-## 障害許容性 (Fault Tolerance)
+- 単一障害点の導入
+- readiness / liveness / startup の役割分離がない
+- グレースフルシャットダウンなしで in-flight 処理を落とす
+- 依存サービス障害で全機能停止する
 
-- タイムアウト欠如: HTTP クライアント・DB クエリ・外部 API 呼び出しにタイムアウトなし（TS: `fetch` の `signal`/`AbortController`, Python: `httpx` の `timeout`）
-- リトライ: 指数バックオフなし・非冪等操作のリトライ・上限なしリトライ・ジッターなし
-- サーキットブレーカー: 障害中の外部サービスへの継続的アクセス（カスケード障害の原因）
-- 部分障害: バッチ処理で一部失敗時に全体ロールバック（部分成功を返すべき場面）、エラー応答に成功/失敗の内訳がない
+### 障害許容性 (Fault Tolerance)
 
-## 回復性 (Recoverability)
+- タイムアウトなし（`AbortController`, `httpx timeout` 等なし）、指数バックオフやジッターなし、非冪等操作のリトライ
+- retry budget や上限なしの再試行
+- サーキットブレーカーやバックプレッシャーなしで障害を増幅する
+- 部分失敗時の内訳や継続方針がない
 
-- リソース解放漏れ: Python `with`/`contextmanager` 未使用、TS `using`（5.2+）/`try-finally` 未使用
-- DB コネクション・ファイルハンドル・トランザクションの解放漏れ（特にエラーパス）
-- 一時ファイル・一時テーブル・ロックのクリーンアップ漏れ
-- 冪等性: リトライ時に二重処理が発生する操作（冪等キーの欠如）
+### 回復性 (Recoverability)
 
-## 実務補助: 並行性
+- リソース解放漏れ（`try-finally`, `with`, `contextmanager` 不足）、一時ファイルやロックのクリーンアップ漏れ
+- 冪等キーや重複排除がなく二重処理を起こす
+- 縮退運転や機能制限で継続する設計がない
 
-- 同期ブロッキング: Python asyncio 内の `requests.get`・`time.sleep`・`open()`（→ `httpx`・`asyncio.sleep`・`aiofiles`）
-- 無制限タスク生成: セマフォ/ワーカープールなしの並列タスク起動
-- 共有ミュータブル状態: ロックなしの並行書き込み、TOCTOU 競合
-- トランザクション分離: 読み取り一貫性の欠如、lost update
+## surface 条件付き補助観点
 
-## 実務補助: 可観測性
+- `external integration`: timeout、retry、idempotency、circuit breaker、degraded mode を確認する
+- `cloud runtime / IaC`: startup / readiness / liveness、graceful shutdown、autoscaling と probe の整合を見る
+- `async job / queue`: 並列数制限、部分失敗の表現、再実行の安全性を見る
+- `HTTP API`: リクエスト ID、トレース伝播、重要操作のメトリクスが維持されるかを見る
 
-- 失敗パスのログ欠如: エラーハンドリング内でログを出さずに握り潰し
-- 構造化ログ未使用: 文字列結合のみ、コンテキスト情報（リクエスト ID, ユーザー ID, トレース ID）なし
-- 分散トレース: コンテキスト伝播の途切れ（HTTP ヘッダ/メッセージメタデータの未転送）、span の欠如
-- メトリクス: 重要なビジネス操作のカウンター/ヒストグラム未計装
+## false positive 注意
+
+- 外部依存がない変更に対して timeout や circuit breaker を機械的に求めない
+- probe 設定の詳細が diff にない場合、存在しないと断定しない
+- observability 指摘は「解析不能なまま障害を増やすか」で判断し、計装の好みの問題にしない
+
+## 標準マップ
+
+| 観点 | 標準 |
+|---|---|
+| 信頼性の主軸 | ISO/IEC 25010:2023 |
+| startup / readiness / liveness | Kubernetes probes documentation |
+| trace / log correlation | OpenTelemetry context propagation |
