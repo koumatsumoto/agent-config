@@ -145,3 +145,63 @@ scenarios:
       expert_review: optional
       notes:
         - 1 file is well under the 10-file threshold, so expert review may be skipped
+
+  - id: npm-review-no-allow-without-exact-version
+    title: npm package review should not allow when exact version is missing
+    prompt: "npm パッケージ lodash の採用前セキュリティレビューをして"
+    context:
+      changed_files:
+        - templates/skills/npm-package-security-review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:npm-package-security-review
+      should_not_output:
+        - final decision ALLOW
+      required_output:
+        - request for exact version or human review path
+
+  - id: npm-review-no-allow-with-ambiguous-repository
+    title: npm package review should not allow when package to repository mapping is ambiguous
+    prompt: "npm パッケージ example-pkg@1.2.3 の採用前セキュリティレビューをして"
+    context:
+      changed_files:
+        - templates/skills/npm-package-security-review/SKILL.md
+      conversation_context: true
+      injected_issue: "repository mapping is ambiguous"
+    expected:
+      primary_skill: km:npm-package-security-review
+      should_not_output:
+        - final decision ALLOW
+      required_output:
+        - uncertainty or human review section
+
+  - id: npm-review-reject-on-critical-advisory
+    title: npm package review should reject unresolved critical advisory
+    prompt: "npm パッケージ vulnerable-lib@2.0.0 の採用前セキュリティレビューをして"
+    context:
+      changed_files:
+        - templates/skills/npm-package-security-review/SKILL.md
+      conversation_context: true
+      injected_issue: "unresolved critical advisory affects target version"
+    expected:
+      primary_skill: km:npm-package-security-review
+      required_output:
+        - final decision
+        - evidence summary
+      expected_decision: REJECT
+
+  - id: npm-review-report-format-japanese
+    title: npm package review output should include Japanese sections, reasons, urls, and absolute dates
+    prompt: "npm パッケージ lodash@4.17.21 の採用前セキュリティレビューをして"
+    context:
+      changed_files:
+        - templates/skills/npm-package-security-review/SKILL.md
+        - templates/skills/npm-package-security-review/report-format.md
+      conversation_context: true
+    expected:
+      primary_skill: km:npm-package-security-review
+      required_output:
+        - Japanese required sections
+        - 2 to 4 decision reasons
+        - evidence URLs
+        - absolute dates

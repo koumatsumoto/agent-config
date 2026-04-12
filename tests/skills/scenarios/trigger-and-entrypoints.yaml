@@ -84,3 +84,31 @@ scenarios:
         - km:quality-review
       notes:
         - km:quality-review has disable-model-invocation so must route through orchestrator
+
+  - id: trigger-npm-package-security-review-explicit
+    title: Explicit npm package intake review should trigger km:npm-package-security-review
+    prompt: "npm パッケージ lodash@4.17.21 の採用前セキュリティレビューをして"
+    context:
+      changed_files:
+        - templates/skills/npm-package-security-review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:npm-package-security-review
+      should_not_start_with:
+        - km:review
+      notes:
+        - this skill is specialized and manual-only
+
+  - id: trigger-generic-review-should-not-trigger-npm-package-security-review
+    title: Generic review request should not trigger npm package security review
+    prompt: "この変更レビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_trigger:
+        - km:npm-package-security-review
+      notes:
+        - package intake review should remain outside km:review routing
