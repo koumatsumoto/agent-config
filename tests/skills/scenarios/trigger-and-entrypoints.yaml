@@ -89,8 +89,7 @@ scenarios:
     title: Explicit npm package intake review should trigger km:npm-package-security-review
     prompt: "npm パッケージ lodash@4.17.21 の採用前セキュリティレビューをして"
     context:
-      changed_files:
-        - templates/skills/npm-package-security-review/SKILL.md
+      changed_files: []
       conversation_context: true
     expected:
       primary_skill: km:npm-package-security-review

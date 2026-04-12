@@ -150,8 +150,7 @@ scenarios:
     title: npm package review should not allow when exact version is missing
     prompt: "npm パッケージ lodash の採用前セキュリティレビューをして"
     context:
-      changed_files:
-        - templates/skills/npm-package-security-review/SKILL.md
+      changed_files: []
       conversation_context: true
     expected:
       primary_skill: km:npm-package-security-review
@@ -164,8 +163,7 @@ scenarios:
     title: npm package review should not allow when package to repository mapping is ambiguous
     prompt: "npm パッケージ example-pkg@1.2.3 の採用前セキュリティレビューをして"
     context:
-      changed_files:
-        - templates/skills/npm-package-security-review/SKILL.md
+      changed_files: []
       conversation_context: true
       injected_issue: "repository mapping is ambiguous"
     expected:
@@ -179,8 +177,7 @@ scenarios:
     title: npm package review should reject unresolved critical advisory
     prompt: "npm パッケージ vulnerable-lib@2.0.0 の採用前セキュリティレビューをして"
     context:
-      changed_files:
-        - templates/skills/npm-package-security-review/SKILL.md
+      changed_files: []
       conversation_context: true
       injected_issue: "unresolved critical advisory affects target version"
     expected:
@@ -194,9 +191,7 @@ scenarios:
     title: npm package review output should include Japanese sections, reasons, urls, and absolute dates
     prompt: "npm パッケージ lodash@4.17.21 の採用前セキュリティレビューをして"
     context:
-      changed_files:
-        - templates/skills/npm-package-security-review/SKILL.md
-        - templates/skills/npm-package-security-review/report-format.md
+      changed_files: []
       conversation_context: true
     expected:
       primary_skill: km:npm-package-security-review

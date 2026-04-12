@@ -11,6 +11,15 @@
 **Review Confidence**: Medium
 ```
 
+```md
+## レビュー結果
+
+**対象**: vulnerable-lib@2.0.0
+**Repository**: https://github.com/example/vulnerable-lib
+**最終判定**: REJECT
+**Review Confidence**: High
+```
+
 ## 必須セクション
 
 以下をこの順で出力する。
@@ -46,4 +55,5 @@
 - 証跡には URL と絶対日付を付ける
 - `ALLOW_WITH_CONDITIONS` は実施可能な条件を書く
 - `NEEDS_HUMAN_REVIEW` は不足情報と確認主体を書く
+- `REJECT` は拒否理由を `policy` / `vulnerability` / `provenance` / `behavior` に分類する
 - 「安全である」と断定せず、「確認できた範囲では」と「未確認事項」を分ける

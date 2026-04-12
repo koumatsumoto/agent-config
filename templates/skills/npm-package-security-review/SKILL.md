@@ -129,4 +129,5 @@ production、`secrets_access=true`、`data_sensitivity=high` の場合は一段�
 - 主要証跡は URL と絶対日付を付ける
 - `ALLOW_WITH_CONDITIONS` は実施可能な条件を書く
 - `NEEDS_HUMAN_REVIEW` は不足情報と確認主体を明示する
+- `REJECT` は拒否理由を `policy` / `vulnerability` / `provenance` / `behavior` に分類する
 - 「安全である」と断定せず、「確認できた範囲では」と「未確認事項」を分ける
