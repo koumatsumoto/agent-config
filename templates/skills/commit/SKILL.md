@@ -67,4 +67,5 @@ feat(auth): add refresh token flow
 
 - `git add -A` / `git add .` は使わない
 - `git commit --no-verify` は使わない
+- 要求が曖昧でコミット実行の意図を確認できない場合は、コミット前にユーザーへ確認する
 - push はこのスキルのスコープ外

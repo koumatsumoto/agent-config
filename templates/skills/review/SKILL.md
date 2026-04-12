@@ -58,7 +58,7 @@ intent-review の構造化出力は `intent-review/SKILL.md` の Phase 2 で定�
 
 ## Phase 3-4: code-review + quality-review + 第三者専門家レビュー
 
-Phase 2 完了後に、以下の全サブエージェントを `run_in_background: true` で同時起動する。Phase 3（内部レビュー）と Phase 4（第三者診断）は互いに独立しており、並列実行で待機時間を削減する。
+Phase 2 完了後に、以下の全サブエージェントを可能な限り並列で起動する。Phase 3（内部レビュー）と Phase 4（第三者診断）は互いに独立しており、並列実行で待機時間を削減する。
 
 ### サブエージェントへの共通コンテキスト
 
