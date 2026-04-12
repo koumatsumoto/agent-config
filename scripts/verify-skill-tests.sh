@@ -20,6 +20,7 @@ fi
 python3 - "$TEST_ROOT" <<'PY'
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -33,6 +34,7 @@ except Exception as exc:  # pragma: no cover - env-dependent
 root = Path(sys.argv[1])
 failures = 0
 checks = 0
+repo_root = root.parent.parent
 
 
 def check(condition: bool, message: str) -> None:
@@ -52,6 +54,47 @@ def load_yaml(path: Path) -> object:
         print(f"invalid yaml: {path} ({exc})")
         failures += 1
         return None
+
+
+def load_text(path: Path) -> str | None:
+    global checks, failures
+    checks += 1
+    try:
+        return path.read_text()
+    except Exception as exc:
+        print(f"invalid text: {path} ({exc})")
+        failures += 1
+        return None
+
+
+def extract_skill_operation_bullets(path: Path) -> list[str] | None:
+    text = load_text(path)
+    if text is None:
+        return None
+    lines = text.splitlines()
+    start = None
+    header_level = None
+    for heading in ("## Skill 運用", "### Skill 運用"):
+        try:
+            start = lines.index(heading)
+            header_level = heading.count("#")
+            break
+        except ValueError:
+            continue
+    if start is None or header_level is None:
+        return None
+
+    bullets: list[str] = []
+    for line in lines[start + 1 :]:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        heading_match = re.match(r"^(#{1,6})\s+", stripped)
+        if heading_match and len(heading_match.group(1)) <= header_level:
+            break
+        if stripped.startswith("- "):
+            bullets.append(stripped)
+    return bullets
 
 
 def main() -> int:
@@ -136,6 +179,56 @@ def main() -> int:
     gitkeep = runs_dir / ".gitkeep"
     check(gitkeep.is_file(), f"missing: {gitkeep}")
 
+    repo_readme = repo_root / "README.md"
+    agents_md = repo_root / "templates" / "AGENTS.md"
+    claude_md = repo_root / "templates" / "CLAUDE.md"
+    review_skill = repo_root / "templates" / "skills" / "review" / "SKILL.md"
+
+    if repo_readme.is_file():
+        readme_text = load_text(repo_readme)
+        if readme_text is not None:
+            codex_notes_match = re.search(r"^## Codex 設計メモ\n(?P<body>.*?)(?=^## )", readme_text, re.MULTILINE | re.DOTALL)
+            skill_list_match = re.search(r"^## スキル一覧\n(?P<body>.*?)(?=^## )", readme_text, re.MULTILINE | re.DOTALL)
+            check(codex_notes_match is not None, "README missing Codex design notes section")
+            if codex_notes_match is not None:
+                codex_body = codex_notes_match.group("body")
+                check("### 推奨 profile" not in codex_body, "README Codex design notes should not define recommended profiles")
+                check("`web_search = \"cached\"`" in codex_body, "README missing config rationale for cached web_search")
+                check("`alternate_screen = \"never\"`" in codex_body, "README missing config rationale for alternate_screen")
+                check("workspace-write + on-request" in codex_body, "README missing default sandbox/approval rationale")
+                check("`VISUAL` / `EDITOR`" in codex_body, "README missing external editor rationale")
+            check(skill_list_match is not None, "README missing skill list section")
+            if skill_list_match is not None:
+                skill_body = skill_list_match.group("body")
+                check("既定のレビュー入口" not in skill_body, "README skill list should not define invocation policy")
+                check("明示起動のみ" not in skill_body, "README skill list should not define manual-only policy")
+
+    if agents_md.is_file() and claude_md.is_file():
+        agents_bullets = extract_skill_operation_bullets(agents_md)
+        claude_bullets = extract_skill_operation_bullets(claude_md)
+        check(agents_bullets is not None, "templates/AGENTS.md missing Skill 運用 section")
+        check(claude_bullets is not None, "templates/CLAUDE.md missing Skill 運用 section")
+        if agents_bullets is not None and claude_bullets is not None:
+            check(agents_bullets == claude_bullets, "templates/AGENTS.md and templates/CLAUDE.md Skill 運用 bullets must match")
+
+    if review_skill.is_file():
+        review_text = load_text(review_skill)
+        if review_text is not None:
+            review_lines = review_text.splitlines()
+            persona_count = 0
+            in_persona_section = False
+            for line in review_lines:
+                if line.strip() == "### 専門家の構成":
+                    in_persona_section = True
+                    continue
+                if in_persona_section and line.startswith("### "):
+                    break
+                if in_persona_section and re.match(r"^\d+\.\s+\*\*", line):
+                    persona_count += 1
+            check(persona_count == 2, f"review skill should define exactly 2 expert personas, got {persona_count}")
+        reviewer_dir = review_skill.parent / "reviewers"
+        check(not reviewer_dir.exists(), "review reviewer directory should not exist")
+
     # --- orphan scenario detection ---
     manifest_scenario_ids: set[str] = set()
     for case in cases:
@@ -161,7 +254,7 @@ def main() -> int:
                 check(key in manifest_scenario_ids, f"orphan scenario: {sid} in {rel} not referenced by manifest")
 
     # --- agents/openai.yaml contract ---
-    skills_root = root.parent.parent / "templates" / "skills"
+    skills_root = repo_root / "templates" / "skills"
     if skills_root.is_dir():
         # Manual-only skills MUST have agents/openai.yaml with allow_implicit_invocation: false
         manual_only = ["code-review", "quality-review", "intent-review", "doc-review"]

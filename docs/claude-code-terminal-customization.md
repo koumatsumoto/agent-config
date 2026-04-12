@@ -1,5 +1,8 @@
 # Claude Code ターミナルカスタマイズガイド
 
+> Optional reference. Not a runtime contract. この文書は導入可能なカスタマイズ例をまとめた参考資料であり、必須設定を定義しない。
+
+
 Claude Code ターミナルのカスタマイズ方法とセキュリティベストプラクティス。
 
 ## カスタマイズ一覧
