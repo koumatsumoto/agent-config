@@ -1,60 +1,53 @@
 # セキュリティ (Security)
 
-ISO/IEC 25010:2023 のセキュリティ特性に関する品質リファレンス。副特性ごとに、diff レビューで確認すべきパターンとアンチパターンを示す。
+ISO/IEC 25010:2023 のセキュリティに関するリファレンス。インジェクションだけでなく、認可粒度、ブラウザ境界、API 消費安全性、サプライチェーンまで含めて現代的な実害へ寄せて確認する。
 
-## 機密性 (Confidentiality)
+## 副特性ごとのアンチパターン + diff シグナル
 
-- ハードコードされたシークレット: API キー・トークン・パスワードの文字列リテラル、`.env`/`.pem`/`.key` の tracked 化
-- ログへの機密情報混入: PII・トークン・セッション ID がログ引数やエラーメッセージに含まれていないか
-- レスポンスへの内部情報漏えい: スタックトレース・DB スキーマ・内部 ID のクライアント返却
-- 差分にシークレットの追加/削除痕跡がある場合の履歴残存リスク: コミット間で削除しても履歴に残る
+### 機密性 (Confidentiality)
 
-## 真正性 (Authenticity)
+- ハードコードされたシークレット、`.env` / `.pem` / `.key` の tracked 化
+- ログやレスポンスへの PII、トークン、内部情報の漏えい
+- 平文通信や保存時暗号化の欠如
 
-- 認証の適用漏れ: エンドポイントにミドルウェア/デコレータ（TS: `@Auth()`, Python: `@login_required`）が未適用
-- リソースレベル認可の粒度不足: オブジェクト ID のオーナーシップ検証なし（IDOR 脆弱性）
-- セッション管理: 固定化対策・有効期限・トークンローテーションの欠如
-- リソース・成果物の出所証明: コード署名、SBOM アテステーション、アーティファクト来歴の欠如
+### 真正性 / 完全性 (Authenticity / Integrity)
 
-## 責任追跡性 (Accountability)
+- 認証ミドルウェア未適用、所有者検証不足、BOPLA を含む認可粒度不足
+- スキーマバリデーション未適用、SQLi（`$queryRawUnsafe`, f-string SQL）、XSS（`dangerouslySetInnerHTML`, `| safe`）、SSRF、コマンド / パスインジェクション
+- デシリアライゼーションや prototype pollution の入口（`pickle.loads`, `yaml.load`, 無検証 `JSON.parse`）を開く
+- ユーザー入力を含む URL や外部 API 応答を信頼しすぎる unsafe consumption of APIs
+- LLM 出力を検証せず実行に使う
 
-- 監査ログ: 権限変更・データ削除・設定変更等の重要操作でログが出ていない
-- 操作者の特定: ログにユーザー ID・リクエスト ID 等のコンテキスト情報がない
-- ログの改ざん耐性: 監査ログが通常のアプリケーションログと同じストアにあり、上書き可能
+### 責任追跡性 / 否認防止 (Accountability / Non-repudiation)
 
-## 否認防止 (Non-repudiation)
+- 重要操作に監査ログがない、操作者を特定できない、改ざん耐性がない
+- append-only 証跡や署名付き送信が必要な操作で証明がない
 
-- トランザクション証跡: 決済・契約・承認フローで、操作の発生とその内容を暗号的に証明できるか
-- 改ざん検知可能な監査証跡: append-only ログ、タイムスタンプ署名、ハッシュチェーンの欠如
-- 送受信の証明: メッセージ送信・受信の記録が、送信者/受信者双方で検証可能か
-- デジタル署名: 重要な操作（API リクエスト、ウェブフック送信）に署名が付与されているか
+### 耐性 (Resistance)
 
-## 完全性 (Integrity)
+- 認証や高コスト API にレート制限やサイズ上限がない
+- 全件更新や全件削除を単一リクエストで実行できる
+- 既知脆弱性依存、ロックファイル不在、依存関係混乱、来歴不明なアーティファクトを導入する
 
-- スキーマバリデーション未適用: 外部入力が検証なしにロジックに到達（TS: Zod 未使用, Python: Pydantic 未使用）
-- SQL インジェクション: パラメータ化クエリ/ORM 未使用（TS: Prisma `$queryRawUnsafe`・Drizzle `sql.raw`, Python: f-string/format SQL）
-- XSS: `dangerouslySetInnerHTML`、テンプレートの未エスケープ出力（`| safe`、`{% autoescape false %}`）
-- コマンド/パスインジェクション: ユーザー入力のシェルコマンド（`child_process.exec`、`subprocess.run(shell=True)`）やファイルパスへの直接結合
-- デシリアライゼーション: Python `pickle.loads`・`yaml.load`（`Loader` 未指定）・`torch.load`（`weights_only=True` 未指定）、TS `JSON.parse` 後の型未検証・prototype pollution（再帰マージ）
-- SSRF: ユーザー入力由来の HTTP リクエスト先、プライベート IP/ループバック未ブロック
+## surface 条件付き補助観点
 
-## 耐性 (Resistance)
+- `HTTP API`: BOLA、BOPLA、入力境界、レート制限、unsafe API consumption を確認する
+- `Web / Browser`: CORS、Cookie 属性、CSP、XSS の導線を見る
+- `external integration`: webhook 署名、リプレイ防止、外部応答の検証、TLS、認証ヘッダ、SSRF の導線を見る
+- `AI/LLM`: 構造化入力、出力検証、テナント分離、tool 実行境界を見る
+- `cloud runtime / IaC`: secret 配布、アーティファクト署名 / 来歴、公開設定の緩さ、暗号設定を確認する
 
-- レート制限なし: 認証エンドポイント（ブルートフォース）、API エンドポイント（乱用）
-- リソース消費上限なし: アップロードサイズ・バッチサイズ・クエリ結果件数・リクエストボディサイズの制限欠如
-- 大量データ操作の制限なし: 全件削除・全件更新が単一リクエストで可能
-- サプライチェーン: ロックファイル未固定、`@scope` 未使用（npm）、既知脆弱性パッケージ、依存関係混乱攻撃（内部パッケージ名の公開レジストリ未登録）
-- DDoS 耐性: CDN/WAF の設定欠如、コネクション数制限なし、slowloris 対策なし
+## false positive 注意
 
-## 実務補助: 暗号化
+- 権限モデルが単純な変更に対し、BOPLA を機械的に要求しない
+- WAF や CDN など diff に出ない外部防御層の有無を断定しない
+- 監査ログの保存先や改ざん耐性がコード差分にない場合、存在しないと断定しない
 
-- 非推奨アルゴリズム: MD5・SHA1（ハッシュ用途）、DES、RC4
-- 非セキュア乱数: `Math.random()`・`random.random()` をセキュリティ用途に使用（→ `crypto.randomUUID()`・`secrets` モジュール）
-- パスワードハッシュ: bcrypt/argon2 以外の使用、ソルトなしハッシュ
-- 平文通信: TLS 未使用の外部通信、保存時暗号化の欠如
+## 標準マップ
 
-## 実務補助: ブラウザセキュリティ (Web 固有)
-
-- CORS: ワイルドカード (`*`) 許可 + credentials、オリジン検証の欠如
-- Cookie 属性: `HttpOnly`・`Secure`・`SameSite` の欠如
-- CSP: `Content-Security-Policy` 未設定、`unsafe-inline`/`unsafe-eval` の使用
+| 観点 | 標準 |
+|---|---|
+| セキュリティの主軸 | ISO/IEC 25010:2023 |
+| Web / API の検証観点 | OWASP ASVS |
+| BOLA / リソース消費 / unsafe API consumption | OWASP API Security Top 10 2023 |
+| アーティファクト来歴 / transparency | Sigstore documentation |

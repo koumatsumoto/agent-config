@@ -23,6 +23,9 @@
   - config/chore で safety と flexibility を落としていないか
   - `standard` / `thorough` の code change path で 9 品質特性ごとの評価（PASS / WARN / FAIL / SKIP）が出力されているか
   - `quick` や docs-only path では `（スキップ）` が妥当か
+  - surface 条件付き補助観点が Tier / Depth の優先順位を壊していないか
+  - UI 変更がないのに WCAG やブラウザ固有観点を暴発させていないか
+  - database / migration 変更で compatibility / reliability / safety を見落としていないか
 - `doc-review`
   - 事実誤認だけでなく、構造的な混乱も拾えているか
 - `intent-review`
@@ -43,3 +46,6 @@
 - 第三者専門家レビューのセクションが欠落している、または severity 形式でない（expert review 実行時）
 - 専門家の HIGH / CRITICAL が統合サマリーの blocking 判定に反映されていない
 - スキップされたレビューのセクションが省略されている（「スキップ」明示なし）
+- Tier 2 の SKIP 条件を surface 条件で上書きしてしまう
+- `quick` path なのに surface を理由に quality-review を再実行してしまう
+- 接点変更がないのに WCAG 2.2 やブラウザ固有の指摘を出す

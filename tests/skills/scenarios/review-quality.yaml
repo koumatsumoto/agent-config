@@ -180,6 +180,92 @@ scenarios:
       notes:
         - docs-only first-pass routing should keep quality-review out even in thorough level
 
+  - id: review-quality-multiple-surfaces-no-unrelated-findings
+    title: Multiple surfaces should combine relevant lenses without inventing unrelated ones
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/orders.ts
+        - src/ui/orders.tsx
+        - src/db/migrations/20260412_add_order_flags.sql
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - quality evaluation summary table with 9 characteristics
+      should_not_output:
+        - CLI / developer tool
+      notes:
+        - review should combine HTTP API, Web/Browser, and database/data store lenses
+        - unrelated CLI-only findings should not be invented
+
+  - id: review-quality-quick-surface-does-not-force-quality
+    title: Quick review should not force quality-review even when API surfaces apply
+    prompt: "軽くレビューして"
+    context:
+      changed_files:
+        - src/api/webhook.ts
+      change_type: fix
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_output:
+        - quality evaluation summary table with 9 characteristics
+      notes:
+        - quick keeps the existing minimal path and surfaces must not escalate it back into quality-review
+
+  - id: review-quality-tier2-skip-wins-over-surface
+    title: Tier 2 skip conditions should win over surface-conditioned supplements
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/internal/health.ts
+      change_type: fix
+      conversation_context: true
+      public_interface_changed: false
+    expected:
+      primary_skill: km:review
+      required_output:
+        - quality evaluation summary table with 9 characteristics
+      notes:
+        - compatibility should remain SKIP when no public API, CLI, DB schema, or config contract changed
+        - HTTP API surface alone must not override Tier 2 skip rules
+
+  - id: review-quality-database-surface-trigger
+    title: Database and migration changes should trigger database surface checks
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/db/migrations/20260412_add_status.sql
+        - src/db/queries.ts
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - quality evaluation summary table with 9 characteristics
+      notes:
+        - database/data store changes should activate compatibility, reliability, performance, and safety lenses
+
+  - id: review-quality-non-ui-change-should-not-report-wcag
+    title: Non-UI changes should not trigger WCAG framing
+    prompt: "レビューして"
+    context:
+      changed_files:
+        - src/api/orders.ts
+        - src/lib/orders.ts
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      required_output:
+        - quality evaluation summary table with 9 characteristics
+      should_not_output:
+        - WCAG 2.2
+      notes:
+        - accessibility framing should not appear when there is no Web/Browser interaction change
+
   - id: npm-review-no-allow-without-exact-version
     title: npm package review should not allow when exact version is missing
     prompt: "npm パッケージ lodash の採用前セキュリティレビューをして"
