@@ -16,6 +16,40 @@ scenarios:
         - km:doc-review
       notes:
         - review subskills may be used as children after km:review decides routing
+        - unspecified review requests default to the standard level
+
+  - id: trigger-review-thorough
+    title: Deep review request should still route through km:review
+    prompt: "この変更を深くレビューして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+        - templates/skills/code-review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
+      notes:
+        - deep review requests should select the thorough level within km:review
+
+  - id: trigger-review-quick
+    title: Quick review request should still route through km:review
+    prompt: "この変更を浅くレビューして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      should_not_start_with:
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
+      notes:
+        - shallow review requests should select the quick level within km:review
 
   - id: trigger-commit-natural-language
     title: Natural language commit request should still trigger km:commit

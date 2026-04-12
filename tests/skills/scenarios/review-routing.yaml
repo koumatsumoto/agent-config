@@ -17,12 +17,12 @@ scenarios:
         - km:quality-review
       child_skills_skipped:
         - km:doc-review
-      expert_review: executed
+      expert_review: skipped
       additional_checks:
         - code-only doc update necessity check is performed
 
   - id: review-routing-docs-only
-    title: Docs-only change should route only to doc-review
+    title: Docs-only change should still route only to doc-review in standard level
     prompt: "README をレビューして"
     context:
       changed_files:
@@ -40,8 +40,27 @@ scenarios:
         - km:quality-review
       expert_review: skipped
 
+  - id: review-routing-docs-only-thorough
+    title: Docs-only change should not expand into code or expert review in thorough level
+    prompt: "README を深くレビューして"
+    context:
+      changed_files:
+        - README.md
+        - docs/setup.md
+      change_type: docs
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      child_skills:
+        - km:doc-review
+      child_skills_skipped:
+        - km:intent-review
+        - km:code-review
+        - km:quality-review
+      expert_review: skipped
+
   - id: review-routing-config-chore
-    title: Config or chore only change should use Quick path
+    title: Config or chore only change should keep Quick internal depth in standard level
     prompt: "この設定変更を確認して"
     context:
       changed_files:
@@ -78,14 +97,14 @@ scenarios:
       child_skills_skipped:
         - km:intent-review
         - km:doc-review
-      expert_review: executed
+      expert_review: skipped
       additional_checks:
         - code-only doc update necessity check is performed
       notes:
         - output should state a concrete skip reason instead of guessing intent
 
   - id: review-routing-code-and-docs-self
-    title: Code + docs change with conversation context should run all 5 reviews
+    title: Code + docs change with conversation context should skip expert review in standard level
     prompt: "レビューして"
     context:
       changed_files:
@@ -100,9 +119,9 @@ scenarios:
         - km:code-review
         - km:quality-review
         - km:doc-review
-      expert_review: executed
+      expert_review: skipped
       notes:
-        - most complex routing path with all 5 review axes active
+        - standard keeps intent/code/quality/doc but skips expert review
 
   - id: review-routing-code-and-docs-third-party
     title: Code + docs change without conversation context should skip intent-review
@@ -121,4 +140,44 @@ scenarios:
         - km:doc-review
       child_skills_skipped:
         - km:intent-review
+      expert_review: skipped
+
+  - id: review-routing-code-and-docs-thorough
+    title: Thorough review should preserve the full review path for code and docs changes
+    prompt: "深くレビューして"
+    context:
+      changed_files:
+        - src/api/users.ts
+        - docs/api.md
+      change_type: feat
+      conversation_context: true
+    expected:
+      primary_skill: km:review
+      child_skills:
+        - km:intent-review
+        - km:code-review
+        - km:quality-review
+        - km:doc-review
       expert_review: executed
+      notes:
+        - thorough should match the legacy full review path
+
+  - id: review-routing-test-only-quick
+    title: Quick review should narrow test-only changes down to code-review only
+    prompt: "浅くレビューして"
+    context:
+      changed_files:
+        - tests/api/users.test.ts
+        - tests/lib/auth.test.ts
+      change_type: test
+      conversation_context: false
+    expected:
+      primary_skill: km:review
+      child_skills:
+        - km:code-review
+      child_skills_skipped:
+        - km:intent-review
+        - km:quality-review
+        - km:doc-review
+      review_depth: Quick
+      expert_review: skipped

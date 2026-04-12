@@ -25,7 +25,7 @@
 1. Trigger
    - どの自然言語要求でどの skill が入口になるか
 2. Routing
-   - `km:review` が変更種別と会話コンテキストに応じて正しく振り分けるか
+   - `km:review` が変更種別・会話コンテキスト・レビュー強度に応じて正しく振り分けるか
 3. Output Quality
    - report-format と blocking 判定が壊れていないか
 4. Workflow
@@ -54,7 +54,7 @@
 - `trigger_failure`
   - 想定した skill が起動しない
 - `routing_failure`
-  - `km:review` の振り分けが誤る
+  - `km:review` の振り分けやレベル絞り込みが誤る
 - `quality_failure`
   - 出力品質、重大度、false positive 制御が不適切
 - `workflow_failure`

@@ -9,8 +9,8 @@
 - false positive を抑える説明がある
 - 修正提案が具体的である
 - report-format と大きく矛盾しない
-- 品質評価サマリー（9 品質特性テーブル）が出力に含まれる（quality-review 実行時）
-- 第三者専門家レビューのセクションが存在し、severity 形式（CRITICAL / HIGH / MEDIUM / LOW）で報告されている（expert review 実行時）
+- 品質評価サマリー（9 品質特性テーブル）が出力に含まれる、または `（スキップ）` と明示される（quality-review 実行時 / 非実行時）
+- 第三者専門家レビューのセクションが存在し、実行時は severity 形式（CRITICAL / HIGH / MEDIUM / LOW）で報告され、非実行時は `（スキップ）` と明示される
 - スキップされたレビューはセクション見出しと「スキップ」が明示されている（省略は不可）
 
 ## 注目点
@@ -21,7 +21,8 @@
 - `quality-review`
   - diff に根拠のある品質問題だけを報告しているか
   - config/chore で safety と flexibility を落としていないか
-  - 9 品質特性ごとの評価（PASS / WARN / FAIL / SKIP）が出力されているか
+  - `standard` / `thorough` の code change path で 9 品質特性ごとの評価（PASS / WARN / FAIL / SKIP）が出力されているか
+  - `quick` や docs-only path では `（スキップ）` が妥当か
 - `doc-review`
   - 事実誤認だけでなく、構造的な混乱も拾えているか
 - `intent-review`
