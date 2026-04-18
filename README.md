@@ -108,10 +108,14 @@ AI に渡す前の Markdown から余分な空白やテーブルのパディン�
 
 - デフォルトの sandbox / approval は `workspace-write + on-request` としている
 - `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `research` profile を使い分ける前提にしている
+- `plan_mode_reasoning_effort = "high"` を明示し、Plan mode では通常ターンより深く考えさせる
+- `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
+- stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、`fast_mode = false` を含めて将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- 互換性のため既存 profile (`deep`、`readonly`、`live_web`、`fast`) を残しつつ、用途別 profile (`research`、`review`、`quick`) を追加している
+- profile は `deep`、`research`、`review`、`readonly`、`live_web` に絞り、fast tier 前提の profile は配布しない
 - status line は組み込み項目のみを使い、モデル・Git・コンテキスト・5h 制限・トークン totals を常時確認できるようにしている
 - 5h 制限のリセット時刻は内部イベントでは取得できるが、`codex-cli 0.118.0` の `tui.status_line` には専用表示項目がないため常時表示は未対応
+- 起動時の初期モードを Plan mode に固定する安定した公開設定キーは、2026-04-18 時点の OpenAI Codex docs と `codex-cli 0.121.0` では確認できなかったため未設定としている
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 - profile の運用方針そのものは `templates/AGENTS.md` を参照
