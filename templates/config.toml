@@ -5,11 +5,22 @@
 
 model = "gpt-5.4"
 model_reasoning_effort = "medium"
+plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "cached"
+check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]
+
+[features]
+enable_request_compression = true
+fast_mode = false
+multi_agent = true
+personality = true
+shell_snapshot = true
+shell_tool = true
+skill_mcp_dependency_install = true
 
 [tui]
 alternate_screen = "never"
@@ -41,14 +52,6 @@ sandbox_mode = "read-only"
 
 [profiles.live_web]
 web_search = "live"
-
-[profiles.fast]
-service_tier = "fast"
-model_reasoning_effort = "medium"
-
-[profiles.quick]
-service_tier = "fast"
-model_reasoning_effort = "medium"
 
 [notice.model_migrations]
 gpt-5-codex = "gpt-5.4"
