@@ -12,7 +12,7 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 |ステータスライン|`~/.claude/statusline.sh` + `settings.json`|画面下部にモデル・コンテキスト・コスト等を常時表示|
 |キーバインド|`~/.claude/keybindings.json`|キーボードショートカットのカスタマイズ|
 |Output Styles|`~/.claude/output-styles/*.md` or `/config`|応答スタイルの変更|
-|Hooks|`settings.json`|イベント駆動の自動処理（通知、フォーマット等）|
+|Hooks|`settings.json`|イベント駆動の自動処理（フォーマット等）|
 |Vim モード|`settings.json`|プロンプト入力欄での Vim キーバインド|
 
 ## 1. ステータスライン
@@ -125,82 +125,9 @@ keep-coding-instructions: true
 
 |イベント|タイミング|活用例|
 |---|---|---|
-|`Notification`|通知発生時|デスクトップ通知|
 |`PreToolUse`|ツール実行前|危険なコマンドをブロック|
 |`PostToolUse`|ツール実行後|コードの自動フォーマット|
-|`Stop`|応答完了時|完了通知|
-
-### 通知フックの例
-
-以下の例では `matcher: ""` を使用している（全 Notification イベントにマッチ）。Notification イベントは Claude Code がユーザの注意を必要とする場合にのみ発火するため通常は低頻度だが、必要に応じて特定のイベントに絞ることもできる。
-
-#### Linux (notify-send)
-
-```json
-{
-  "hooks": {
-    "Notification": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "notify-send 'Claude Code' 'Action needed'"
-      }]
-    }]
-  }
-}
-```
-
-#### macOS
-
-```json
-{
-  "hooks": {
-    "Notification": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "osascript -e 'display notification \"Action needed\" with title \"Claude Code\"'"
-      }]
-    }]
-  }
-}
-```
-
-#### Windows — Git Bash
-
-Git Bash では `powershell.exe` が Windows PATH 経由で利用可能。フルパスで指定する:
-
-```json
-{
-  "hooks": {
-    "Notification": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -Command \"[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]; $t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $n = $t.GetElementsByTagName('text'); $n.Item(0).InnerText = 'Claude Code'; $n.Item(1).InnerText = 'Action needed'; [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show([Windows.UI.Notifications.ToastNotification]::new($t))\""
-      }]
-    }]
-  }
-}
-```
-
-#### Windows — WSL2
-
-WSL2 では `/mnt/c/` プレフィックスでフルパス指定する:
-
-```json
-{
-  "hooks": {
-    "Notification": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe -Command \"[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]; $t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $n = $t.GetElementsByTagName('text'); $n.Item(0).InnerText = 'Claude Code'; $n.Item(1).InnerText = 'Action needed'; [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show([Windows.UI.Notifications.ToastNotification]::new($t))\""
-      }]
-    }]
-  }
-}
-```
+|`Stop`|応答完了時|ログ記録・後処理|
 
 ### フックのセキュリティ注意事項
 
@@ -357,5 +284,4 @@ Windows 上で Claude Code を使用する場合、環境に応じた考慮が�
   ```
 
 **共通:**
-- 通知フックでは `powershell.exe` をフルパスで指定し PATH 汚染を防止する（Git Bash: `C:/WINDOWS/...`、WSL2: `/mnt/c/WINDOWS/...`）
 - `statusline.sh` は jq（推奨）+ bash fallback の二段構成。Git Bash / WSL2 のどちらでも動作する

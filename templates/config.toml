@@ -13,8 +13,6 @@ project_doc_fallback_filenames = ["CLAUDE.md"]
 
 [tui]
 alternate_screen = "never"
-notifications = true
-notification_method = "auto"
 show_tooltips = false
 animations = false
 # Built-in TUI items only. As of codex-cli 0.118.0, the status line does not
