@@ -164,6 +164,50 @@ cases:
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr
     tags: [workflow, github]
+  - id: workflow-issue-create-new
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-issue-create-new
+    tags: [workflow, github, issue]
+  - id: workflow-issue-reuse-open
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-issue-reuse-open
+    tags: [workflow, github, issue]
+  - id: workflow-issue-ambiguous-candidates
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-issue-ambiguous-candidates
+    tags: [workflow, github, issue, negative]
+  - id: workflow-existing-issue-argument
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-existing-issue-argument
+    tags: [workflow, github, issue]
+  - id: workflow-pr-closes-issue
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-pr-closes-issue
+    tags: [workflow, github, issue, pr]
+  - id: workflow-body-file-only
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-body-file-only
+    tags: [workflow, github, safety]
+  - id: workflow-non-github-repo-stop
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-non-github-repo-stop
+    tags: [workflow, github, negative]
+  - id: workflow-existing-pr-keeps-issue-link
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-existing-pr-keeps-issue-link
+    tags: [workflow, github, issue, pr]
+  - id: workflow-explicit-base-branch
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-explicit-base-branch
+    tags: [workflow, github, branch]
+  - id: workflow-default-base-main
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-default-base-main
+    tags: [workflow, github, branch]
+  - id: workflow-issue-ssot-comments
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-issue-ssot-comments
+    tags: [workflow, github, issue, docs]
   - id: docs-policy-drift
     file: scenarios/workflow-and-state.yaml
     scenario_id: docs-policy-drift

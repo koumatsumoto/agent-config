@@ -218,7 +218,7 @@ bash clean.sh
 | `km:doc-review` | ドキュメントの整合性と正確性を確認するレビュー |
 | `km:npm-package-security-review` | 単一 npm package の採用前セキュリティレビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
-| `km:github-workflow` | ブランチ作成から PR 作成までの GitHub ワークフロー |
+| `km:github-workflow` | issue 連携を含む GitHub delivery ワークフロー |
 
 ## ライセンス
 
