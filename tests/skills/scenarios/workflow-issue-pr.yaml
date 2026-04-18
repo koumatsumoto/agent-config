@@ -13,8 +13,10 @@ scenarios:
       primary_skill: km:github-workflow
       required_behavior:
         - verify the repository is GitHub-managed before proceeding
-        - create a new issue before continuing to PR steps
+        - create a new issue before any PR step
         - use body-file based issue body submission
+        - stop after issue creation when implementation is not ready
+        - tell the user to resume with the created issue number
 
   - id: workflow-issue-reuse-open
     title: Explicit issue request should reuse one matching open issue
@@ -29,7 +31,8 @@ scenarios:
       primary_skill: km:github-workflow
       required_behavior:
         - reuse the existing open issue instead of creating a duplicate
-        - continue with a single linked issue
+        - stop after issue reuse when implementation is not ready
+        - tell the user to resume with the selected issue number
 
   - id: workflow-issue-ambiguous-candidates
     title: Multiple plausible open issues should stop for clarification
@@ -47,7 +50,7 @@ scenarios:
         - ask the user which issue should be used
 
   - id: workflow-existing-issue-argument
-    title: Explicit issue-number argument should not edit the issue body
+    title: Explicit issue-number argument should reuse that issue number directly
     prompt: "/km:github-workflow 21"
     context:
       git_branch: feat/github-workflow-issue-pr-linkage
@@ -60,7 +63,7 @@ scenarios:
       primary_skill: km:github-workflow
       required_behavior:
         - reuse the specified issue number
-        - avoid editing the issue body
+        - do not search for or create another issue
 
   - id: workflow-pr-closes-issue
     title: Linked single-issue PR should include Closes syntax
@@ -75,7 +78,7 @@ scenarios:
     expected:
       primary_skill: km:github-workflow
       required_behavior:
-        - include a standalone Closes issue line at the end of the PR body
+        - include a standalone Closes issue line in the PR body
 
   - id: workflow-body-file-only
     title: GitHub body submission should use body-file only
@@ -89,7 +92,7 @@ scenarios:
     expected:
       primary_skill: km:github-workflow
       required_behavior:
-        - use gh issue or pr create/edit with body-file
+        - use quoted heredoc with body-file for issue and PR content
         - avoid body string flags for issue and PR content
 
   - id: workflow-non-github-repo-stop
@@ -155,17 +158,17 @@ scenarios:
         - choose main as the default base branch when no explicit base branch is given
 
   - id: workflow-issue-ssot-comments
-    title: Issue-backed planning history should be appended as comments
+    title: Issue-backed planning should keep the issue body aligned with the latest plan
     prompt: "issue化してから PR までやって"
     context:
       git_branch: main
       has_uncommitted_changes: false
       upstream_set: true
       github_repo: true
-      matching_open_issues: 1
+      matching_open_issues: 0
       issue_is_plan_ssot: true
     expected:
       primary_skill: km:github-workflow
       required_behavior:
-        - keep the canonical plan in the issue body
-        - record review feedback and plan corrections as issue comments
+        - keep a newly created issue body aligned with the latest plan
+        - use comments only when review notes or extra context need to be preserved
