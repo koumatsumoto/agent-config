@@ -92,7 +92,7 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 2. 強く一致する候補が 1 件なら再利用する
 3. 候補が 2 件以上なら新規作成せず、どれを使うべきかユーザーに確認する
 4. 候補が 0 件なら新規 issue を作成する
-5. issue 作成・更新時は `--body "..."` を使わず、`--body-file` だけを使う
+5. issue 作成・更新時は `--body "..."` を使わず、原則 `--body-file - <<'EOF'` を使う
 6. issue を計画の SSOT として使う場合、後続の計画レビュー結果、修正方針、修正完了報告は issue comment に残す
 7. まだ実装が終わっていなければ、issue を用意したあと通常の実装に戻り、コード差分ができてから次の phase に進む
 
@@ -124,7 +124,7 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
     - 単一 PR なら PR 本文末尾に独立行で `Closes #<num>` を入れる
     - 複数 PR に分割する場合は、中間 PR では `Refs #<num>`、最終 PR だけ `Closes #<num>` を入れる
 12. 既存 PR があれば、最新の変更内容に合わせてタイトルと説明を更新する。なければ GitHub で PR を新規作成する
-13. PR 作成・更新時は `--body "..."` を使わず、`--body-file` だけを使う
+13. PR 作成・更新時は `--body "..."` を使わず、原則 `--body-file - <<'EOF'` を使う
 14. PR URL、変更要約、見てほしい論点を共有する
 
 ## Decision Rules
