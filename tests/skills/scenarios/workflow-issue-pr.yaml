@@ -150,12 +150,11 @@ scenarios:
       has_uncommitted_changes: false
       upstream_set: true
       github_repo: true
-      repo_has_main: true
-      repo_has_master: true
+      default_branch: main
     expected:
       primary_skill: km:github-workflow
       required_behavior:
-        - choose main as the default base branch when no explicit base branch is given
+        - choose the repository default branch as the base branch when no explicit base branch is given
 
   - id: workflow-issue-ssot-comments
     title: Issue-backed planning should be maintained only until a PR exists

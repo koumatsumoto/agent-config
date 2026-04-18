@@ -1,6 +1,6 @@
 ---
 name: km:github-workflow
-description: GitHub 管理リポジトリで、issue 連携を含む PR delivery workflow を進める。明示的に PR / issue / delivery 完了を求められたときだけ使う。
+description: Runs the GitHub PR delivery workflow with optional issue linkage. Use when the user says "PRにして", "issue化してからPRにして", or otherwise explicitly requests PR / issue / delivery completion.
 argument-hint: "[issue-number]"
 ---
 
@@ -20,9 +20,6 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 
 - GitHub 管理リポジトリであることを確認してから進める
 - issue 要求がある場合だけ Phase 2 で issue を扱う
-- `[issue-number]` 指定時はその issue だけを PR に連携する
-- base branch が明示されていればそれを使い、未指定なら `main` を優先して既定 base を決める
-- 今回の作業に対応するブランチで実装・レビュー・コミット・push を終える
 - issue 連携がある場合だけ PR 本文に `Closes #<num>` または `Refs #<num>` を入れる
 - issue を計画として使うなら、PR 作成前までは計画更新をなるべく issue 本文に反映する
 - PR 作成後は PR を実装成果物の正とし、issue の詳細同期を続けない
@@ -30,17 +27,14 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 
 ## Trigger Signals
 
-この skill は GitHub 上での delivery 完了が明確な発話でのみ使う。
-`PR`、`issue`、`delivery` を伴う完了要求があるときは開始してよい。単なる実装依頼では開始しない。
+`PR` / `issue` / `delivery` の完了要求が明確なときだけ使う。単なる実装依頼では使わない。
 
-- `PRにして`
-- `issue化してからPRにして`
-- `/km:github-workflow 123`
+- 例: `PRにして` / `issue化してからPRにして` / `/km:github-workflow 123`
 
 ## Entry Point
 
 まず `gh auth status` で認証を確認する。失敗したら認証エラーとして停止する。
-次に `gh repo view --json nameWithOwner` を実行する。失敗したら stderr を見て、non-GitHub repo、権限不足、network 失敗を区別して停止する。
+次に `gh repo view --json nameWithOwner,defaultBranchRef` を実行する。失敗したら stderr を見て、non-GitHub repo、権限不足、network 失敗を区別して停止する。
 
 次に mode を決める:
 
@@ -55,7 +49,7 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 
 |状態|開始位置|
 |---|---|
-|`main` / `master` 上|Phase 1|
+|既定 base branch 上|Phase 1|
 |作業ブランチ + 未コミット変更あり|Phase 3|
 |作業ブランチ + 未 push コミットあり|Phase 3|
 |push 済みで PR 未作成|Phase 4 の PR 作成|
@@ -67,8 +61,8 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 
 1. 現在ブランチを確認する
 2. base branch の明示指定は `<branch> から` または `base は <branch>` のように branch 名が直接示された場合だけ採用する
-3. base branch 指定がなければ、`main` があれば `main`、なければ `master` を既定 base branch とする
-4. 明示された base branch が存在しない、または指定が曖昧な場合は確認する
+3. base branch 指定がなければ、Entry Point で取得した `defaultBranchRef` を既定 base branch とする
+4. 明示された base branch が存在しない、指定が曖昧、または `defaultBranchRef` が取得できない場合は確認する
 5. base branch 上にいるなら `type/short-description` 形式で新ブランチを切る
 6. 既存作業ブランチなら、今回のタスク用かをブランチ名と最近のコミットで判断する
 7. issue-first / existing-issue mode でも、ブランチ名に issue 番号は必須にしない
@@ -79,21 +73,19 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 
 ### `issue-first` mode
 
-1. ユーザー要求の主キーワード 1-3 語だけを空白連結した単純な検索語で、`gh issue list --state open --search ...` を 1 回実行する
-2. 結果が 10 件超または弱い一致ばかりなら、検索語を 1 回だけ絞り直す。それでも曖昧なら確認する
-3. 強く一致する候補が 1 件なら再利用する
-4. 候補が 2 件以上なら新規作成せず、どれを使うべきかユーザーに確認する
-5. 候補が 0 件なら新規 issue を作成する
-6. issue を計画として使うなら、再利用した issue でも新規 issue でも、計画更新をなるべく issue 本文に反映する
-7. レビュー結果や補足は、PR 作成前だけ必要に応じて issue comment に残す
-8. 実装がまだ終わっていなければ、issue を用意した時点で一度止める。再開時は `/km:github-workflow <issue-number>` を使う
+1. 主キーワード 1-3 語で `gh issue list --state open --search ...` を実行する。結果が 10 件超または弱一致ばかりなら 1 回だけ絞り直す
+2. 1 件一意なら再利用、0 件なら新規作成、2 件以上または曖昧なら作成せずユーザーに確認する
+3. issue を計画として使うなら、再利用でも新規でも、計画更新は issue 本文に反映する。PR 作成前のみ補足や決定履歴を issue comment に残す
+4. issue / PR 本文は `--body-file - <<'EOF'` で流し込む
+5. 実装がまだ終わっていなければ、issue を用意した時点で一度止める。再開時は `/km:github-workflow <issue-number>` を使う
 
 ### `existing-issue` mode
 
 1. 指定された issue 番号が open で存在することを確認する
-2. issue を計画として使うなら、必要な計画更新は issue 本文に反映してよい
-3. PR 作成前で、レビュー結果や修正完了報告を残したい場合だけ issue comment に追記する
-4. PR 本文にはその issue 番号だけを連携対象として使う
+2. 既定では issue 本文を編集しない
+3. ユーザーが計画更新を明示要求した場合のみ、必要最小限の本文更新を行う
+4. PR 作成前で、レビュー結果や修正完了報告を残したい場合だけ issue comment に追記する
+5. PR 本文にはその issue 番号だけを連携対象として使う
 
 ### `standard-pr` mode
 
