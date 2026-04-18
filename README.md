@@ -77,7 +77,7 @@ bash install.sh
 }
 ```
 
-通知フック、Output Styles、permissions のセキュリティハードニング等の詳細は `docs/claude-code-terminal-customization.md` を参照。
+Hooks、Output Styles、permissions のセキュリティハードニング等の詳細は `docs/claude-code-terminal-customization.md` を参照。
 
 ### 外部エディタを VS Code にする
 

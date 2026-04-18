@@ -569,7 +569,6 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 | | `Stop` | メインエージェント応答完了時 |
 | | `SubagentStart` | サブエージェント起動時 |
 | | `SubagentStop` | サブエージェント完了時 |
-| | `Notification` | 通知送信時 |
 | ツール実行 | `PreToolUse` | ツール実行前（ブロック可能） |
 | | `PostToolUse` | ツール実行成功後 |
 | | `PostToolUseFailure` | ツール実行失敗後 |
@@ -669,7 +668,7 @@ Hooks はエージェントのライフサイクルの特定ポイントで実�
 
 **サブエージェント出力の後処理**:
 
-`SubagentStop` の `last_assistant_message` フィールドでサブエージェントの最終応答にアクセスし、ログ記録や通知に活用できる。
+`SubagentStop` の `last_assistant_message` フィールドでサブエージェントの最終応答にアクセスし、ログ記録や後処理に活用できる。
 
 ### 5.7 終了コードの意味
 
