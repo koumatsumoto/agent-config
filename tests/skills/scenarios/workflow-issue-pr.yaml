@@ -158,7 +158,7 @@ scenarios:
         - choose main as the default base branch when no explicit base branch is given
 
   - id: workflow-issue-ssot-comments
-    title: Issue-backed planning should keep the issue body aligned with the latest plan
+    title: Issue-backed planning should be maintained only until a PR exists
     prompt: "issue化してから PR までやって"
     context:
       git_branch: main
@@ -170,5 +170,5 @@ scenarios:
     expected:
       primary_skill: km:github-workflow
       required_behavior:
-        - keep a newly created issue body aligned with the latest plan
-        - use comments only when review notes or extra context need to be preserved
+        - keep a newly created issue body aligned with the latest plan before a PR exists
+        - stop maintaining issue details after the PR becomes the implementation record

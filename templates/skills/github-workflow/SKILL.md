@@ -24,7 +24,8 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 - base branch が明示されていればそれを使い、未指定なら `main` を優先して既定 base を決める
 - 今回の作業に対応するブランチで実装・レビュー・コミット・push を終える
 - issue 連携がある場合だけ PR 本文に `Closes #<num>` または `Refs #<num>` を入れる
-- issue を計画として使うなら、計画更新をなるべく issue 本文に反映する
+- issue を計画として使うなら、PR 作成前までは計画更新をなるべく issue 本文に反映する
+- PR 作成後は PR を実装成果物の正とし、issue の詳細同期を続けない
 - PR URL、変更要約、見てほしい論点を共有する
 
 ## Trigger Signals
@@ -84,14 +85,14 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 4. 候補が 2 件以上なら新規作成せず、どれを使うべきかユーザーに確認する
 5. 候補が 0 件なら新規 issue を作成する
 6. issue を計画として使うなら、再利用した issue でも新規 issue でも、計画更新をなるべく issue 本文に反映する
-7. レビュー結果や補足は必要に応じて issue comment に残す
+7. レビュー結果や補足は、PR 作成前だけ必要に応じて issue comment に残す
 8. 実装がまだ終わっていなければ、issue を用意した時点で一度止める。再開時は `/km:github-workflow <issue-number>` を使う
 
 ### `existing-issue` mode
 
 1. 指定された issue 番号が open で存在することを確認する
 2. issue を計画として使うなら、必要な計画更新は issue 本文に反映してよい
-3. レビュー結果や修正完了報告が必要なら issue comment に追記する
+3. PR 作成前で、レビュー結果や修正完了報告を残したい場合だけ issue comment に追記する
 4. PR 本文にはその issue 番号だけを連携対象として使う
 
 ### `standard-pr` mode
@@ -126,8 +127,8 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 - PR 説明は日本語で書く
 - issue 本文・PR 本文の章立ては固定テンプレートに縛らず、タスクの難しさに応じて必要な情報を過不足なく含める
 - issue が 1 件に定まらない状態で `Closes` を勝手に決めない
-- issue を計画として使うなら、計画更新をなるべく issue 本文へ反映する
-- レビュー結果や補足は必要に応じて issue comment に残す
+- issue を計画として使うなら、PR 作成前までは計画更新をなるべく issue 本文へ反映する
+- PR を作成したら、以後の実装状態や詳細な差分は PR を正とする
 - 明示 base branch 指定は新規ブランチ作成時だけに効かせ、既存作業ブランチの履歴を書き換える理由には使わない
 
 ## Safety Rules
