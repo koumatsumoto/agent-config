@@ -14,4 +14,4 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 
 - テンプレートの編集は `templates/` 配下で行う
 - `install.sh` 実行でテンプレートがホームディレクトリに反映される
-- .claude/skills/config-review/ はこのプロジェクト専用スキル（テンプレートではない）
+- 作業用の計画メモは repo 直下の `.plan/` に置き、git には含めない
