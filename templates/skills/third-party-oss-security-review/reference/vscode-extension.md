@@ -14,6 +14,24 @@ VS Code extension の採用前レビューで共通 8 観点に加えて確認�
 - Marketplace 上の repository link と実 GitHub repository が一致するか
 - 人気 extension 名の混同を狙う命名になっていないか
 
+## 配布 / lifecycle 注記
+
+- Marketplace で配布される `.vsix` は pre-built された成果物であり、インストール時に `scripts.postinstall` / `preinstall` / `prepare` 等の npm lifecycle scripts は実行されない。`package.json` の lifecycle scripts は開発者向けと見なし、extension の runtime 挙動の証拠としては直接使わない
+- 静的解析の対象は「`.vsix` に実際に含まれる成果物」に置く。対応 tag / release が特定できればその commit、特定できない場合は master または最新 commit を暫定対象とし、その旨をレポートに明記する
+- Marketplace version と GitHub tag / commit の対応が一次ソースで検証できない場合は、`release / distribution integrity` と `decision-rules.md` の hard rule（source-correlation 未確認なら `ALLOW` 不可）を適用する
+
+## subdir / language server manifest
+
+- extension が language server を同梱する場合（`vscode-languageclient` / `vscode-languageserver` に依存）、client 側と server 側で別プロセスが動作する
+- root の `package.json` に加えて、`client/` / `server/` / `gclient/` / `gserver/` 等の subdir `package.json` を全て列挙し、それぞれの `dependencies` / `devDependencies` / `main` を `dependency / supply-chain surface` と `execution / privilege surface` の両方に反映する
+- subdir が存在するが内容が取得できない場合は、その旨を「不確実性 / 未確認事項」に残したうえで `NEEDS_HUMAN_REVIEW` 方向に倒す
+
+## Marketplace 開示欠落
+
+- Marketplace listing 上に license / privacy / telemetry の記載が無い場合は `identity / provenance` の signal として記録する
+- license は repository 側の `LICENSE` / `package.json.license` で代替確認してよいが、Marketplace 表示欠落そのものは「不確実性 / 未確認事項」に残す
+- Marketplace に `Verified Domain` バッジが無い publisher は identity/provenance の confidence を一段下げる
+
 ## manifest（`package.json`）解析
 
 - `main` / `activationEvents` / `contributes` / `capabilities` を確認する

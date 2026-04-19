@@ -28,6 +28,7 @@
 ## 4. maintainer / repo health
 
 - 最新 release 日と最新 commit 日を確認したか
+- 最新 release 日と最新 commit 日の乖離を確認したか。大きな乖離（目安: 1 年以上）は「配布済 artifact に未反映の変更が累積している」可能性として記述する
 - `SECURITY.md` / SECURITY policy の有無を確認したか
 - CI / release automation の有無を確認したか
 - メンテナ構成、最近の publisher 変更（突然の所有者交代、コミット頻度の急変）を確認したか
