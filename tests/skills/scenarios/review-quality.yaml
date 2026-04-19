@@ -266,57 +266,135 @@ scenarios:
       notes:
         - accessibility framing should not appear when there is no Web/Browser interaction change
 
-  - id: npm-review-no-allow-without-exact-version
-    title: npm package review should not allow when exact version is missing
+  - id: oss-review-no-allow-without-exact-version
+    title: OSS intake review should not allow when exact artifact version is missing
     prompt: "npm パッケージ lodash の採用前セキュリティレビューをして"
     context:
       changed_files: []
       conversation_context: true
     expected:
-      primary_skill: km:npm-package-security-review
+      primary_skill: km:third-party-oss-security-review
       should_not_output:
         - final decision ALLOW
       required_output:
         - request for exact version or human review path
+        - Artifact Resolution Status distinction
 
-  - id: npm-review-no-allow-with-ambiguous-repository
-    title: npm package review should not allow when package to repository mapping is ambiguous
+  - id: oss-review-no-allow-with-ambiguous-repository
+    title: OSS intake review should not allow when artifact to repository mapping is ambiguous
     prompt: "npm パッケージ example-pkg@1.2.3 の採用前セキュリティレビューをして"
     context:
       changed_files: []
       conversation_context: true
       injected_issue: "repository mapping is ambiguous"
     expected:
-      primary_skill: km:npm-package-security-review
+      primary_skill: km:third-party-oss-security-review
       should_not_output:
         - final decision ALLOW
       required_output:
         - uncertainty or human review section
 
-  - id: npm-review-reject-on-critical-advisory
-    title: npm package review should reject unresolved critical advisory
+  - id: oss-review-reject-on-critical-advisory
+    title: OSS intake review should reject unresolved critical advisory
     prompt: "npm パッケージ vulnerable-lib@2.0.0 の採用前セキュリティレビューをして"
     context:
       changed_files: []
       conversation_context: true
       injected_issue: "unresolved critical advisory affects target version"
     expected:
-      primary_skill: km:npm-package-security-review
+      primary_skill: km:third-party-oss-security-review
       required_output:
         - final decision
         - evidence summary
       expected_decision: REJECT
 
-  - id: npm-review-report-format-japanese
-    title: npm package review output should include Japanese sections, reasons, urls, and absolute dates
+  - id: oss-review-report-format-japanese
+    title: OSS intake review output should include Japanese sections, reasons, urls, absolute dates, and resolution status
     prompt: "npm パッケージ lodash@4.17.21 の採用前セキュリティレビューをして"
     context:
       changed_files: []
       conversation_context: true
     expected:
-      primary_skill: km:npm-package-security-review
+      primary_skill: km:third-party-oss-security-review
       required_output:
         - Japanese required sections
         - 2 to 4 decision reasons
         - evidence URLs
         - absolute dates
+        - Artifact Resolution Status value
+
+  - id: oss-review-repo-only-forces-human-review
+    title: repo-only input without resolvable artifact must yield NEEDS_HUMAN_REVIEW and a preliminary assessment disclaimer
+    prompt: "https://github.com/example/unknown-tool の採用レビューをして"
+    context:
+      changed_files: []
+      conversation_context: true
+      injected_issue: "no tags or releases are exposed from the repository"
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      expected_decision: NEEDS_HUMAN_REVIEW
+      should_not_output:
+        - final decision ALLOW
+        - final decision ALLOW_WITH_CONDITIONS
+      required_output:
+        - Artifact Resolution Status unresolved
+        - preliminary repository-level assessment disclaimer
+
+  - id: oss-review-yanked-artifact-blocks-allow
+    title: yanked / deprecated / unpublished artifact must not reach ALLOW
+    prompt: "pip パッケージ yanked-lib==1.0.0 の採用前セキュリティレビューをして"
+    context:
+      changed_files: []
+      conversation_context: true
+      injected_issue: "target version is yanked on PyPI"
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_output:
+        - final decision ALLOW
+      required_output:
+        - release / distribution integrity finding
+        - yanked evidence with URL and absolute date
+
+  - id: oss-review-vscode-high-privilege-downgrade
+    title: VS Code extension with editor-extension runtime and secrets_access must apply the decision downgrade table
+    prompt: "VS Code 拡張 example.heavy-extension の採用前セキュリティレビュー。production・secrets_access=true で使う"
+    context:
+      changed_files: []
+      conversation_context: true
+      injected_issue: "extension activates on * and reads workspace files broadly"
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_output:
+        - final decision ALLOW
+      required_output:
+        - downgrade rationale referencing usage context
+        - execution / privilege surface finding
+
+  - id: oss-review-monorepo-ambiguous-ecosystem
+    title: repo-only input with both package.json and pyproject.toml should not guess an ecosystem
+    prompt: "https://github.com/example/hybrid-monorepo を採用したい。セキュリティレビューして"
+    context:
+      changed_files: []
+      conversation_context: true
+      injected_issue: "repository contains both package.json and pyproject.toml as candidate artifacts"
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      expected_decision: NEEDS_HUMAN_REVIEW
+      required_output:
+        - ecosystem candidate list
+        - human confirmation request
+
+  - id: oss-review-pip-native-extension-heightened
+    title: pip package with native extension or build-time network access must heighten execution / privilege surface
+    prompt: "pip パッケージ fancy-native==0.3.0 の採用前セキュリティレビューをして"
+    context:
+      changed_files: []
+      conversation_context: true
+      injected_issue: "wheel ships C extension and setup.py performs network fetch during build"
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_output:
+        - final decision ALLOW
+      required_output:
+        - execution / privilege surface finding referencing native extension
+        - usage-context impact reasoning
