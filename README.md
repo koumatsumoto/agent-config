@@ -148,7 +148,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `km:code-review` | 設計妥当性・バグ検出・コード品質を確認するレビュー |
 | `km:quality-review` | ISO/IEC 25010 を軸に品質特性を確認するレビュー |
 | `km:doc-review` | ドキュメントの整合性と正確性を確認するレビュー |
-| `km:npm-package-security-review` | 単一 npm package の採用前セキュリティレビュー |
+| `km:third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
 | `km:github-workflow` | issue 連携を含む GitHub delivery ワークフロー |
 

@@ -119,21 +119,60 @@ scenarios:
       notes:
         - km:quality-review has disable-model-invocation so must route through orchestrator
 
-  - id: trigger-npm-package-security-review-explicit
-    title: Explicit npm package intake review should trigger km:npm-package-security-review
+  - id: trigger-third-party-oss-security-review-npm
+    title: Explicit npm package intake review should trigger km:third-party-oss-security-review
     prompt: "npm パッケージ lodash@4.17.21 の採用前セキュリティレビューをして"
     context:
       changed_files: []
       conversation_context: true
     expected:
-      primary_skill: km:npm-package-security-review
+      primary_skill: km:third-party-oss-security-review
       should_not_start_with:
         - km:review
       notes:
         - this skill is specialized and manual-only
 
-  - id: trigger-generic-review-should-not-trigger-npm-package-security-review
-    title: Generic review request should not trigger npm package security review
+  - id: trigger-third-party-oss-security-review-pip
+    title: Explicit pip package intake review should trigger km:third-party-oss-security-review
+    prompt: "pip パッケージ requests==2.32.0 の採用可否を確認して"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_start_with:
+        - km:review
+      notes:
+        - pip ecosystem must route through the single OSS intake skill
+
+  - id: trigger-third-party-oss-security-review-vscode-extension
+    title: VS Code extension intake review should trigger km:third-party-oss-security-review
+    prompt: "VS Code 拡張 ms-python.python の採用前セキュリティレビューをして"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_start_with:
+        - km:review
+      notes:
+        - vscode-extension ecosystem must route through the single OSS intake skill
+
+  - id: trigger-third-party-oss-security-review-repo-url
+    title: GitHub repository URL intake should trigger km:third-party-oss-security-review
+    prompt: "https://github.com/example/tool を採用したいのでセキュリティレビューしてほしい"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_start_with:
+        - km:review
+      notes:
+        - repo-url input should still enter the OSS intake skill and yield a repository-level preliminary assessment
+
+  - id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
+    title: Generic review request should not trigger km:third-party-oss-security-review
     prompt: "この変更レビューして"
     context:
       changed_files:
@@ -142,6 +181,6 @@ scenarios:
     expected:
       primary_skill: km:review
       should_not_trigger:
-        - km:npm-package-security-review
+        - km:third-party-oss-security-review
       notes:
-        - package intake review should remain outside km:review routing
+        - OSS intake review should remain outside km:review routing

@@ -36,14 +36,26 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-quality-review-should-route-through-orchestrator
     tags: [trigger, review, negative]
-  - id: trigger-npm-package-security-review-explicit
+  - id: trigger-third-party-oss-security-review-npm
     file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-npm-package-security-review-explicit
-    tags: [trigger, review, npm]
-  - id: trigger-generic-review-should-not-trigger-npm-package-security-review
+    scenario_id: trigger-third-party-oss-security-review-npm
+    tags: [trigger, review, oss, npm]
+  - id: trigger-third-party-oss-security-review-pip
     file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-generic-review-should-not-trigger-npm-package-security-review
-    tags: [trigger, review, npm, negative]
+    scenario_id: trigger-third-party-oss-security-review-pip
+    tags: [trigger, review, oss, pip]
+  - id: trigger-third-party-oss-security-review-vscode-extension
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-third-party-oss-security-review-vscode-extension
+    tags: [trigger, review, oss, vscode]
+  - id: trigger-third-party-oss-security-review-repo-url
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-third-party-oss-security-review-repo-url
+    tags: [trigger, review, oss, repo]
+  - id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
+    tags: [trigger, review, oss, negative]
   - id: review-routing-code-only
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-only
@@ -144,22 +156,50 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: review-quality-non-ui-change-should-not-report-wcag
     tags: [quality, routing, accessibility, negative]
-  - id: npm-review-no-allow-without-exact-version
+  - id: oss-review-no-allow-without-exact-version
     file: scenarios/review-quality.yaml
-    scenario_id: npm-review-no-allow-without-exact-version
-    tags: [quality, review, npm]
-  - id: npm-review-no-allow-with-ambiguous-repository
+    scenario_id: oss-review-no-allow-without-exact-version
+    tags: [quality, review, oss, npm]
+  - id: oss-review-no-allow-with-ambiguous-repository
     file: scenarios/review-quality.yaml
-    scenario_id: npm-review-no-allow-with-ambiguous-repository
-    tags: [quality, review, npm]
-  - id: npm-review-reject-on-critical-advisory
+    scenario_id: oss-review-no-allow-with-ambiguous-repository
+    tags: [quality, review, oss, npm]
+  - id: oss-review-reject-on-critical-advisory
     file: scenarios/review-quality.yaml
-    scenario_id: npm-review-reject-on-critical-advisory
-    tags: [quality, review, npm, blocking]
-  - id: npm-review-report-format-japanese
+    scenario_id: oss-review-reject-on-critical-advisory
+    tags: [quality, review, oss, npm, blocking]
+  - id: oss-review-report-format-japanese
     file: scenarios/review-quality.yaml
-    scenario_id: npm-review-report-format-japanese
-    tags: [quality, review, npm]
+    scenario_id: oss-review-report-format-japanese
+    tags: [quality, review, oss, npm]
+  - id: oss-review-repo-only-forces-human-review
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-repo-only-forces-human-review
+    tags: [quality, review, oss, repo]
+  - id: oss-review-yanked-artifact-blocks-allow
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-yanked-artifact-blocks-allow
+    tags: [quality, review, oss, pip, blocking]
+  - id: oss-review-vscode-high-privilege-downgrade
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-vscode-high-privilege-downgrade
+    tags: [quality, review, oss, vscode, blocking]
+  - id: oss-review-monorepo-ambiguous-ecosystem
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-monorepo-ambiguous-ecosystem
+    tags: [quality, review, oss, repo]
+  - id: oss-review-pip-native-extension-heightened
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-pip-native-extension-heightened
+    tags: [quality, review, oss, pip]
+  - id: oss-review-marketplace-only-blocks-allow
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-marketplace-only-blocks-allow
+    tags: [quality, review, oss, vscode, distribution]
+  - id: oss-review-downgrade-ladder-accumulates
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-downgrade-ladder-accumulates
+    tags: [quality, review, oss, downgrade]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr
