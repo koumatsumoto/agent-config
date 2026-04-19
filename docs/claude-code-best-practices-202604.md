@@ -69,7 +69,10 @@
 - 参照用の長文知識は supporting files に分離し、`SKILL.md` は契約と入口に絞る
 - 自動起動させたくない workflow は invocation policy を絞る
 - skill 本体では stop condition、success criteria、expected output を明記する
-- Opus 4.7 前提では、review や commit の skill で verification step を明文化した方が挙動が安定する
+
+### Opus 4.7 前提の推論
+
+- これは公式仕様ではなく運用上の推論だが、Opus 4.7 の instruction following と長時間タスク適性を踏まえると、review や commit の skill では verification step を明文化した方が挙動が安定しやすい
 
 ## 4. Subagents
 
@@ -88,6 +91,7 @@
 
 ### Opus 4.7 前提の補足
 
+- 以下は一次情報からの直接記述ではなく、公開されたモデル特性と Claude Code 機能拡張を踏まえた運用上の推論
 - Opus 4.7 は長時間の multi-step work と role fidelity が強く、subagent を使う場合も「役割」「停止条件」「返却形式」を雑にしない方がよい
 - モデル性能が上がったぶん、曖昧な reviewer / planner を作るより、用途を狭めた subagent の方が扱いやすい
 
@@ -129,6 +133,7 @@
 
 ### 実務上の指針
 
+- ここから先は 2026-04 の一次情報を踏まえた運用上の整理であり、仕様そのものではない
 - Opus 4.7 では review / plan / subagent の指示を以前より短くできる一方、曖昧な裁量指示は減らす
 - 深い review を常設 instruction に埋め込まず、必要時に skill や `/ultrareview` へ切り出す
 - 長時間タスク向けの設定は「無確認で危険操作する」こととは分けて設計する

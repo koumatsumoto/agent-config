@@ -51,7 +51,8 @@ reportUnnecessaryTypeIgnoreComment = "error"
 
 ## 4. Python 3.14 で押さえる点
 
-- deferred evaluation of annotations 前提で、前方参照のためだけの文字列化を増やさない
+- Python 3.14 では annotations の runtime 挙動が deferred evaluation ベースに変わった。annotation を読む側は `__annotations__` 直読みではなく `annotationlib` や対応 API を前提に設計する
+- 前方参照のためだけの文字列化は減らせるが、`from __future__ import annotations` を使う既存コードの挙動自体は 3.14 でも変わらない。書き手側の移行と、annotation を読むライブラリ側の対応は分けて考える
 - template string literals、標準ライブラリの更新、`compression.zstd` などの 3.14 追加機能は「必要な場面でだけ」使う
 - 3.14 の機能を使うなら、ツールチェーンとデプロイ環境も同じ最低バージョンに揃える
 

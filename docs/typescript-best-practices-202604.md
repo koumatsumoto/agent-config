@@ -62,7 +62,7 @@ TypeScript 6.0 以上を前提に、TSConfig、ESLint flat config、typed lintin
     "module": "esnext",
     "moduleResolution": "bundler",
     "target": "es2025",
-    "lib": ["es2025", "dom", "dom.iterable"],
+    "lib": ["es2025", "dom"],
     "noEmit": true,
     "jsx": "react-jsx"
   }
@@ -88,7 +88,7 @@ TypeScript 6.0 以上を前提に、TSConfig、ESLint flat config、typed lintin
 - `RegExp.escape` は `es2025` lib で扱える
 - `Temporal` の型は `esnext` / `esnext.temporal` で使える
 - `stableTypeOrdering` は 6.0 から 7.0 への移行確認に有効
-- `dom` lib は iterable 系を内包するよう更新されているため、古い lib 指定を惰性で残さない
+- TypeScript 6.0 では `dom` lib が `dom.iterable` と `dom.asynciterable` を内包するため、古い lib 指定を惰性で残さない
 
 ## 5. 型設計
 
