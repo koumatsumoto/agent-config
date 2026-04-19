@@ -50,8 +50,16 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 
 不足していれば確認する。確認できず既定値を採らざるを得ない場合は最保守の既定値を使う。
 
-- 最保守既定: `production=true` / `secrets_access=true` / `data_sensitivity=high` / `runtime=cli`
-- 既定値採用時はレポートの「不確実性 / 未確認事項」に明記する
+- 最保守既定値 (確認不能時の fallback)
+  - `production=true`
+  - `secrets_access=true`
+  - `data_sensitivity=high`
+  - `runtime`: ecosystem 別に設定する
+    - npm → `cli`
+    - pip → `cli`
+    - vscode-extension → `editor-extension`
+    - github-repo → ecosystem 解決後の既定値に従う
+- 既定値採用時はレポートの「不確実性 / 未確認事項」と「主要な判断理由」に明記する
 
 ## Workflow
 
@@ -100,6 +108,12 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 - repository が解決できない、対応が曖昧: `ALLOW` は出さない
 - advisory source が取得不能: `ALLOW` は出さない
 - 一部証跡のみ失敗: `unknown` として残し、判定への影響を明記する
+
+ソースが「不在」を明示した場合の扱い:
+
+- `GET /releases/latest` や `GET /tags` が `404` / 空配列を返した場合は「取れない」ではなく「release / tag 不在」という確定的 negative evidence として `release / distribution integrity` に反映する
+- registry / marketplace 上で対象 version が `yanked` / `deprecated` / `unpublished` と明示された場合も確定的 negative evidence として扱う
+- 上記は `unknown` ではないので、確証として判定ロジックに載せる
 
 ## Phase 3: 共通 8 観点
 

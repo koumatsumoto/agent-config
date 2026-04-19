@@ -398,3 +398,33 @@ scenarios:
       required_output:
         - execution / privilege surface finding referencing native extension
         - usage-context impact reasoning
+
+  - id: oss-review-marketplace-only-blocks-allow
+    title: Marketplace-resolved artifact without a correlating GitHub tag / release must not reach ALLOW
+    prompt: "VS Code 拡張 example.marketplace-only の採用前セキュリティレビューをして"
+    context:
+      changed_files: []
+      conversation_context: true
+      injected_issue: "marketplace version resolves but the linked GitHub repository exposes no releases or tags"
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_output:
+        - final decision ALLOW
+      required_output:
+        - release / distribution integrity finding referencing missing source correlation
+        - negative evidence of absent GitHub release
+
+  - id: oss-review-downgrade-ladder-accumulates
+    title: Multiple high-risk usage-context conditions must accumulate downgrades with NEEDS_HUMAN_REVIEW as floor
+    prompt: "npm パッケージ safe-lib@1.0.0 を production で、secrets_access=true、data_sensitivity=high として採用前レビューして"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      primary_skill: km:third-party-oss-security-review
+      should_not_output:
+        - final decision ALLOW
+        - final decision ALLOW_WITH_CONDITIONS
+      required_output:
+        - accumulated downgrade rationale in decision reasoning
+        - final decision NEEDS_HUMAN_REVIEW

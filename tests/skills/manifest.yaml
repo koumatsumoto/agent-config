@@ -192,6 +192,14 @@ cases:
     file: scenarios/review-quality.yaml
     scenario_id: oss-review-pip-native-extension-heightened
     tags: [quality, review, oss, pip]
+  - id: oss-review-marketplace-only-blocks-allow
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-marketplace-only-blocks-allow
+    tags: [quality, review, oss, vscode, distribution]
+  - id: oss-review-downgrade-ladder-accumulates
+    file: scenarios/review-quality.yaml
+    scenario_id: oss-review-downgrade-ladder-accumulates
+    tags: [quality, review, oss, downgrade]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr

@@ -60,6 +60,7 @@
 
 - `Artifact Resolution Status != resolved`
 - artifact と repository の対応が曖昧
+- 対象 artifact (registry / marketplace の配布物) と repository source の対応が一次ソースで検証できない（例: tag / release / commit の紐付けが取れない、vsix と source の対応が取れない）
 - advisory source 未確認
 - 主要観点（identity/provenance、vulnerabilities、execution surface、release integrity）のいずれかに unresolved unknown が残る
 - 対象 artifact が yanked / deprecated / unpublished
@@ -72,20 +73,37 @@
 
 対象 artifact に当たる未解決の Critical 相当 advisory がある場合は `REJECT` を検討する。
 
-## 降格表（usage-context による厳格化）
+## 降格ロジック（usage-context による厳格化）
 
-`ALLOW` / `ALLOW_WITH_CONDITIONS` に到達した判定は、次の高リスク条件ごとに 1 段ずつ降格する。複数条件が重なった場合、重なった回数だけ累積降格する。
+降格 ladder は次の 3 段に固定する。`REJECT` は別系統で、降格では到達しない。
 
-| 高リスク条件 | 降格 1 段の方向 |
-| --- | --- |
-| `production=true` | `ALLOW` → `ALLOW_WITH_CONDITIONS` |
-| `secrets_access=true` | `ALLOW_WITH_CONDITIONS` → `NEEDS_HUMAN_REVIEW` |
-| `data_sensitivity=high` | `ALLOW_WITH_CONDITIONS` → `NEEDS_HUMAN_REVIEW` |
-| `runtime in {editor-extension, ci, cli}` | `ALLOW_WITH_CONDITIONS` → `NEEDS_HUMAN_REVIEW` |
+```
+ALLOW → ALLOW_WITH_CONDITIONS → NEEDS_HUMAN_REVIEW
+```
+
+ベース判定（共通 8 観点と adapter 評価から導いた素の判定）に対し、次の高リスク条件ごとに 1 step の累積降格を適用する。適用する条件の数だけ step を進め、下限は `NEEDS_HUMAN_REVIEW`。
+
+高リスク条件（各 1 step）:
+
+- `production=true`
+- `secrets_access=true`
+- `data_sensitivity=high`
+- `runtime ∈ {editor-extension, ci, cli}`
+
+既定で降格なしとする組合せ:
+
+- `runtime ∈ {library, build-tool, test-tool, node-server, browser}`
+- `development` scope のみでの利用
+
+例:
+
+- base=`ALLOW`、`production=true` のみ → `ALLOW_WITH_CONDITIONS`
+- base=`ALLOW`、`production=true` + `secrets_access=true` → `NEEDS_HUMAN_REVIEW`
+- base=`ALLOW`、高リスク 3 条件以上 → `NEEDS_HUMAN_REVIEW`（floor）
+- base=`ALLOW_WITH_CONDITIONS`、`production=true` のみ → `NEEDS_HUMAN_REVIEW`
+- base=`NEEDS_HUMAN_REVIEW`、任意 → `NEEDS_HUMAN_REVIEW`（floor）
 
 備考:
 
-- 降格の下限は `NEEDS_HUMAN_REVIEW`。`REJECT` には降格で落ちない（`REJECT` は blocker 判定の結果のみ）
-- `runtime=library` / `build-tool` / `test-tool` / `node-server` / `browser` / `development` は既定で降格なし
-- 最保守既定値が採用された context は、既定値を使った旨をレポートに明記したうえで降格対象に含める
+- 最保守既定値が採用された context も降格対象に含める。既定値を使った旨はレポートの「主要な判断理由」と「不確実性 / 未確認事項」に明記する
 - 降格適用前後の値を「主要な判断理由」に 1 点として書く
