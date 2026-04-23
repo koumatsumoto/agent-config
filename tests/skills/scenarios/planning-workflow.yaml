@@ -89,7 +89,8 @@ scenarios:
     expected:
       primary_skill: km:plan
       required_behavior:
-        - detect that .plan is git-tracked
+        - detect that .plan is git-tracked before any side effect
+        - run the .gitignore safety check BEFORE mkdir -p .plan
         - avoid auto-editing .gitignore
         - ask the user how to proceed before writing or committing the plan
 
@@ -306,7 +307,7 @@ scenarios:
         - only then proceed to issue creation
 
   - id: plan-secret-detected-blocks-issue
-    title: Detected secret-like content in the plan body must block issue creation
+    title: Detected secret-like content must block before write (pre-write) and before issue creation (pre-issue)
     prompt: "この計画を .plan と issue に出して"
     context:
       claude_plan_mode: false
@@ -316,12 +317,14 @@ scenarios:
     expected:
       primary_skill: km:plan
       required_behavior:
-        - detect secret-like patterns (AKIA, sk-, password=, .env* references) during the Secret Check pass
-        - stop before gh issue create
-        - ask the user to mask or remove the content before resuming
+        - run a pre-write Secret Check on the in-memory plan body before writing .plan/
+        - if detected at pre-write, do not write any file to .plan/ and ask the user to mask
+        - run a pre-issue Secret Check on the final body before gh issue create/edit
+        - if detected at pre-issue, stop without creating the issue; do not auto-delete the .plan/ file, ask the user to remediate
+        - detect patterns like AKIA, sk-, password=, .env* references
 
   - id: plan-mkdir-plan-directory
-    title: .plan directory must be created before writing the plan file
+    title: mkdir -p .plan must run only after the .gitignore safety check passes
     prompt: "この計画を .plan と issue に出して"
     context:
       claude_plan_mode: false
@@ -331,8 +334,9 @@ scenarios:
     expected:
       primary_skill: km:plan
       required_behavior:
-        - ensure .plan/ exists via mkdir -p .plan before writing the plan file
-        - do not rely on the working tree already having .plan/
+        - run the .gitignore safety check (git rev-parse, ls-files, check-ignore, gitignore update) first
+        - only then invoke mkdir -p .plan to create the output directory
+        - never mkdir before the safety check completes
 
   - id: plan-gh-cli-not-installed-skips-issue
     title: gh CLI missing (command not found) must be reported separately from auth failure

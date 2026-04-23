@@ -1,6 +1,6 @@
 ---
 name: km:plan
-description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and mirrors the full body into a GitHub issue. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", "計画レビューしてから issue 化", or otherwise asks for a pre-implementation plan or planning issue. Not for "実装して", "レビューして", "コミットして", or "PR にして" — those belong to km:github-workflow / km:review / km:commit. For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
+description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and mirrors the full body into a GitHub issue. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", "計画レビューしてから issue 化", "この計画ファイルをレビューして", or otherwise asks for a pre-implementation plan, a planning issue, or a review of a plan file / planning content. Not for "実装して", "コミットして", or "PR にして" — those belong to km:github-workflow / km:commit. For general "レビューして" on changes, use km:review; only plan-file / planning-content review stays with km:plan. For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
 argument-hint: "[title-or-topic]"
 ---
 
@@ -15,7 +15,8 @@ argument-hint: "[title-or-topic]"
 - `.plan/` tracked?: !`git ls-files -- .plan .plan/ 2>/dev/null | head -1 || echo "(none)"`
 - `.plan/` ignored?: !`git check-ignore -q .plan/ 2>/dev/null && echo "yes" || echo "no"`
 - `.gitignore` has `.plan/`: !`grep -E '^\.plan/?$' .gitignore 2>/dev/null || echo "(absent)"`
-- GitHub repo: !`gh repo view --json nameWithOwner,defaultBranchRef,url 2>/dev/null || echo "(not github or gh unauthenticated)"`
+
+GitHub / `gh` の状態は draft-only 用途では不要なので Context では取得しない。GitHub issue phase (下の「GitHub Issue 作成とミラー」) の手順 1-2 で `gh auth status` / `gh repo view` を実行する。
 
 ## Success Criteria
 
@@ -31,8 +32,9 @@ argument-hint: "[title-or-topic]"
 
 **計画作成・`.plan/`・計画 issue 化** が明示された発話のときだけ使う。
 
-- 例: "計画を作って" / "実装計画を作成して" / ".plan に出して" / "計画を issue にして" / "計画レビューしてから issue 化" / "/km:plan <topic>"
-- 非 trigger: "実装して" / "レビューして" / "コミットして" / "PR にして" — これらは計画作成を明示していない
+- 例: "計画を作って" / "実装計画を作成して" / ".plan に出して" / "計画を issue にして" / "計画レビューしてから issue 化" / "この計画ファイルをレビューして" / "/km:plan <topic>"
+- 非 trigger: "実装して" / "コミットして" / "PR にして" — これらは計画作成を明示していない
+- 「レビューして」は対象で分岐: 計画ファイル / 計画内容のレビューなら `km:plan`、変更差分のレビューなら `km:review`
 - 優先度:
   - 「計画を作って PR まで」のように計画と PR delivery が同時依頼された場合は、まず `km:plan` で計画と issue 化まで行い、PR delivery は後続の `km:github-workflow` に委ねる
   - 「issue 化してから PR」だけで計画作成が明示されない場合は `km:github-workflow` を優先する
@@ -53,13 +55,16 @@ argument-hint: "[title-or-topic]"
 1. repo と依頼内容を把握する。`$ARGUMENTS` があれば計画タイトルや既存 issue 番号のヒントとして扱う
 2. entry mode を決める（`draft-only` / `materialize-existing-plan` / `full-normal-mode`）
 3. `draft-only` では Plan Mode で質問・調査・下案作成を行い、`<proposed_plan>` を提示して停止する
-4. materialize に進む場合、`mkdir -p .plan` で出力先を確保し、必要なら `.gitignore` を更新する（下の「`.gitignore` 安全確認」を参照）
-5. plan 本文を書き出す前に `references/plan-template.md` を読む。その観点集に沿って計画本文を組み立て、`.plan/YYYYMMDD-<slug>.md` に書き出す。plan 本文の先頭近くに `<!-- km:plan:managed -->` marker を含める
-6. 「Secret Check」節に従って秘密情報混入を確認する。検出したら issue 化を止めてユーザーに報告する
-7. 計画レビュー前に `references/plan-review-checklist.md` を読む。その観点集で `.plan/` ファイルを対象に agentic 計画レビューを最大 2 pass 行う。未解消の `CRITICAL` / `HIGH` があれば issue 化を止めて報告する
-8. GitHub 管理 repo なら新規 issue を作る（既存 issue 再利用はユーザーが明示した場合のみ。後述）
-9. 新規 issue 作成後、返された URL を `.plan/` 本文に追記し、`gh issue edit <number> --body-file <plan-file>` で再同期する（2-step sync）
-10. 結果をユーザーに報告する（`.plan/` のパス、issue URL、未反映の受け入れ済みリスク）
+4. materialize に進む場合、**副作用を出す前** に「`.gitignore` 安全確認」節の 4 ステップ（git repo 判定 → tracked 判定 → ignore 判定 → 必要なら `.gitignore` 更新）を実行する。`.plan` が tracked / blocked ならここで停止してユーザー確認
+5. 安全確認が通った後にのみ `mkdir -p .plan` で出力先を確保する（tracked file 衝突や意図しない動作を避けるため、順序を逆にしない）
+6. `references/plan-template.md` を読み、その観点集に沿って plan 本文を **メモリ上で** 組み立てる。先頭近くに `<!-- km:plan:managed -->` marker を含める
+7. **pre-write Secret Check**: 組み立てた plan 本文に「Secret Check」節のパターンを適用する。検出したらファイル書き出しを行わず停止し、ユーザーにマスキングを依頼する（検出時は秘密情報をディスクに残さない）
+8. Secret Check を通過したら `.plan/YYYYMMDD-<slug>.md` に書き出す
+9. `references/plan-review-checklist.md` を読み、その観点集で `.plan/` ファイルを対象に agentic 計画レビューを最大 2 pass 行う。未解消の `CRITICAL` / `HIGH` があれば issue 化を止めて報告する
+10. **pre-issue Secret Check (再チェック)**: レビューの過程で plan 本文に追加された情報が secret を含まないか、issue 化直前にもう一度 Secret Check をかける。検出時はファイルを削除せず、ユーザーに対処依頼して停止
+11. GitHub 管理 repo なら新規 issue を作る（既存 issue 再利用はユーザーが明示した場合のみ。後述）
+12. 新規 issue 作成後、返された URL を `.plan/` 本文に追記し、`gh issue edit <number> --body-file <plan-file>` で再同期する（2-step sync）
+13. 結果をユーザーに報告する（`.plan/` のパス、issue URL、未反映の受け入れ済みリスク）
 
 ## `.plan/` 出力ルール
 
@@ -93,7 +98,12 @@ argument-hint: "[title-or-topic]"
 
 ## Secret Check
 
-plan 本文は GitHub issue に全文ミラーされるため、秘密情報の混入は public 公開に直結する。`.plan/` 書き出し直後と issue 化直前の 2 回、以下をチェックする。検出したら issue 化を止め、ユーザーにマスキングを依頼してから再開する。
+plan 本文は GitHub issue に全文ミラーされるため、秘密情報の混入は public 公開に直結する。`.plan/` はローカル ignore されていても、検出時にファイルがディスクに残れば事故リスクは減らない。そのため以下の 2 点でチェックする。
+
+- **pre-write** (Workflow step 7): 組み立て中の plan 本文をメモリ上で走査する。検出したらファイル書き出しを行わず停止し、ユーザーにマスキングを依頼する。検出された秘密情報はディスクに書き出さない
+- **pre-issue** (Workflow step 10): レビュー pass で追記・修正された最終本文をもう一度走査する。検出時は `gh issue create/edit` を実行せず停止。`.plan/` のファイルは自動削除せず、ユーザーに対処 (masking / 再生成) を依頼する
+
+検出パターン:
 
 - ファイル名や path パターン: `.env*`, `*.pem`, `*.key`, `*credentials*`, `*.pfx` を参照する行
 - 文字列パターン: `AKIA`, `sk-`, `password=`, `secret=`, `api_key=`, `token=`, `Bearer ` で始まる行
