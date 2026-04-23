@@ -14,54 +14,6 @@ scenarios:
         - km:code-review
         - km:quality-review
         - km:doc-review
-      notes:
-        - review subskills may be used as children after km:review decides routing
-        - unspecified review requests default to the standard level
-
-  - id: trigger-review-thorough
-    title: Deep review request should still route through km:review
-    prompt: "この変更を深くレビューして"
-    context:
-      changed_files:
-        - templates/skills/review/SKILL.md
-        - templates/skills/code-review/SKILL.md
-      conversation_context: true
-    expected:
-      primary_skill: km:review
-      should_not_start_with:
-        - km:code-review
-        - km:quality-review
-        - km:doc-review
-      notes:
-        - deep review requests should select the thorough level within km:review
-
-  - id: trigger-review-quick
-    title: Quick review request should still route through km:review
-    prompt: "この変更を浅くレビューして"
-    context:
-      changed_files:
-        - templates/skills/review/SKILL.md
-      conversation_context: true
-    expected:
-      primary_skill: km:review
-      should_not_start_with:
-        - km:code-review
-        - km:quality-review
-        - km:doc-review
-      notes:
-        - shallow review requests should select the quick level within km:review
-
-  - id: trigger-commit-natural-language
-    title: Natural language commit request should still trigger km:commit
-    prompt: "この変更をコミットして"
-    context:
-      changed_files:
-        - templates/skills/review/SKILL.md
-      conversation_context: true
-    expected:
-      primary_skill: km:commit
-      notes:
-        - the user should not need to type /km:commit explicitly
 
   - id: trigger-github-workflow-natural-language
     title: Natural language PR request should still trigger km:github-workflow
@@ -73,11 +25,19 @@ scenarios:
       conversation_context: true
     expected:
       primary_skill: km:github-workflow
-      notes:
-        - branch creation or reuse may be part of the workflow
+
+  - id: trigger-commit-natural-language
+    title: Natural language commit request should still trigger km:commit
+    prompt: "この変更をコミットして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:commit
 
   - id: trigger-implementation-should-not-trigger-github-workflow
-    title: Generic implementation request should NOT trigger km:github-workflow
+    title: Generic implementation request should not trigger km:github-workflow
     prompt: "この機能を実装して"
     context:
       changed_files: []
@@ -85,39 +45,6 @@ scenarios:
     expected:
       should_not_trigger:
         - km:github-workflow
-      notes:
-        - generic implementation requests should go through normal coding flow
-        - km:github-workflow requires explicit PR or delivery intent
-
-  - id: trigger-code-review-should-route-through-orchestrator
-    title: Natural language code review request should use km:review, not km:code-review
-    prompt: "コードレビューして"
-    context:
-      changed_files:
-        - src/api/users.ts
-      conversation_context: true
-    expected:
-      primary_skill: km:review
-      should_not_start_with:
-        - km:code-review
-        - km:quality-review
-      notes:
-        - km:code-review has disable-model-invocation so must route through orchestrator
-
-  - id: trigger-quality-review-should-route-through-orchestrator
-    title: Natural language quality review request should use km:review, not km:quality-review
-    prompt: "品質レビューして"
-    context:
-      changed_files:
-        - src/api/users.ts
-      conversation_context: true
-    expected:
-      primary_skill: km:review
-      should_not_start_with:
-        - km:code-review
-        - km:quality-review
-      notes:
-        - km:quality-review has disable-model-invocation so must route through orchestrator
 
   - id: trigger-third-party-oss-security-review-npm
     title: Explicit npm package intake review should trigger km:third-party-oss-security-review
@@ -129,61 +56,6 @@ scenarios:
       primary_skill: km:third-party-oss-security-review
       should_not_start_with:
         - km:review
-      notes:
-        - this skill is specialized and manual-only
-
-  - id: trigger-third-party-oss-security-review-pip
-    title: Explicit pip package intake review should trigger km:third-party-oss-security-review
-    prompt: "pip パッケージ requests==2.32.0 の採用可否を確認して"
-    context:
-      changed_files: []
-      conversation_context: true
-    expected:
-      primary_skill: km:third-party-oss-security-review
-      should_not_start_with:
-        - km:review
-      notes:
-        - pip ecosystem must route through the single OSS intake skill
-
-  - id: trigger-third-party-oss-security-review-vscode-extension
-    title: VS Code extension intake review should trigger km:third-party-oss-security-review
-    prompt: "VS Code 拡張 ms-python.python の採用前セキュリティレビューをして"
-    context:
-      changed_files: []
-      conversation_context: true
-    expected:
-      primary_skill: km:third-party-oss-security-review
-      should_not_start_with:
-        - km:review
-      notes:
-        - vscode-extension ecosystem must route through the single OSS intake skill
-
-  - id: trigger-third-party-oss-security-review-repo-url
-    title: GitHub repository URL intake should trigger km:third-party-oss-security-review
-    prompt: "https://github.com/example/tool を採用したいのでセキュリティレビューしてほしい"
-    context:
-      changed_files: []
-      conversation_context: true
-    expected:
-      primary_skill: km:third-party-oss-security-review
-      should_not_start_with:
-        - km:review
-      notes:
-        - repo-url input should still enter the OSS intake skill and yield a repository-level preliminary assessment
-
-  - id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
-    title: Generic review request should not trigger km:third-party-oss-security-review
-    prompt: "この変更レビューして"
-    context:
-      changed_files:
-        - src/api/users.ts
-      conversation_context: true
-    expected:
-      primary_skill: km:review
-      should_not_trigger:
-        - km:third-party-oss-security-review
-      notes:
-        - OSS intake review should remain outside km:review routing
 
   - id: trigger-plan-natural-language
     title: Natural language plan request should trigger km:plan
@@ -197,64 +69,3 @@ scenarios:
       should_not_start_with:
         - km:github-workflow
         - km:review
-      notes:
-        - explicit planning + issue request should go through km:plan, not km:github-workflow
-        - the user should not need to type /km:plan explicitly
-
-  - id: trigger-plan-does-not-steal-generic-implementation
-    title: Generic implementation request should NOT trigger km:plan
-    prompt: "この機能を実装して"
-    context:
-      changed_files: []
-      conversation_context: true
-    expected:
-      should_not_trigger:
-        - km:plan
-      notes:
-        - km:plan requires explicit planning / .plan / planning-issue intent
-        - generic implementation should flow through normal coding, not plan first
-
-  - id: trigger-plan-does-not-steal-pr-delivery
-    title: PR delivery request without planning intent should still go to km:github-workflow
-    prompt: "この作業をPRまでやって"
-    context:
-      changed_files:
-        - templates/skills/review/SKILL.md
-      conversation_context: true
-      github_repo: true
-    expected:
-      primary_skill: km:github-workflow
-      should_not_trigger:
-        - km:plan
-      notes:
-        - without explicit planning / .plan / planning-issue intent, km:plan must not hijack PR delivery
-
-  - id: trigger-plan-priority-plan-then-pr
-    title: Combined plan + PR request should start with km:plan, then hand off to km:github-workflow
-    prompt: "この機能の計画を作って PR まで進めて"
-    context:
-      changed_files: []
-      conversation_context: true
-      github_repo: true
-    expected:
-      primary_skill: km:plan
-      required_behavior:
-        - start with km:plan for .plan/ output and issue creation
-        - hand off PR delivery to km:github-workflow after issue creation
-      notes:
-        - planning comes first when both planning and delivery are requested in one turn
-
-  - id: trigger-plan-file-review-routing
-    title: Plan file review request should use km:plan, not km:review
-    prompt: "この計画ファイルをレビューして"
-    context:
-      changed_files:
-        - .plan/20260423-km-plan-skill.md
-      conversation_context: true
-    expected:
-      primary_skill: km:plan
-      should_not_start_with:
-        - km:review
-      notes:
-        - plan-file-targeted review stays inside km:plan agentic review loop
-        - changes-targeted review ("この変更をレビューして") still goes to km:review

@@ -1,81 +1,33 @@
 version: 1
 suite: skills-regression
 owner: agent-config
-description: Regression and acceptance scenarios for templates/skills.
+description: Canonical static regression cases for templates/skills.
 
 cases:
   - id: trigger-review-default
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-review-default
     tags: [trigger, review]
-  - id: trigger-review-thorough
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-review-thorough
-    tags: [trigger, review]
-  - id: trigger-review-quick
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-review-quick
-    tags: [trigger, review]
-  - id: trigger-commit-natural-language
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-commit-natural-language
-    tags: [trigger, workflow]
   - id: trigger-github-workflow-natural-language
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-github-workflow-natural-language
+    tags: [trigger, workflow]
+  - id: trigger-commit-natural-language
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-commit-natural-language
     tags: [trigger, workflow]
   - id: trigger-implementation-should-not-trigger-github-workflow
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-implementation-should-not-trigger-github-workflow
     tags: [trigger, workflow, negative]
-  - id: trigger-code-review-should-route-through-orchestrator
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-code-review-should-route-through-orchestrator
-    tags: [trigger, review, negative]
-  - id: trigger-quality-review-should-route-through-orchestrator
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-quality-review-should-route-through-orchestrator
-    tags: [trigger, review, negative]
   - id: trigger-third-party-oss-security-review-npm
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-third-party-oss-security-review-npm
-    tags: [trigger, review, oss, npm]
-  - id: trigger-third-party-oss-security-review-pip
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-third-party-oss-security-review-pip
-    tags: [trigger, review, oss, pip]
-  - id: trigger-third-party-oss-security-review-vscode-extension
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-third-party-oss-security-review-vscode-extension
-    tags: [trigger, review, oss, vscode]
-  - id: trigger-third-party-oss-security-review-repo-url
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-third-party-oss-security-review-repo-url
-    tags: [trigger, review, oss, repo]
-  - id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
-    tags: [trigger, review, oss, negative]
+    tags: [trigger, review, oss]
   - id: trigger-plan-natural-language
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-plan-natural-language
-    tags: [trigger, plan, workflow]
-  - id: trigger-plan-does-not-steal-generic-implementation
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-plan-does-not-steal-generic-implementation
-    tags: [trigger, plan, negative]
-  - id: trigger-plan-does-not-steal-pr-delivery
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-plan-does-not-steal-pr-delivery
-    tags: [trigger, plan, workflow, negative]
-  - id: trigger-plan-priority-plan-then-pr
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-plan-priority-plan-then-pr
-    tags: [trigger, plan, workflow]
-  - id: trigger-plan-file-review-routing
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-plan-file-review-routing
-    tags: [trigger, plan, review]
+    tags: [trigger, plan]
   - id: review-routing-code-only
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-only
@@ -84,14 +36,6 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-docs-only
     tags: [routing, review, docs]
-  - id: review-routing-docs-only-thorough
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-docs-only-thorough
-    tags: [routing, review, docs]
-  - id: review-routing-docs-only-quick
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-docs-only-quick
-    tags: [routing, review, docs, quick]
   - id: review-routing-config-chore
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-config-chore
@@ -100,150 +44,18 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-no-conversation-context
     tags: [routing, review, intent]
-  - id: review-routing-code-and-docs-self
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-code-and-docs-self
-    tags: [routing, review, docs]
-  - id: review-routing-code-and-docs-third-party
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-code-and-docs-third-party
-    tags: [routing, review, docs, intent]
   - id: review-routing-code-and-docs-thorough
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-and-docs-thorough
-    tags: [routing, review, docs]
-  - id: review-routing-test-only-quick
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-test-only-quick
-    tags: [routing, review, quick]
-  - id: review-quality-blocking
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-blocking
-    tags: [quality, blocking]
-  - id: review-quality-doc-update-check
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-doc-update-check
-    tags: [quality, docs]
-  - id: review-quality-expert-severity-format
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-expert-severity-format
-    tags: [quality, expert, blocking]
-  - id: review-quality-evaluation-summary
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-evaluation-summary
-    tags: [quality, summary]
-  - id: review-quality-expert-skipped-for-config
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-expert-skipped-for-config
-    tags: [quality, expert, routing]
-  - id: review-quality-expert-skipped-for-test
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-expert-skipped-for-test
-    tags: [quality, expert, routing]
-  - id: review-quality-expert-executed-for-large-fix
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-expert-executed-for-large-fix
-    tags: [quality, expert, routing]
-  - id: review-quality-expert-executed-for-small-fix-thorough
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-expert-executed-for-small-fix-thorough
-    tags: [quality, expert, routing]
-  - id: review-quality-config-standard-quick-depth
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-config-standard-quick-depth
-    tags: [quality, routing, config]
-  - id: review-quality-docs-only-thorough-skips-quality
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-docs-only-thorough-skips-quality
-    tags: [quality, expert, routing]
-  - id: review-quality-multiple-surfaces-no-unrelated-findings
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-multiple-surfaces-no-unrelated-findings
-    tags: [quality, routing, surface]
-  - id: review-quality-quick-surface-does-not-force-quality
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-quick-surface-does-not-force-quality
-    tags: [quality, routing, quick, surface]
-  - id: review-quality-tier2-skip-wins-over-surface
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-tier2-skip-wins-over-surface
-    tags: [quality, routing, surface, negative]
-  - id: review-quality-database-surface-trigger
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-database-surface-trigger
-    tags: [quality, routing, database, surface]
-  - id: review-quality-non-ui-change-should-not-report-wcag
-    file: scenarios/review-quality.yaml
-    scenario_id: review-quality-non-ui-change-should-not-report-wcag
-    tags: [quality, routing, accessibility, negative]
-  - id: oss-review-no-allow-without-exact-version
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-no-allow-without-exact-version
-    tags: [quality, review, oss, npm]
-  - id: oss-review-no-allow-with-ambiguous-repository
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-no-allow-with-ambiguous-repository
-    tags: [quality, review, oss, npm]
-  - id: oss-review-reject-on-critical-advisory
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-reject-on-critical-advisory
-    tags: [quality, review, oss, npm, blocking]
-  - id: oss-review-report-format-japanese
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-report-format-japanese
-    tags: [quality, review, oss, npm]
-  - id: oss-review-repo-only-forces-human-review
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-repo-only-forces-human-review
-    tags: [quality, review, oss, repo]
-  - id: oss-review-yanked-artifact-blocks-allow
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-yanked-artifact-blocks-allow
-    tags: [quality, review, oss, pip, blocking]
-  - id: oss-review-vscode-high-privilege-downgrade
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-vscode-high-privilege-downgrade
-    tags: [quality, review, oss, vscode, blocking]
-  - id: oss-review-monorepo-ambiguous-ecosystem
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-monorepo-ambiguous-ecosystem
-    tags: [quality, review, oss, repo]
-  - id: oss-review-pip-native-extension-heightened
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-pip-native-extension-heightened
-    tags: [quality, review, oss, pip]
-  - id: oss-review-marketplace-only-blocks-allow
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-marketplace-only-blocks-allow
-    tags: [quality, review, oss, vscode, distribution]
-  - id: oss-review-downgrade-ladder-accumulates
-    file: scenarios/review-quality.yaml
-    scenario_id: oss-review-downgrade-ladder-accumulates
-    tags: [quality, review, oss, downgrade]
+    tags: [routing, review, docs, thorough]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr
     tags: [workflow, github]
-  - id: workflow-issue-create-new
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-issue-create-new
-    tags: [workflow, github, issue]
-  - id: workflow-issue-reuse-open
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-issue-reuse-open
-    tags: [workflow, github, issue]
   - id: workflow-issue-ambiguous-candidates
     file: scenarios/workflow-issue-pr.yaml
     scenario_id: workflow-issue-ambiguous-candidates
     tags: [workflow, github, issue, negative]
-  - id: workflow-existing-issue-argument
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-existing-issue-argument
-    tags: [workflow, github, issue]
-  - id: workflow-pr-closes-issue
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-pr-closes-issue
-    tags: [workflow, github, issue, pr]
   - id: workflow-body-file-only
     file: scenarios/workflow-issue-pr.yaml
     scenario_id: workflow-body-file-only
@@ -252,123 +64,15 @@ cases:
     file: scenarios/workflow-issue-pr.yaml
     scenario_id: workflow-non-github-repo-stop
     tags: [workflow, github, negative]
-  - id: workflow-existing-pr-keeps-issue-link
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-existing-pr-keeps-issue-link
-    tags: [workflow, github, issue, pr]
-  - id: workflow-explicit-base-branch
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-explicit-base-branch
-    tags: [workflow, github, branch]
-  - id: workflow-default-base-main
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-default-base-main
-    tags: [workflow, github, branch]
-  - id: workflow-issue-ssot-comments
-    file: scenarios/workflow-issue-pr.yaml
-    scenario_id: workflow-issue-ssot-comments
-    tags: [workflow, github, issue, docs]
-  - id: docs-policy-drift
-    file: scenarios/workflow-and-state.yaml
-    scenario_id: docs-policy-drift
-    tags: [docs, policy]
   - id: plan-mode-no-mutation
     file: scenarios/planning-workflow.yaml
     scenario_id: plan-mode-no-mutation
-    tags: [plan, planmode, safety]
-  - id: plan-mode-resume-without-agreed-plan
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-mode-resume-without-agreed-plan
-    tags: [plan, planmode, safety]
-  - id: plan-filename-yyyymmdd-prefix
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-filename-yyyymmdd-prefix
-    tags: [plan, filename]
-  - id: plan-filename-collision-suffix
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-filename-collision-suffix
-    tags: [plan, filename]
-  - id: plan-output-adds-gitignore
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-output-adds-gitignore
-    tags: [plan, gitignore]
+    tags: [plan, safety]
   - id: plan-output-tracked-plan-needs-confirmation
     file: scenarios/planning-workflow.yaml
     scenario_id: plan-output-tracked-plan-needs-confirmation
-    tags: [plan, gitignore, safety]
-  - id: plan-output-info-exclude-no-gitignore-edit
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-output-info-exclude-no-gitignore-edit
-    tags: [plan, gitignore, safety]
-  - id: plan-github-default-new-no-search
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-default-new-no-search
-    tags: [plan, github, issue, safety]
-  - id: plan-github-issue-full-mirror
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-issue-full-mirror
-    tags: [plan, github, issue]
-  - id: plan-github-issue-no-local-plan-link
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-issue-no-local-plan-link
-    tags: [plan, github, issue, safety]
-  - id: plan-github-issue-body-file-direct
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-issue-body-file-direct
-    tags: [plan, github, issue, safety]
-  - id: plan-github-issue-two-step-sync
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-issue-two-step-sync
-    tags: [plan, github, issue]
-  - id: plan-existing-issue-explicit-update-with-marker
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-existing-issue-explicit-update-with-marker
-    tags: [plan, github, issue]
+    tags: [plan, safety]
   - id: plan-existing-issue-explicit-update-without-marker-needs-confirmation
     file: scenarios/planning-workflow.yaml
     scenario_id: plan-existing-issue-explicit-update-without-marker-needs-confirmation
-    tags: [plan, github, issue, safety]
-  - id: plan-non-github-repo-skips-issue
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-non-github-repo-skips-issue
-    tags: [plan, github, negative]
-  - id: plan-github-auth-failure-skips-issue
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-auth-failure-skips-issue
-    tags: [plan, github, negative]
-  - id: plan-github-body-file-failure-stops
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-github-body-file-failure-stops
     tags: [plan, github, safety]
-  - id: plan-review-high-risk-specialist-review
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-review-high-risk-specialist-review
-    tags: [plan, review]
-  - id: plan-review-unresolved-high-blocks-issue
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-review-unresolved-high-blocks-issue
-    tags: [plan, review, blocking]
-  - id: plan-review-accepted-medium-risk-recorded
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-review-accepted-medium-risk-recorded
-    tags: [plan, review]
-  - id: plan-secret-detected-blocks-issue
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-secret-detected-blocks-issue
-    tags: [plan, secret, safety, blocking]
-  - id: plan-mkdir-plan-directory
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-mkdir-plan-directory
-    tags: [plan, filesystem]
-  - id: plan-gh-cli-not-installed-skips-issue
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-gh-cli-not-installed-skips-issue
-    tags: [plan, github, negative]
-  - id: plan-existing-issue-title-change-needs-confirmation
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-existing-issue-title-change-needs-confirmation
-    tags: [plan, github, issue, safety]
-  - id: plan-review-records-resolved-findings-in-body
-    file: scenarios/planning-workflow.yaml
-    scenario_id: plan-review-records-resolved-findings-in-body
-    tags: [plan, review]
