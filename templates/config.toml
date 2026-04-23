@@ -28,7 +28,7 @@ show_tooltips = false
 animations = false
 # Built-in TUI items only. As of codex-cli 0.118.0, the status line does not
 # expose a dedicated item for the five-hour limit reset timestamp.
-status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "total-input-tokens", "total-output-tokens"]
+status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "weekly-limit"]
 
 [history]
 persistence = "save-all"
