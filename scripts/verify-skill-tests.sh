@@ -296,7 +296,7 @@ def main() -> int:
                         check(False, f"{skill_name}: agents/openai.yaml missing policy section")
 
         # Workflow skills MUST NOT have agents/openai.yaml (auto-invocable)
-        workflow_skills = ["commit", "github-workflow", "review"]
+        workflow_skills = ["commit", "github-workflow", "review", "plan"]
         for skill_name in workflow_skills:
             oa_path = skills_root / skill_name / "agents" / "openai.yaml"
             check(

@@ -1,0 +1,386 @@
+version: 1
+scenarios:
+  - id: plan-mode-no-mutation
+    title: Plan Mode should not mutate .plan/, .gitignore, or GitHub issues
+    prompt: "この機能の実装計画を作って"
+    context:
+      claude_plan_mode: true
+      github_repo: true
+      conversation_context: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - remain in draft-only entry mode while Plan Mode is active
+        - do not create or edit .plan/ files while Plan Mode is active
+        - do not edit .gitignore while Plan Mode is active
+        - do not create or edit GitHub issues while Plan Mode is active
+        - report how to materialize the plan once the user exits Plan Mode
+
+  - id: plan-mode-resume-without-agreed-plan
+    title: Materialize request without a recoverable agreed plan must ask for confirmation
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: false
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - detect that no recently agreed plan is recoverable from the conversation
+        - refuse to guess plan content
+        - ask the user to confirm or restate the plan before writing .plan/
+
+  - id: plan-filename-yyyymmdd-prefix
+    title: .plan file must use YYYYMMDD date prefix (no separators)
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      current_date: "2026-04-23"
+      slug_from_title: "km-plan-skill"
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - write the plan to .plan/20260423-km-plan-skill.md
+        - do not use separators (hyphen, slash) inside the date prefix
+
+  - id: plan-filename-collision-suffix
+    title: Filename collision should add -2, -3 suffix
+    prompt: "この計画を .plan に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      current_date: "2026-04-23"
+      slug_from_title: "km-plan-skill"
+      existing_plan_files:
+        - .plan/20260423-km-plan-skill.md
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - detect the existing file and avoid overwriting it
+        - write the new plan to .plan/20260423-km-plan-skill-2.md
+
+  - id: plan-output-adds-gitignore
+    title: Absent .plan/ ignore rule should be added before writing the plan
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      gitignore_has_plan: false
+      plan_tracked: false
+      plan_ignored_elsewhere: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - add .plan/ to .gitignore before writing the plan file
+        - write the plan after the .gitignore update
+
+  - id: plan-output-tracked-plan-needs-confirmation
+    title: Tracked .plan should stop for user confirmation, not edit .gitignore automatically
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      plan_tracked: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - detect that .plan is git-tracked before any side effect
+        - run the .gitignore safety check BEFORE mkdir -p .plan
+        - avoid auto-editing .gitignore
+        - ask the user how to proceed before writing or committing the plan
+
+  - id: plan-output-info-exclude-no-gitignore-edit
+    title: .git/info/exclude already hiding .plan/ must skip .gitignore edit
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      gitignore_has_plan: false
+      plan_tracked: false
+      plan_ignored_elsewhere: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - detect that .plan/ is already ignored via .git/info/exclude
+        - leave .gitignore untouched
+        - still write the plan file normally
+
+  - id: plan-github-default-new-no-search
+    title: Default planning request must not auto-search existing issues
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      similar_open_issues: 3
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - create a brand-new issue
+        - do not run gh issue list to search for similar issues
+        - do not reuse any existing issue without explicit user instruction
+
+  - id: plan-github-issue-full-mirror
+    title: Issue body must mirror the full .plan/ file content
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - embed the full .plan/ markdown content in the issue body
+        - include the "<!-- km:plan:managed -->" marker in the issue body
+        - do not replace the body with a summary or excerpt
+
+  - id: plan-github-issue-no-local-plan-link
+    title: Issue body must not reference the local .plan/ path as source of truth
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - avoid wording that links to the local .plan/ path as source of truth
+        - 'avoid phrases like "元計画: .plan/..." or "参照先: .plan/..." in the issue body'
+      notes:
+        - documentation-style references to --body-file commands are allowed when the plan itself is a km:plan design doc
+
+  - id: plan-github-issue-body-file-direct
+    title: gh issue create/edit must pass the .plan/ file via --body-file
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - use gh issue create --title ... --body-file <plan-file>
+        - avoid --body "..."
+        - avoid recomposing the body via a separate file or heredoc
+
+  - id: plan-github-issue-two-step-sync
+    title: After issue creation, the URL must be written back into .plan/ and re-synced
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - append the returned issue URL into the .plan/ file after creation
+        - run gh issue edit <number> --body-file <plan-file> to re-sync the body
+        - keep the issue body and .plan/ file identical after sync
+
+  - id: plan-existing-issue-explicit-update-with-marker
+    title: Explicit existing-issue update with marker should update via --body-file
+    prompt: "この計画を issue #25 に反映して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      issue_number_argument: 25
+      target_issue_has_managed_marker: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - update issue 25 via gh issue edit 25 --body-file <plan-file>
+        - do not create a new issue
+        - leave the marker in place
+
+  - id: plan-existing-issue-explicit-update-without-marker-needs-confirmation
+    title: Explicit existing-issue update without marker must stop for confirmation
+    prompt: "この計画を issue #99 に反映して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      issue_number_argument: 99
+      target_issue_has_managed_marker: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - detect that the target issue lacks the km:plan marker
+        - ask the user before overwriting the issue body
+        - avoid auto full-replacement
+
+  - id: plan-non-github-repo-skips-issue
+    title: Non-GitHub repo should stop after .plan/ output and report the skip
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - write the plan to .plan/ as usual
+        - skip GitHub issue creation
+        - report the reason the issue step was skipped
+
+  - id: plan-github-auth-failure-skips-issue
+    title: gh auth failure should stop at .plan/ output and report the cause
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      gh_auth_status_failed: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - write the plan to .plan/ as usual
+        - skip GitHub issue creation when gh auth status fails
+        - report the authentication failure
+
+  - id: plan-github-body-file-failure-stops
+    title: gh issue create/edit failure must not be reported as success
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      gh_issue_command_failed: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - treat gh issue create/edit failure as a hard stop
+        - report "URL 未同期" or equivalent status instead of claiming success
+        - leave the .plan/ file intact for a retry
+
+  - id: plan-review-high-risk-specialist-review
+    title: High-risk plan should add specialist review on top of the basic checklist
+    prompt: "このデータ移行の計画を作って issue にして"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      high_risk_plan: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - run the basic plan review checklist
+        - add a data-migration specialist review
+        - record specialist findings alongside the basic review results
+
+  - id: plan-review-unresolved-high-blocks-issue
+    title: Unresolved HIGH findings after 2 passes must block issue creation
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      review_pass_1_high_findings: true
+      review_pass_2_high_findings: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - stop after the 2nd review pass when CRITICAL or HIGH findings remain
+        - do not create a GitHub issue
+        - report the unresolved findings and defer to the user
+
+  - id: plan-review-accepted-medium-risk-recorded
+    title: Accepted MEDIUM / LOW findings must be recorded as accepted risks
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      review_pass_1_medium_findings: true
+      accept_some_medium_findings: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - record any intentionally accepted MEDIUM or LOW findings in the plan
+        - include severity, rationale, and follow-up trigger
+        - only then proceed to issue creation
+
+  - id: plan-secret-detected-blocks-issue
+    title: Detected secret-like content must block before write (pre-write) and before issue creation (pre-issue)
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      plan_body_contains_secret_like_pattern: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - run a pre-write Secret Check on the in-memory plan body before writing .plan/
+        - if detected at pre-write, do not write any file to .plan/ and ask the user to mask
+        - run a pre-issue Secret Check on the final body before gh issue create/edit
+        - if detected at pre-issue, stop without creating the issue; do not auto-delete the .plan/ file, ask the user to remediate
+        - detect patterns like AKIA, sk-, password=, .env* references
+
+  - id: plan-mkdir-plan-directory
+    title: mkdir -p .plan must run only after the .gitignore safety check passes
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      plan_directory_exists: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - run the .gitignore safety check (git rev-parse, ls-files, check-ignore, gitignore update) first
+        - only then invoke mkdir -p .plan to create the output directory
+        - never mkdir before the safety check completes
+
+  - id: plan-gh-cli-not-installed-skips-issue
+    title: gh CLI missing (command not found) must be reported separately from auth failure
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      gh_cli_installed: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - write the plan to .plan/ as usual
+        - skip GitHub issue creation when gh CLI is not installed
+        - report "gh CLI 未インストール" distinctly from an authentication failure
+
+  - id: plan-existing-issue-title-change-needs-confirmation
+    title: Existing-issue update with title drift must not auto-rename the issue
+    prompt: "この計画を issue #25 に反映して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      issue_number_argument: 25
+      target_issue_has_managed_marker: true
+      plan_title_differs_from_issue_title: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - update only the issue body by default
+        - ask the user before changing the issue title
+        - never auto-invoke gh issue edit --title without explicit user approval
+
+  - id: plan-review-records-resolved-findings-in-body
+    title: Resolved review findings must be logged in the plan body
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      review_pass_1_high_findings: true
+      review_pass_2_clear: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - append resolved CRITICAL / HIGH findings into the plan body under a "計画レビューで何が指摘され、どう反映したか" style section
+        - keep the review trail visible to readers of the .plan/ file and the mirrored GitHub issue
