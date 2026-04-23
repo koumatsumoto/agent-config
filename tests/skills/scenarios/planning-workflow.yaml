@@ -304,3 +304,79 @@ scenarios:
         - record any intentionally accepted MEDIUM or LOW findings in the plan
         - include severity, rationale, and follow-up trigger
         - only then proceed to issue creation
+
+  - id: plan-secret-detected-blocks-issue
+    title: Detected secret-like content in the plan body must block issue creation
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      plan_body_contains_secret_like_pattern: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - detect secret-like patterns (AKIA, sk-, password=, .env* references) during the Secret Check pass
+        - stop before gh issue create
+        - ask the user to mask or remove the content before resuming
+
+  - id: plan-mkdir-plan-directory
+    title: .plan directory must be created before writing the plan file
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      plan_directory_exists: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - ensure .plan/ exists via mkdir -p .plan before writing the plan file
+        - do not rely on the working tree already having .plan/
+
+  - id: plan-gh-cli-not-installed-skips-issue
+    title: gh CLI missing (command not found) must be reported separately from auth failure
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      gh_cli_installed: false
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - write the plan to .plan/ as usual
+        - skip GitHub issue creation when gh CLI is not installed
+        - report "gh CLI 未インストール" distinctly from an authentication failure
+
+  - id: plan-existing-issue-title-change-needs-confirmation
+    title: Existing-issue update with title drift must not auto-rename the issue
+    prompt: "この計画を issue #25 に反映して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      issue_number_argument: 25
+      target_issue_has_managed_marker: true
+      plan_title_differs_from_issue_title: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - update only the issue body by default
+        - ask the user before changing the issue title
+        - never auto-invoke gh issue edit --title without explicit user approval
+
+  - id: plan-review-records-resolved-findings-in-body
+    title: Resolved review findings must be logged in the plan body
+    prompt: "この計画を .plan と issue に出して"
+    context:
+      claude_plan_mode: false
+      prior_agreed_plan: true
+      github_repo: true
+      review_pass_1_high_findings: true
+      review_pass_2_clear: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - append resolved CRITICAL / HIGH findings into the plan body under a "計画レビューで何が指摘され、どう反映したか" style section
+        - keep the review trail visible to readers of the .plan/ file and the mirrored GitHub issue

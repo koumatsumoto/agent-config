@@ -1,6 +1,6 @@
 ---
 name: km:plan
-description: Produces a reviewed implementation plan, writes it to `.plan/YYYYMMDD-<slug>.md`, and mirrors the full body into a GitHub issue. Use when the user says "計画を作って", "実装計画を作成して", ".plan に出して", "計画を issue にして", "計画レビューしてから issue 化", or otherwise explicitly asks for a pre-implementation plan, a `.plan/` artifact, or a planning issue. Not for "実装して", "レビューして", "コミットして", "PR にして" — those stay with their existing skills.
+description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and mirrors the full body into a GitHub issue. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", "計画レビューしてから issue 化", or otherwise asks for a pre-implementation plan or planning issue. Not for "実装して", "レビューして", "コミットして", or "PR にして" — those belong to km:github-workflow / km:review / km:commit. For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
 argument-hint: "[title-or-topic]"
 ---
 
@@ -53,17 +53,19 @@ argument-hint: "[title-or-topic]"
 1. repo と依頼内容を把握する。`$ARGUMENTS` があれば計画タイトルや既存 issue 番号のヒントとして扱う
 2. entry mode を決める（`draft-only` / `materialize-existing-plan` / `full-normal-mode`）
 3. `draft-only` では Plan Mode で質問・調査・下案作成を行い、`<proposed_plan>` を提示して停止する
-4. materialize に進む場合、`.plan/` 出力先を確認し、必要なら `.gitignore` を更新する（下の「`.gitignore` 安全確認」を参照）
-5. `references/plan-template.md` の観点集に沿って計画本文を組み立て、`.plan/YYYYMMDD-<slug>.md` に書き出す。plan 本文の先頭近くに `<!-- km:plan:managed -->` marker を含める
-6. `references/plan-review-checklist.md` に沿って `.plan/` ファイルを対象に agentic 計画レビューを最大 2 pass 行う。未解消の `CRITICAL` / `HIGH` があれば issue 化を止めて報告する
-7. GitHub 管理 repo なら新規 issue を作る（既存 issue 再利用はユーザーが明示した場合のみ。後述）
-8. 新規 issue 作成後、返された URL を `.plan/` 本文に追記し、`gh issue edit <number> --body-file <plan-file>` で再同期する（2-step sync）
-9. 結果をユーザーに報告する（`.plan/` のパス、issue URL、未反映の受け入れ済みリスク）
+4. materialize に進む場合、`mkdir -p .plan` で出力先を確保し、必要なら `.gitignore` を更新する（下の「`.gitignore` 安全確認」を参照）
+5. plan 本文を書き出す前に `references/plan-template.md` を読む。その観点集に沿って計画本文を組み立て、`.plan/YYYYMMDD-<slug>.md` に書き出す。plan 本文の先頭近くに `<!-- km:plan:managed -->` marker を含める
+6. 「Secret Check」節に従って秘密情報混入を確認する。検出したら issue 化を止めてユーザーに報告する
+7. 計画レビュー前に `references/plan-review-checklist.md` を読む。その観点集で `.plan/` ファイルを対象に agentic 計画レビューを最大 2 pass 行う。未解消の `CRITICAL` / `HIGH` があれば issue 化を止めて報告する
+8. GitHub 管理 repo なら新規 issue を作る（既存 issue 再利用はユーザーが明示した場合のみ。後述）
+9. 新規 issue 作成後、返された URL を `.plan/` 本文に追記し、`gh issue edit <number> --body-file <plan-file>` で再同期する（2-step sync）
+10. 結果をユーザーに報告する（`.plan/` のパス、issue URL、未反映の受け入れ済みリスク）
 
 ## `.plan/` 出力ルール
 
 - ファイル名は `.plan/YYYYMMDD-<slug>.md`。日付 prefix は区切りなしの `YYYYMMDD`（例: `.plan/20260423-km-plan-skill.md`）
-- slug は英小文字 ASCII の kebab-case。日本語依頼でも repo 名や issue title から短い英語 slug を作る。適切な slug が作れない場合は `plan`、同名衝突時は `-2`, `-3` の suffix
+- slug は英小文字 ASCII の kebab-case（`[a-z0-9-]+`）、長さは 50 文字以下を目安にする。日本語依頼でも repo 名や issue title から短い英語 slug を作る
+- 適切な英語 slug が作れない場合は `plan`。同日付内で既存の `.plan/YYYYMMDD-*.md` と衝突する場合は `-2`, `-3` の suffix を付ける（衝突判定は同日付内のみ）
 - plan 本文の先頭近くに `<!-- km:plan:managed -->` marker を入れる（`km:plan` 管理 issue の識別に使う）
 - 計画本文の構成は `references/plan-template.md` の観点集で組み立てる。タスクの性質に合わせて節の順序や粒度は変える。固定テンプレートではない
 
@@ -78,19 +80,35 @@ argument-hint: "[title-or-topic]"
 
 ## Agentic Review
 
+- レビュー前に `references/plan-review-checklist.md` を読む
 - 計画は `.plan/` に書き出した後、そのファイルを対象に第三者目線でレビューして精度を上げる
-- 基本は `references/plan-review-checklist.md` の観点でレビューする。高リスク計画では専門家ロールレビューを追加する
-- multi-agent が使える場合は別エージェントに `.plan/` ファイルをレビューさせる。使えない場合はメイン agent が「第三者レビュー」と明示して同じ観点でレビューする
+- 基本は checklist の観点でレビューする。高リスク計画では専門家ロールレビューを追加する
+- レビュー実行者の選び方:
+  - Task tool / subagent が使える環境（Claude Code の Agent tool、Codex CLI のサブエージェントなど）では、**別エージェントに `.plan/` ファイルを渡してレビュー**してもらう。メイン agent の視点バイアスを避ける意図
+  - 使えない環境では、メイン agent が「第三者レビュー」と明示して同じ観点で critical に読み直す。自分の計画を評価するバイアスを自覚し、通常の Q&A より厳しめに判定する
 - レビュー結果は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` と対象箇所・問題・修正案で記録する
+- **反映した指摘は plan 本文の「計画レビュー結果」相当の節（`references/plan-template.md` の「計画レビューで何が指摘され、どう反映したか」観点）に追記する**。修正後の最終本文を plan file に残し、reviewing の痕跡を読者が追えるようにする
 - review loop は最大 2 pass。1 pass 目で `CRITICAL` / `HIGH` が出たら修正し、2 pass 目で再確認する。2 pass 目でも未解消なら issue 化を止め、ユーザーに判断を委ねる
-- 残す `MEDIUM` / `LOW` は `.plan/` の「受け入れ済みリスク」相当の記述に重大度・残す理由・後続対応条件を記録してから issue 化する
+- 残す `MEDIUM` / `LOW` は plan 本文の「受け入れ済みリスク」相当の記述に重大度・残す理由・後続対応条件を記録してから issue 化する
+
+## Secret Check
+
+plan 本文は GitHub issue に全文ミラーされるため、秘密情報の混入は public 公開に直結する。`.plan/` 書き出し直後と issue 化直前の 2 回、以下をチェックする。検出したら issue 化を止め、ユーザーにマスキングを依頼してから再開する。
+
+- ファイル名や path パターン: `.env*`, `*.pem`, `*.key`, `*credentials*`, `*.pfx` を参照する行
+- 文字列パターン: `AKIA`, `sk-`, `password=`, `secret=`, `api_key=`, `token=`, `Bearer ` で始まる行
+- ログやスタックトレースを貼り付けた場合に含まれがちな、社内ホスト名・ユーザー名・内部 URL
+
+検出が不確かな場合も issue 化前にユーザーへ確認する。疑わしきは止める。
 
 ## GitHub Issue 作成とミラー
 
 - 明示がない限り **新規計画・新規 issue** を作る。類似 open issue は自動探索しない（誤上書きリスクを避けるため）
 - 手順:
-  1. `gh auth status` で認証を確認する
-  2. `gh repo view --json nameWithOwner,defaultBranchRef,url` で GitHub 管理 repo を確認する
+  1. `gh auth status` で `gh` CLI の可用性と認証を同時に確認する。失敗したら原因を区別して報告する:
+     - `command not found: gh` → `gh` CLI 未インストール。`.plan/` 出力までで停止し、インストールを依頼する
+     - 認証エラー → 未認証。`.plan/` 出力までで停止し、`gh auth login` を依頼する
+  2. `gh repo view --json nameWithOwner,defaultBranchRef,url` で GitHub 管理 repo を確認する。失敗時は stderr を見て非 GitHub repo / 権限不足 / ネットワーク失敗を区別する
   3. issue title は計画タイトルから作る（Conventional Commits 互換にしておくと後続 PR と揃う）
   4. 新規作成は常に `gh issue create --title "<title>" --body-file <plan-file>` で `.plan/` ファイルを直接渡す
   5. issue 作成後、返された URL を `.plan/` に追記し、`gh issue edit <number> --body-file <plan-file>` で再同期する
@@ -104,6 +122,7 @@ argument-hint: "[title-or-topic]"
 - `gh issue view <number> --json number,title,body,url,state` で対象を確認する
 - body に `<!-- km:plan:managed -->` marker があれば `.plan/` ファイルを直接 `gh issue edit <number> --body-file <plan-file>` で更新できる
 - marker がない既存 issue は `km:plan` 管理外の可能性があるため、自動で全文置換しない。更新前にユーザーへ確認する
+- **title 更新ポリシー**: 更新対象は原則 body のみ。計画タイトルが大きく変わり既存 issue title と齟齬が出る場合だけ、ユーザーに変更可否を確認してから `gh issue edit <number> --title <new-title>` を追加実行する。タイトル変更を自動判定しない
 
 ## Decision Rules
 
@@ -113,7 +132,7 @@ argument-hint: "[title-or-topic]"
 - issue body 同期は `.plan/` ファイルをそのまま `--body-file` に渡す。別ファイルや heredoc の本文を組み立て直さない
 - `--body "..."` を使わない
 - 計画は作って終わりではなく、レビュー → 反映 → issue 化までが 1 単位
-- 非 GitHub repo や `gh` 未認証では `.plan/` 出力までで止め、その理由を報告する
+- 非 GitHub repo、`gh` 未インストール、`gh` 未認証のいずれでも `.plan/` 出力までで止め、原因を区別して報告する
 - 計画生成スクリプトや `agents/openai.yaml` は追加しない（初回実装の非スコープ）
 
 ## Safety Rules

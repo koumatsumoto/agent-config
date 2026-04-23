@@ -352,3 +352,23 @@ cases:
     file: scenarios/planning-workflow.yaml
     scenario_id: plan-review-accepted-medium-risk-recorded
     tags: [plan, review]
+  - id: plan-secret-detected-blocks-issue
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-secret-detected-blocks-issue
+    tags: [plan, secret, safety, blocking]
+  - id: plan-mkdir-plan-directory
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-mkdir-plan-directory
+    tags: [plan, filesystem]
+  - id: plan-gh-cli-not-installed-skips-issue
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-gh-cli-not-installed-skips-issue
+    tags: [plan, github, negative]
+  - id: plan-existing-issue-title-change-needs-confirmation
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-existing-issue-title-change-needs-confirmation
+    tags: [plan, github, issue, safety]
+  - id: plan-review-records-resolved-findings-in-body
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-review-records-resolved-findings-in-body
+    tags: [plan, review]
