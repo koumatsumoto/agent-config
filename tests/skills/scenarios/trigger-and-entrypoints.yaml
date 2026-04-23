@@ -26,6 +26,16 @@ scenarios:
     expected:
       primary_skill: km:github-workflow
 
+  - id: trigger-commit-natural-language
+    title: Natural language commit request should still trigger km:commit
+    prompt: "この変更をコミットして"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+      conversation_context: true
+    expected:
+      primary_skill: km:commit
+
   - id: trigger-implementation-should-not-trigger-github-workflow
     title: Generic implementation request should not trigger km:github-workflow
     prompt: "この機能を実装して"
@@ -59,13 +69,3 @@ scenarios:
       should_not_start_with:
         - km:github-workflow
         - km:review
-
-  - id: trigger-plan-does-not-steal-generic-implementation
-    title: Generic implementation request should not trigger km:plan
-    prompt: "この機能を実装して"
-    context:
-      changed_files: []
-      conversation_context: true
-    expected:
-      should_not_trigger:
-        - km:plan

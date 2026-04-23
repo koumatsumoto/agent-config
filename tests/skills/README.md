@@ -18,9 +18,10 @@
 ## 何を守るか
 
 - trigger の優先度
+- `km:commit` を含む workflow entrypoint
 - `km:review` の routing
 - workflow / plan の safety boundary
-- README / AGENTS / CLAUDE / skill metadata の drift
+- AGENTS / CLAUDE / repo README / skill metadata の drift
 
 ## 機械的整合チェック
 

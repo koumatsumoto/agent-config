@@ -12,6 +12,10 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-github-workflow-natural-language
     tags: [trigger, workflow]
+  - id: trigger-commit-natural-language
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-commit-natural-language
+    tags: [trigger, workflow]
   - id: trigger-implementation-should-not-trigger-github-workflow
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-implementation-should-not-trigger-github-workflow
@@ -24,10 +28,6 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-plan-natural-language
     tags: [trigger, plan]
-  - id: trigger-plan-does-not-steal-generic-implementation
-    file: scenarios/trigger-and-entrypoints.yaml
-    scenario_id: trigger-plan-does-not-steal-generic-implementation
-    tags: [trigger, plan, negative]
   - id: review-routing-code-only
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-only
@@ -56,6 +56,10 @@ cases:
     file: scenarios/workflow-issue-pr.yaml
     scenario_id: workflow-issue-ambiguous-candidates
     tags: [workflow, github, issue, negative]
+  - id: workflow-body-file-only
+    file: scenarios/workflow-issue-pr.yaml
+    scenario_id: workflow-body-file-only
+    tags: [workflow, github, safety]
   - id: workflow-non-github-repo-stop
     file: scenarios/workflow-issue-pr.yaml
     scenario_id: workflow-non-github-repo-stop

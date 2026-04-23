@@ -37,6 +37,7 @@
 新しい decision boundary が増えたときだけ増やす。
 
 - trigger
+  - `commit` を含む workflow trigger
 - review routing
 - workflow safety
 - plan safety

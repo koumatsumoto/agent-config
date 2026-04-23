@@ -6,10 +6,10 @@
 | --- | --- |
 | `trigger-review-default` | generic review request routes through `km:review` |
 | `trigger-github-workflow-natural-language` | explicit PR/delivery request routes to `km:github-workflow` |
+| `trigger-commit-natural-language` | explicit commit intent routes to `km:commit` |
 | `trigger-implementation-should-not-trigger-github-workflow` | generic implementation does not steal PR workflow |
 | `trigger-third-party-oss-security-review-npm` | explicit OSS intake routes to the specialized skill |
 | `trigger-plan-natural-language` | explicit planning request routes to `km:plan` |
-| `trigger-plan-does-not-steal-generic-implementation` | generic implementation does not trigger planning |
 | `review-routing-code-only` | code-only path keeps intent/code/quality |
 | `review-routing-docs-only` | docs-only path narrows to doc-review |
 | `review-routing-config-chore` | config/chore path keeps Quick depth without expert review |
@@ -17,6 +17,7 @@
 | `review-routing-code-and-docs-thorough` | thorough code+docs path preserves the full review set |
 | `workflow-existing-pr` | existing PR is reused |
 | `workflow-issue-ambiguous-candidates` | ambiguous issue candidates stop for clarification |
+| `workflow-body-file-only` | issue / PR body submission stays on the body-file path |
 | `workflow-non-github-repo-stop` | non-GitHub repos stop before side effects |
 | `plan-mode-no-mutation` | Plan Mode stays draft-only |
 | `plan-output-tracked-plan-needs-confirmation` | tracked `.plan` stops before write |

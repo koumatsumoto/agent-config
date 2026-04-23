@@ -247,6 +247,11 @@ def main() -> int:
     for required in ("tests/docs/skills-test-strategy.md", "tests/docs/skills-test-catalog.md", "軽量な静的検証 + 必要時の手動 spot check"):
         check(required in tests_readme_text, f"tests/README.md missing: {required}")
 
+    repo_readme = repo_root / "README.md"
+    repo_readme_text = load_text(repo_readme) or ""
+    for required in ("## Codex 設計メモ", "## スキル一覧", "`web_search = \"cached\"`", "`alternate_screen = \"never\"`"):
+        check(required in repo_readme_text, f"README.md missing: {required}")
+
     skills_readme_text = load_text(skills_readme) or ""
     for required in ("manifest.yaml", "scenarios/", "rubrics/", "runs/", "canonical decision boundary"):
         check(required in skills_readme_text, f"tests/skills/README.md missing: {required}")
@@ -283,6 +288,7 @@ def main() -> int:
                 "`CRITICAL` / `HIGH`、または intent-review の `HIGH` を見逃さずにブロックする",
             ],
             "safety": None,
+            "phrases": [],
         },
         "github-workflow": {
             "success": [
@@ -292,6 +298,9 @@ def main() -> int:
             "safety": [
                 "branch 作成 / push / PR 作成の要求が曖昧な場合は、workflow 開始前にユーザーへ確認する",
                 "`--body \"...\"` や非クォート heredoc で issue / PR 本文を流し込まない",
+            ],
+            "phrases": [
+                "issue / PR 本文は `--body-file - <<'EOF'` で流し込む",
             ],
         },
         "plan": {
@@ -303,6 +312,7 @@ def main() -> int:
                 "明示のない限り既存 issue を探索・再利用しない。類似 issue の自動 search は行わない",
                 "既存 issue を更新する場合でも、marker がなければ全文置換前にユーザーへ確認する",
             ],
+            "phrases": [],
         },
     }
 
@@ -359,6 +369,8 @@ def main() -> int:
                 check(bool(safety_bullets), f"{skill_path}: missing Safety Rules bullets")
                 for bullet in expected_safety:
                     check(bullet in safety_bullets, f"{skill_path}: missing stable Safety Rules bullet: {bullet}")
+            for phrase in stable_contracts[skill_name]["phrases"]:
+                check(phrase in text, f"{skill_path}: missing stable contract phrase: {phrase}")
 
         oa_path = skill_dir / "agents" / "openai.yaml"
         if skill_name in manual_only_codex:
