@@ -56,6 +56,26 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-generic-review-should-not-trigger-third-party-oss-security-review
     tags: [trigger, review, oss, negative]
+  - id: trigger-plan-natural-language
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-plan-natural-language
+    tags: [trigger, plan, workflow]
+  - id: trigger-plan-does-not-steal-generic-implementation
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-plan-does-not-steal-generic-implementation
+    tags: [trigger, plan, negative]
+  - id: trigger-plan-does-not-steal-pr-delivery
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-plan-does-not-steal-pr-delivery
+    tags: [trigger, plan, workflow, negative]
+  - id: trigger-plan-priority-plan-then-pr
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-plan-priority-plan-then-pr
+    tags: [trigger, plan, workflow]
+  - id: trigger-plan-file-review-routing
+    file: scenarios/trigger-and-entrypoints.yaml
+    scenario_id: trigger-plan-file-review-routing
+    tags: [trigger, plan, review]
   - id: review-routing-code-only
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-only
@@ -252,3 +272,83 @@ cases:
     file: scenarios/workflow-and-state.yaml
     scenario_id: docs-policy-drift
     tags: [docs, policy]
+  - id: plan-mode-no-mutation
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-mode-no-mutation
+    tags: [plan, planmode, safety]
+  - id: plan-mode-resume-without-agreed-plan
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-mode-resume-without-agreed-plan
+    tags: [plan, planmode, safety]
+  - id: plan-filename-yyyymmdd-prefix
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-filename-yyyymmdd-prefix
+    tags: [plan, filename]
+  - id: plan-filename-collision-suffix
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-filename-collision-suffix
+    tags: [plan, filename]
+  - id: plan-output-adds-gitignore
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-output-adds-gitignore
+    tags: [plan, gitignore]
+  - id: plan-output-tracked-plan-needs-confirmation
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-output-tracked-plan-needs-confirmation
+    tags: [plan, gitignore, safety]
+  - id: plan-output-info-exclude-no-gitignore-edit
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-output-info-exclude-no-gitignore-edit
+    tags: [plan, gitignore, safety]
+  - id: plan-github-default-new-no-search
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-default-new-no-search
+    tags: [plan, github, issue, safety]
+  - id: plan-github-issue-full-mirror
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-issue-full-mirror
+    tags: [plan, github, issue]
+  - id: plan-github-issue-no-local-plan-link
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-issue-no-local-plan-link
+    tags: [plan, github, issue, safety]
+  - id: plan-github-issue-body-file-direct
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-issue-body-file-direct
+    tags: [plan, github, issue, safety]
+  - id: plan-github-issue-two-step-sync
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-issue-two-step-sync
+    tags: [plan, github, issue]
+  - id: plan-existing-issue-explicit-update-with-marker
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-existing-issue-explicit-update-with-marker
+    tags: [plan, github, issue]
+  - id: plan-existing-issue-explicit-update-without-marker-needs-confirmation
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-existing-issue-explicit-update-without-marker-needs-confirmation
+    tags: [plan, github, issue, safety]
+  - id: plan-non-github-repo-skips-issue
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-non-github-repo-skips-issue
+    tags: [plan, github, negative]
+  - id: plan-github-auth-failure-skips-issue
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-auth-failure-skips-issue
+    tags: [plan, github, negative]
+  - id: plan-github-body-file-failure-stops
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-github-body-file-failure-stops
+    tags: [plan, github, safety]
+  - id: plan-review-high-risk-specialist-review
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-review-high-risk-specialist-review
+    tags: [plan, review]
+  - id: plan-review-unresolved-high-blocks-issue
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-review-unresolved-high-blocks-issue
+    tags: [plan, review, blocking]
+  - id: plan-review-accepted-medium-risk-recorded
+    file: scenarios/planning-workflow.yaml
+    scenario_id: plan-review-accepted-medium-risk-recorded
+    tags: [plan, review]

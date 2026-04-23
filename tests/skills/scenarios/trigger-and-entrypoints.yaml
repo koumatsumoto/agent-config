@@ -184,3 +184,77 @@ scenarios:
         - km:third-party-oss-security-review
       notes:
         - OSS intake review should remain outside km:review routing
+
+  - id: trigger-plan-natural-language
+    title: Natural language plan request should trigger km:plan
+    prompt: "この機能の実装計画を作って issue にして"
+    context:
+      changed_files: []
+      conversation_context: true
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      should_not_start_with:
+        - km:github-workflow
+        - km:review
+      notes:
+        - explicit planning + issue request should go through km:plan, not km:github-workflow
+        - the user should not need to type /km:plan explicitly
+
+  - id: trigger-plan-does-not-steal-generic-implementation
+    title: Generic implementation request should NOT trigger km:plan
+    prompt: "この機能を実装して"
+    context:
+      changed_files: []
+      conversation_context: true
+    expected:
+      should_not_trigger:
+        - km:plan
+      notes:
+        - km:plan requires explicit planning / .plan / planning-issue intent
+        - generic implementation should flow through normal coding, not plan first
+
+  - id: trigger-plan-does-not-steal-pr-delivery
+    title: PR delivery request without planning intent should still go to km:github-workflow
+    prompt: "この作業をPRまでやって"
+    context:
+      changed_files:
+        - templates/skills/review/SKILL.md
+      conversation_context: true
+      github_repo: true
+    expected:
+      primary_skill: km:github-workflow
+      should_not_trigger:
+        - km:plan
+      notes:
+        - without explicit planning / .plan / planning-issue intent, km:plan must not hijack PR delivery
+
+  - id: trigger-plan-priority-plan-then-pr
+    title: Combined plan + PR request should start with km:plan, then hand off to km:github-workflow
+    prompt: "この機能の計画を作って PR まで進めて"
+    context:
+      changed_files: []
+      conversation_context: true
+      github_repo: true
+    expected:
+      primary_skill: km:plan
+      required_behavior:
+        - start with km:plan for .plan/ output and issue creation
+        - hand off PR delivery to km:github-workflow after issue creation
+      notes:
+        - planning comes first when both planning and delivery are requested in one turn
+
+  - id: trigger-plan-file-review-routing
+    title: Plan file review request should use km:plan, not km:review
+    prompt: "この計画ファイルをレビューして"
+    context:
+      changed_files:
+        - .plan/20260423-km-plan-skill.md
+      conversation_context: true
+    expected:
+      primary_skill: km:plan
+      should_not_start_with:
+        - km:review
+      notes:
+        - plan-file-targeted review stays inside km:plan agentic review loop
+        - changes-targeted review ("この変更をレビューして") still goes to km:review
