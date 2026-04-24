@@ -23,6 +23,7 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 - issue 連携がある場合だけ PR 本文に `Closes #<num>` または `Refs #<num>` を入れる
 - issue を計画として使うなら、PR 作成前までは計画更新をなるべく issue 本文に反映する
 - PR 作成後は PR を実装成果物の正とし、issue の詳細同期を続けない
+- 現 PR スコープ外の改善点を見つけたら、その場で GitHub issue を起票する（後述 Out-of-Scope Findings）
 - PR URL、変更要約、見てほしい論点を共有する
 
 ## Trigger Signals
@@ -110,6 +111,17 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 5. 既存 PR があれば更新し、なければ新規作成する
 6. PR 作成・更新時は `--body "..."` を使わず、`--body-file - <<'EOF'` を使う
 7. PR URL、変更要約、見てほしい論点を共有する
+
+## Out-of-Scope Findings
+
+作業中に現 PR のスコープ外の改善点・設計課題・未解決問題を見つけた場合は、**その場で GitHub issue を起票する**。後回しにすると忘却するか、現 PR の diff に混入して scope が崩れる。
+
+1. 発見したタイミングで `gh issue create --body-file - <<'EOF' ...` で起票する
+2. issue body には最低限「問題 / 影響 / 想定対応案（TBD でよい）/ 優先度」を記録する。発見の文脈（どの PR/ファイル/行で見つけたか）も簡潔に残す
+3. 現 PR の diff には含めない。別 PR / 別作業で対応する
+4. コード箇所にマーカーを残す場合は `FIXME(issue #N)` 形式で該当 issue 番号を入れる。git grep で追跡可能にする
+5. リポジトリ内に `backlog.md` などの追跡ファイルを作らない。改善バックログは GitHub issue で一元管理する
+6. 起票後は issue URL をユーザーに共有し、現 PR の作業に戻る
 
 ## Decision Rules
 
