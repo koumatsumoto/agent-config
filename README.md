@@ -135,7 +135,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- default は `workspace-write + on-request` を前提にし、運用方針そのものは `templates/AGENTS.md` を正とする
+- default は `workspace-write + never` を前提にし、承認待ちを止めつつファイル操作は workspace sandbox に保つ
+- 承認付きの旧来運用に戻したい場合は `interactive` profile、sandbox も外した完全信頼運用にしたい場合は `full_trust` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 

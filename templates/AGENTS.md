@@ -14,10 +14,12 @@
 
 ### Profile の使い分け
 
-- default: `workspace-write + on-request + cached web`。通常の開発と調査
-- `research`: `workspace-write + on-request + live web + high reasoning`。最新確認や外部仕様調査
+- default: `workspace-write + never + cached web`。承認待ちなしで進めつつ、ファイル操作は workspace sandbox に保つ既定
+- `research`: `workspace-write + never + live web + high reasoning`。最新確認や外部仕様調査を承認待ちなしで進める
 - `review`: `read-only + never + cached web + high reasoning`。レビュー、監査、影響調査
 - `readonly`: 読み取り専用で安全にコードベースを探索したいとき
+- `interactive`: `workspace-write + on-request + cached web`。承認付きの対話運用に戻したいとき
+- `full_trust`: `danger-full-access + never`。完全に信頼したローカル環境で sandbox も外して自律実行したいとき
 
 ### 調査ルール
 

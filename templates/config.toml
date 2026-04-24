@@ -7,7 +7,11 @@ model = "gpt-5.4"
 model_reasoning_effort = "medium"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-approval_policy = "on-request"
+# Trust-first default for local development on owned repositories.
+# This removes routine approval prompts while keeping filesystem access bounded
+# to the workspace sandbox. Switch to `interactive`, `review`, or `readonly`
+# when the repository is less trusted or you want tighter control.
+approval_policy = "never"
 sandbox_mode = "workspace-write"
 web_search = "cached"
 check_for_update_on_startup = true
@@ -40,6 +44,14 @@ model_reasoning_effort = "high"
 [profiles.research]
 model_reasoning_effort = "high"
 web_search = "live"
+
+[profiles.full_trust]
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[profiles.interactive]
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 
 [profiles.review]
 approval_policy = "never"
