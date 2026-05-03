@@ -1,0 +1,15 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "fileCheckpointingEnabled": true,
+  "tui": "fullscreen",
+  "showTurnDuration": true,
+  "showMessageTimestamps": true,
+  "feedbackSurveyRate": 0
+}
