@@ -154,6 +154,24 @@ class InstallTreeTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             fs.install_tree(self.src_root, self.dest_root)
 
+    def test_refuses_symlink_loop_in_template(self) -> None:
+        # A symlink loop inside src_root would hang Python 3.13's rglob
+        # if it followed symlinks; install_tree must use a non-following walk.
+        if not fs.is_posix():
+            self.skipTest("POSIX-only")
+        loop = self.src_root / "loop"
+        os.symlink(self.src_root.resolve(), loop)
+        with self.assertRaises(PermissionError):
+            fs.install_tree(self.src_root, self.dest_root)
+
+    def test_boundary_checked_before_dest_root_mkdir(self) -> None:
+        # Defense-in-depth: install_tree must refuse a dest_root outside the
+        # boundary BEFORE creating or chmod'ing it.
+        unwritten = self.dir / "outside"
+        with self.assertRaises(PermissionError):
+            fs.install_tree(self.src_root, unwritten, boundary=self.dir / "other")
+        self.assertFalse(unwritten.exists())
+
 
 class BackupTests(unittest.TestCase):
     def setUp(self) -> None:

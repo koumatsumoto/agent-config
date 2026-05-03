@@ -134,27 +134,41 @@ def install_tree(
 ) -> list[tuple[str, Path]]:
     """Recursively install a directory tree.
 
-    `boundary`, when given, restricts every dest path to live under it.
+    Uses `os.walk(followlinks=False)` so a symlink loop in the template tree
+    cannot cause infinite recursion (Python 3.13's `Path.rglob` follows
+    symlinks by default, which would otherwise hang during materialisation).
+    Any symlink encountered in src is rejected outright.
+
+    `boundary`, when given, restricts every dest path to live under it after
+    symlink resolution. The check is applied before any filesystem mutation.
     Returns a list of (status, dest_path) entries for files only.
     """
     if not src_root.is_dir():
         raise FileNotFoundError(f"source tree not found: {src_root}")
 
-    ensure_secure_dir(dest_root, dir_mode)
     if boundary is not None:
         assert_within(dest_root, boundary)
+    ensure_secure_dir(dest_root, dir_mode)
 
     results: list[tuple[str, Path]] = []
-    for src in sorted(src_root.rglob("*")):
-        rel = src.relative_to(src_root)
-        dest = dest_root / rel
-        if boundary is not None:
-            assert_within(dest, boundary)
-        if src.is_symlink():
-            raise PermissionError(f"refusing to follow symlink in template: {src}")
-        if src.is_dir():
+    for dirpath, dirnames, filenames in os.walk(src_root, followlinks=False):
+        dirnames.sort()
+        filenames.sort()
+        for name in dirnames:
+            src = Path(dirpath) / name
+            if src.is_symlink():
+                raise PermissionError(f"refusing to follow symlink in template: {src}")
+            dest = dest_root / src.relative_to(src_root)
+            if boundary is not None:
+                assert_within(dest, boundary)
             ensure_secure_dir(dest, dir_mode)
-        elif src.is_file():
+        for name in filenames:
+            src = Path(dirpath) / name
+            if src.is_symlink():
+                raise PermissionError(f"refusing to follow symlink in template: {src}")
+            dest = dest_root / src.relative_to(src_root)
+            if boundary is not None:
+                assert_within(dest, boundary)
             status = install_file(src, dest, mode=file_mode)
             results.append((status, dest))
     return results
