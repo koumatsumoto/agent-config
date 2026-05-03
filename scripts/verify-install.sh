@@ -88,6 +88,7 @@ check_mode "$HOME/.claude" "700"
 check_mode "$HOME/.claude/CLAUDE.md" "600"
 check_mode "$HOME/.claude/keybindings.json" "600"
 check_mode "$HOME/.claude/statusline.sh" "700"
+check_mode "$HOME/.claude/settings.json" "600"
 check_managed_tree "$REPO_ROOT/templates/rules" "$HOME/.claude/rules" "700" "600"
 check_managed_tree "$REPO_ROOT/templates/skills" "$HOME/.claude/skills" "700" "600"
 

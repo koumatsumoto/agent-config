@@ -17,6 +17,7 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 - `templates/config.toml` - Codex CLI 用設定テンプレート
 - `templates/keybindings.json` - Claude Code 用キーバインド
 - `templates/statusline.sh` - Claude Code 用 status line
+- `templates/settings.json` - Claude Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
 
 `docs/` は参考資料として残す。履歴メモや検討計画は git で追跡し、作業中の計画メモが必要な場合は repo 直下の `.plan/` に置く。
 
@@ -41,11 +42,34 @@ bash install.sh
 - `~/.claude/skills/`
 - `~/.claude/keybindings.json`
 - `~/.claude/statusline.sh`
+- `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
 - `~/.codex/AGENTS.md`
 - `~/.codex/config.toml`
 - `~/.agents/skills/`
 
-既存のテンプレート管理対象ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
+`settings.json` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
+
+### `settings.json` の取り扱い
+
+`templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/merge-settings-json.py`)。
+
+- 初回インストール時: テンプレート全体を `~/.claude/settings.json` として作成する
+- 2 回目以降: 既存ファイルに不足しているトップレベルキーだけテンプレートから補い、ユーザが既に設定している値は保持する
+- マージ後の内容が既存と一致する場合は何もしない (`ok: ...` 出力)。差分が出た場合のみ既存ファイルを `*.bak` へ退避する
+
+つまり `theme` のような個人設定はユーザ側で書き加えれば次回 install で消えない。逆に推奨ベースライン側の値を上書きしたい場合は、`~/.claude/settings.json` でそのキーを明示的に再定義すれば優先される。
+
+`templates/settings.json` が現時点で配布する推奨キー:
+
+| キー | 値 | 目的 |
+| --- | --- | --- |
+| `statusLine` | `~/.claude/statusline.sh` を実行する command 設定 | リポジトリ同梱の statusline を有効化する |
+| `attribution.commit` / `attribution.pr` | 空文字 | コミットおよび PR 説明から Claude の署名を抑止する |
+| `fileCheckpointingEnabled` | `true` | 編集前ファイルをスナップショットし `/rewind` で巻き戻せるようにする |
+| `tui` | `"fullscreen"` | ちらつきの無い alt-screen レンダラ + 仮想化スクロールバックを有効化する |
+| `showTurnDuration` | `true` | アシスタントターンごとの所要時間を表示する |
+| `showMessageTimestamps` | `true` | 各メッセージにタイムスタンプを付与する |
+| `feedbackSurveyRate` | `0` | セッション品質アンケートを抑止する |
 
 ## 検証
 
@@ -73,13 +97,19 @@ python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 
 `validate-run` は run sheet 記入後に使う。
 
+`scripts/` 配下ユーティリティの unittest:
+
+```bash
+python3 -m unittest discover -s tests/scripts -t .
+```
+
 ## クリーンアップ
 
 ```bash
 bash clean.sh
 ```
 
-このスクリプトは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。
+このスクリプトは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。
 
 ## Maintained Docs
 
@@ -104,6 +134,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/keybindings.json` | `~/.claude/keybindings.json` |
 | `templates/statusline.sh` | `~/.claude/statusline.sh` |
+| `templates/settings.json` | `~/.claude/settings.json` (shallow merge) |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/skills/` | `~/.agents/skills/` |
 

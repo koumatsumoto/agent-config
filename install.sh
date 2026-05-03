@@ -56,6 +56,15 @@ install_template_file() {
   install_item "$REPO_ROOT/templates/$name" "$dest_dir/$name"
 }
 
+merge_settings_template() {
+  local src="$REPO_ROOT/templates/settings.json"
+  local dest="$HOME/.claude/settings.json"
+
+  mkdir -p "$(dirname "$dest")"
+  python3 "$REPO_ROOT/scripts/merge-settings-json.py" "$src" "$dest"
+  chmod 600 "$dest"
+}
+
 sync_template_tree() {
   local src_root="$1"
   local dest_root="$2"
@@ -88,9 +97,11 @@ sync_template_tree "$REPO_ROOT/templates/rules" "$HOME/.claude/rules" "700" "600
 sync_template_tree "$REPO_ROOT/templates/skills" "$HOME/.claude/skills" "700" "600"
 install_template_file "keybindings.json" "$HOME/.claude"
 install_executable "$REPO_ROOT/templates/statusline.sh" "$HOME/.claude/statusline.sh"
+merge_settings_template
 chmod 700 "$HOME/.claude" 2>/dev/null || true
 chmod 600 "$HOME/.claude/CLAUDE.md" 2>/dev/null || true
 chmod 600 "$HOME/.claude/keybindings.json" 2>/dev/null || echo "WARN: failed to set permissions on keybindings.json" >&2
+chmod 600 "$HOME/.claude/settings.json" 2>/dev/null || echo "WARN: failed to set permissions on settings.json" >&2
 
 # Harden other deployment directories (umask 077 covers new dirs, chmod for existing)
 chmod 700 "$HOME/.codex/" 2>/dev/null || true

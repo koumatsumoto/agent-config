@@ -2,6 +2,7 @@
 .credentials.json
 settings.json
 settings.local.json
+!templates/settings.json
 
 # ===== 個人ログ・キャッシュ =====
 history.jsonl

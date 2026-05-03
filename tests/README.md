@@ -6,6 +6,8 @@
 
 - `tests/skills/`
   - `templates/skills/` の静的 contract と canonical decision boundary を守る
+- `tests/scripts/`
+  - `scripts/` 配下の Python ユーティリティに対する unittest
 - `tests/docs/`
   - どの test をなぜ残すか、どの knowledge を rubric や docs に逃がしたかを説明する
 
@@ -24,4 +26,10 @@ python3 -c "import yaml"
 bash scripts/verify-skill-tests.sh
 python3 scripts/run-skill-tests.py list
 python3 scripts/run-skill-tests.py dry-run --tag trigger
+```
+
+`scripts/` のテストはリポジトリ直下から `unittest` で実行する。
+
+```bash
+python3 -m unittest discover -s tests/scripts -t .
 ```
