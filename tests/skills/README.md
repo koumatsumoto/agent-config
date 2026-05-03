@@ -37,5 +37,5 @@ runner は manifest を読んで一覧表示と dry-run を行う。手動 spot 
 ```bash
 python3 scripts/run-skill-tests.py list
 python3 scripts/run-skill-tests.py dry-run --tag review
-python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4
+python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.5
 ```
