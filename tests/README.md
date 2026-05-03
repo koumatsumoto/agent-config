@@ -4,10 +4,12 @@
 
 ## 役割
 
+- `tests/agent_config/`
+  - `agent_config` インストーラ / クリーナ / 検証 / fs ヘルパ / settings.json マージの unittest (POSIX + Windows 両対応)
 - `tests/skills/`
   - `templates/skills/` の静的 contract と canonical decision boundary を守る
 - `tests/scripts/`
-  - `scripts/` 配下の Python ユーティリティに対する unittest
+  - レガシーの `scripts/merge-settings-json.py` ラッパー smoke test
 - `tests/docs/`
   - どの test をなぜ残すか、どの knowledge を rubric や docs に逃がしたかを説明する
 
@@ -28,8 +30,10 @@ python3 scripts/run-skill-tests.py list
 python3 scripts/run-skill-tests.py dry-run --tag trigger
 ```
 
-`scripts/` のテストはリポジトリ直下から `unittest` で実行する。
+`agent_config` パッケージとレガシーラッパー両方を一度に走らせる:
 
 ```bash
-python3 -m unittest discover -s tests/scripts -t .
+python3 -m unittest discover -v
 ```
+
+CI (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスでこれを実行する。

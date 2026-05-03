@@ -5,7 +5,8 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 ## 概要
 
 - 正本は `templates/` 配下
-- `install.sh` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映
+- `agent_config` Python パッケージで `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (POSIX / Windows 両対応)
+- POSIX 環境では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - リポジトリ内の `README.md` と `docs/` は説明用。runtime contract は `templates/` 側を正とする
 
 ## Source Of Truth
@@ -24,16 +25,31 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 ## ディレクトリ構造
 
 - `templates/` - 配布対象テンプレート
+- `agent_config/` - インストーラ / クリーナ / 検証の Python パッケージ
 - `docs/` - 保守対象の参考ドキュメント
-- `scripts/` - 検証・補助スクリプト
+- `scripts/` - 補助スクリプト・後方互換ラッパー
+- `tests/agent_config/` - `agent_config` の unittest
 - `tests/skills/` - skill 回帰テスト資産
+- `.github/workflows/` - GitHub Actions CI 設定
 - `.claude/` - このリポジトリ自身の Claude Code 設定
 
 ## セットアップ
 
+正規のエントリポイントは Python モジュール呼び出し。POSIX には bash ラッパーも同梱する。
+
 ```bash
+# POSIX (Ubuntu / macOS / WSL)
 bash install.sh
+# または cross-platform
+python3 -m agent_config.install
 ```
+
+```powershell
+# Windows
+python -m agent_config.install
+```
+
+要件: Python 3.12+ (stdlib のみで動作。外部依存なし)。
 
 このコマンドは以下を反映する。
 
@@ -51,7 +67,7 @@ bash install.sh
 
 ### `settings.json` の取り扱い
 
-`templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/merge-settings-json.py`)。
+`templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`agent_config.merge_settings`)。
 
 - 初回インストール時: テンプレート全体を `~/.claude/settings.json` として作成する
 - 2 回目以降: 既存ファイルに不足しているトップレベルキーだけテンプレートから補い、ユーザが既に設定している値は保持する
@@ -73,13 +89,15 @@ bash install.sh
 
 ## 検証
 
-インストール結果の確認:
+インストール結果の確認 (POSIX / Windows どちらでも):
 
 ```bash
 bash scripts/verify-install.sh
+# または
+python3 -m agent_config.verify_install
 ```
 
-skill 回帰資産の静的検証:
+skill 回帰資産の静的検証 (`pyyaml` が必要):
 
 ```bash
 python3 -c "import yaml"
@@ -89,7 +107,6 @@ bash scripts/verify-skill-tests.sh
 run sheet の生成・集計:
 
 ```bash
-python3 -c "import yaml"
 python3 scripts/run-skill-tests.py list
 RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4)
 python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
@@ -97,19 +114,23 @@ python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 
 `validate-run` は run sheet 記入後に使う。
 
-`scripts/` 配下ユーティリティの unittest:
+`agent_config` パッケージと `scripts/` 配下ユーティリティの unittest:
 
 ```bash
-python3 -m unittest discover -s tests/scripts -t .
+python3 -m unittest discover -v
 ```
+
+GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスで上記をすべて実行する。
 
 ## クリーンアップ
 
 ```bash
 bash clean.sh
+# または
+python3 -m agent_config.clean
 ```
 
-このスクリプトは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。
+このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。
 
 ## Maintained Docs
 
