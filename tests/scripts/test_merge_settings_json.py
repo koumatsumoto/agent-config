@@ -1,9 +1,7 @@
 """Tests for scripts/merge-settings-json.py.
 
-Run from repo root:
+Run from repo root (Windows ユーザは python3 を python に読み替える):
     python3 -m unittest tests.scripts.test_merge_settings_json
-or:
-    python3 tests/scripts/test_merge_settings_json.py
 """
 
 from __future__ import annotations

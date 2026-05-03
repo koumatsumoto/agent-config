@@ -23,6 +23,8 @@
 
 ## 実行
 
+skill 静的検証 (POSIX 専用 — `bash` と `pyyaml` が必要):
+
 ```bash
 python3 -c "import yaml"
 bash scripts/verify-skill-tests.sh
@@ -30,10 +32,16 @@ python3 scripts/run-skill-tests.py list
 python3 scripts/run-skill-tests.py dry-run --tag trigger
 ```
 
-`agent_config` パッケージとレガシーラッパー両方を一度に走らせる:
+`agent_config` パッケージとレガシーラッパー両方の unittest (POSIX / Windows どちらでも):
 
 ```bash
+# POSIX
 python3 -m unittest discover -v
 ```
 
-CI (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスでこれを実行する。
+```powershell
+# Windows (Windows には python3 コマンドが無いため python を使う)
+python -m unittest discover -v
+```
+
+CI (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスで unittest を実行する。

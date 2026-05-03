@@ -23,3 +23,12 @@ jobs:
 
       - name: Run unittest discovery
         run: python -m unittest discover -v
+
+      - name: Smoke test bash wrappers (POSIX shells + Git Bash for Windows)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_home=$(mktemp -d)
+          HOME="$tmp_home" bash install.sh > install.log
+          HOME="$tmp_home" bash scripts/verify-install.sh
+          HOME="$tmp_home" bash clean.sh > clean.log
