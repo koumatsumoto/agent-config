@@ -57,6 +57,8 @@ class MergeSettingsJsonTests(unittest.TestCase):
         )
 
     def test_output_has_0600_permissions(self) -> None:
+        if os.name != "posix":
+            self.skipTest("POSIX-only: NTFS does not honour POSIX mode bits")
         run_script(str(self.template), str(self.dest))
         mode = self.dest.stat().st_mode & 0o777
         self.assertEqual(mode, 0o600)
