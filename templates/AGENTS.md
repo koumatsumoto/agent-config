@@ -14,16 +14,18 @@
 
 ### Profile の使い分け
 
-- default: `workspace-write + never + cached web`。承認待ちなしで進めつつ、ファイル操作は workspace sandbox に保つ既定
-- `research`: `workspace-write + never + live web + high reasoning`。最新確認や外部仕様調査を承認待ちなしで進める
+- default: `gpt-5.5 medium + workspace-write + on-request + cached web + shell network`。通常の編集と gh / package manager はそのまま動かし、sandbox 外実行が必要な操作だけ確認する既定
+- `research`: `gpt-5.5 high + workspace-write + on-request + live web + shell network`。最新確認や外部仕様調査を進める
 - `review`: `read-only + never + cached web + high reasoning`。レビュー、監査、影響調査
 - `readonly`: 読み取り専用で安全にコードベースを探索したいとき
-- `interactive`: `workspace-write + on-request + cached web`。承認付きの対話運用に戻したいとき
-- `full_trust`: `danger-full-access + never`。完全に信頼したローカル環境で sandbox も外して自律実行したいとき
+- `interactive`: `workspace-write + on-request + cached web + shell network`。承認付きの対話運用に戻したいとき
+- `autonomous`: `workspace-write + never + cached web + shell network`。承認待ちを完全に避けたいが sandbox は残したいとき
+- `full_trust`: `danger-full-access + never`。sandbox も外した完全信頼運用を明示したいときだけ使う
 
 ### 調査ルール
 
 - 最新性が少しでも重要なら live web で一次情報を確認する
+- `gh`、package manager、外部 API 確認などの CLI network は default で許可されている前提で使う
 - 既知のリポジトリ内情報は web より先にローカルファイルを読む
 - 外部仕様を参照したら、判断と事実を分けて要約する
 

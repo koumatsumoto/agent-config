@@ -117,7 +117,7 @@ run sheet の生成・集計 (POSIX 専用):
 
 ```bash
 python3 scripts/run-skill-tests.py list
-RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.4)
+RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.5)
 python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 ```
 
@@ -202,13 +202,15 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 ## Codex 設計メモ
 
+- default model は `gpt-5.5`、reasoning effort は `medium`、verbosity も `medium` にして、通常実装の品質と速度のバランスを取っている
 - `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `research` profile を使い分ける前提にしている
 - `plan_mode_reasoning_effort = "high"` を明示し、Plan mode では通常ターンより深く考えさせる
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- default は `workspace-write + never` を前提にし、承認待ちを止めつつファイル操作は workspace sandbox に保つ
-- 承認付きの旧来運用に戻したい場合は `interactive` profile、sandbox も外した完全信頼運用にしたい場合は `full_trust` profile を使う
+- default は `workspace-write + on-request` を前提にし、通常のファイル操作は workspace sandbox に保ちながら、sandbox 外実行が必要な操作だけ確認する
+- `sandbox_workspace_write.network_access = true` を明示し、gh / package manager / curl など通常の開発 CLI を default のまま動かす
+- 承認待ちを完全に避けたい場合は `autonomous` profile、sandbox も外した完全信頼運用にしたい場合は `full_trust` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 
