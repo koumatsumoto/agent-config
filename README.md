@@ -37,19 +37,23 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 
 正規のエントリポイントは Python モジュール呼び出し。POSIX には bash ラッパーも同梱する。
 
+POSIX (Ubuntu / macOS / WSL):
+
 ```bash
-# POSIX (Ubuntu / macOS / WSL)
 bash install.sh
-# または cross-platform
+# または同等
 python3 -m agent_config.install
 ```
 
+Windows (PowerShell / cmd):
+
 ```powershell
-# Windows
 python -m agent_config.install
 ```
 
 要件: Python 3.12+ (stdlib のみで動作。外部依存なし)。
+
+> **コマンド表記**: 本 README では POSIX 向けに `python3` を使う。Windows には `python3` コマンドが存在しない (Microsoft Store / installer はどちらも `python` のみ提供) ため、Windows ユーザは以降の例の `python3` をすべて `python` に読み替えること。
 
 このコマンドは以下を反映する。
 
@@ -89,22 +93,27 @@ python -m agent_config.install
 
 ## 検証
 
-インストール結果の確認 (POSIX / Windows どちらでも):
+インストール結果の確認:
 
 ```bash
+# POSIX
 bash scripts/verify-install.sh
-# または
 python3 -m agent_config.verify_install
 ```
 
-skill 回帰資産の静的検証 (`pyyaml` が必要):
+```powershell
+# Windows
+python -m agent_config.verify_install
+```
+
+skill 回帰資産の静的検証 (POSIX 専用 — `bash` と `pyyaml` が必要):
 
 ```bash
 python3 -c "import yaml"
 bash scripts/verify-skill-tests.sh
 ```
 
-run sheet の生成・集計:
+run sheet の生成・集計 (POSIX 専用):
 
 ```bash
 python3 scripts/run-skill-tests.py list
@@ -114,20 +123,31 @@ python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 
 `validate-run` は run sheet 記入後に使う。
 
-`agent_config` パッケージと `scripts/` 配下ユーティリティの unittest:
+`agent_config` パッケージと `scripts/` 配下ユーティリティの unittest (POSIX / Windows どちらでも実行可能):
 
 ```bash
+# POSIX
 python3 -m unittest discover -v
 ```
 
-GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスで上記をすべて実行する。
+```powershell
+# Windows
+python -m unittest discover -v
+```
+
+GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスで unittest を実行する。
 
 ## クリーンアップ
 
 ```bash
+# POSIX
 bash clean.sh
-# または
 python3 -m agent_config.clean
+```
+
+```powershell
+# Windows
+python -m agent_config.clean
 ```
 
 このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。
