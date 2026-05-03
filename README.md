@@ -97,6 +97,12 @@ python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
 
 `validate-run` は run sheet 記入後に使う。
 
+`scripts/` 配下ユーティリティの unittest:
+
+```bash
+python3 -m unittest discover -s tests/scripts -t .
+```
+
 ## クリーンアップ
 
 ```bash
