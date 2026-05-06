@@ -59,36 +59,6 @@ def load_text(path: Path) -> str | None:
         return None
 
 
-def extract_skill_operation_bullets(path: Path) -> list[str] | None:
-    text = load_text(path)
-    if text is None:
-        return None
-    lines = text.splitlines()
-    start = None
-    header_level = None
-    for heading in ("## Skill 運用", "### Skill 運用"):
-        try:
-            start = lines.index(heading)
-            header_level = heading.count("#")
-            break
-        except ValueError:
-            continue
-    if start is None or header_level is None:
-        return None
-
-    bullets: list[str] = []
-    for line in lines[start + 1 :]:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        heading_match = re.match(r"^(#{1,6})\s+", stripped)
-        if heading_match and len(heading_match.group(1)) <= header_level:
-            break
-        if stripped.startswith("- "):
-            bullets.append(stripped)
-    return bullets
-
-
 def parse_frontmatter(text: str, path: Path) -> tuple[dict, list[str]] | tuple[None, None]:
     lines = text.splitlines()
     if len(lines) < 3 or lines[0].strip() != "---":
@@ -269,12 +239,22 @@ def main() -> int:
     agents_md = repo_root / "templates" / "AGENTS.md"
     claude_md = repo_root / "templates" / "CLAUDE.md"
     if agents_md.is_file() and claude_md.is_file():
-        agents_bullets = extract_skill_operation_bullets(agents_md)
-        claude_bullets = extract_skill_operation_bullets(claude_md)
-        check(agents_bullets is not None, "templates/AGENTS.md missing Skill 運用 section")
-        check(claude_bullets is not None, "templates/CLAUDE.md missing Skill 運用 section")
-        if agents_bullets is not None and claude_bullets is not None:
-            check(agents_bullets == claude_bullets, "templates/AGENTS.md and templates/CLAUDE.md Skill 運用 bullets must match")
+        agents_text = load_text(agents_md) or ""
+        claude_text = load_text(claude_md) or ""
+        check("Skill 運用" not in agents_text, "templates/AGENTS.md should not reintroduce Skill 運用 section")
+        check("Skill 運用" not in claude_text, "templates/CLAUDE.md should not reintroduce Skill 運用 section")
+        for heading in ("## 最小ワークフロー", "## 運用ルールの参照"):
+            agents_bullets = find_section_bullets(agents_text, heading)
+            claude_bullets = find_section_bullets(claude_text, heading)
+            check(bool(agents_bullets), f"templates/AGENTS.md missing bullets under {heading}")
+            check(bool(claude_bullets), f"templates/CLAUDE.md missing bullets under {heading}")
+            if agents_bullets and claude_bullets:
+                normalized_agents = [b.replace("`AGENTS.md`", "`<agent-guideline>`") for b in agents_bullets]
+                normalized_claude = [b.replace("`CLAUDE.md`", "`<agent-guideline>`") for b in claude_bullets]
+                check(
+                    normalized_agents == normalized_claude,
+                    f"templates/AGENTS.md and templates/CLAUDE.md bullets must match under {heading}",
+                )
 
     skills_root = repo_root / "templates" / "skills"
     manual_only_codex = {"code-review", "doc-review", "intent-review", "quality-review", "third-party-oss-security-review"}

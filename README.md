@@ -225,7 +225,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `km:doc-review` | ドキュメントの整合性と正確性を確認するレビュー |
 | `km:third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
-| `km:github-workflow` | issue 連携を含む GitHub delivery ワークフロー |
+| `km:github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
 | `km:plan` | 実装前の計画を作成し、`.plan/` への詳細出力、計画レビュー、GitHub issue 化までを行う |
 
 ## ライセンス

@@ -5,7 +5,7 @@
 | Case ID | Boundary |
 | --- | --- |
 | `trigger-review-default` | generic review request routes through `km:review` |
-| `trigger-github-workflow-natural-language` | explicit PR/delivery request routes to `km:github-workflow` |
+| `trigger-github-workflow-natural-language` | explicit PR/delivery request uses `km:github-workflow` |
 | `trigger-commit-natural-language` | explicit commit intent routes to `km:commit` |
 | `trigger-implementation-should-not-trigger-github-workflow` | generic implementation does not steal PR workflow |
 | `trigger-third-party-oss-security-review-npm` | explicit OSS intake routes to the specialized skill |
