@@ -76,6 +76,7 @@ rubric や docs に残す。
 
 - `## Success Criteria`
 - high-risk workflow skill における `## Safety Rules`
+- high-risk workflow skill における Phase 見出しと、運用事故につながる key phrase
 
 対象は次の 3 skill。
 
