@@ -1,6 +1,6 @@
 ---
 name: km:plan
-description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and mirrors the full body into a GitHub issue. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", "計画レビューしてから issue 化", "この計画ファイルをレビューして", or otherwise asks for a pre-implementation plan, a planning issue, or a review of a plan file / planning content. Not for "実装して", "コミットして", or "PR にして" — those belong to km:github-workflow / km:commit. For general "レビューして" on changes, use km:review; only plan-file / planning-content review stays with km:plan. For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
+description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and mirrors the final plan body into a GitHub issue. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", or "計画レビューしてから issue 化" — i.e. plan creation, materialization to `.plan/`, or planning-issue creation. Not for "実装して", "コミットして", "PR にして", or bare "issue にして" — those belong to km:github-workflow / km:commit. For "レビューして" on changes, use km:review (km:plan does not handle plan-file review on its own anymore). For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
 argument-hint: "[title-or-topic]"
 ---
 
@@ -22,23 +22,24 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 
 - Plan Mode 中は `.plan/`, `.gitignore`, GitHub issue を変更しない
 - 書き出し先は `.plan/YYYYMMDD-<slug>.md`。`.plan/` が git 追跡・ignore 済みかは書き出し前に確認する
-- 計画本文は背景・制約・判断理由・却下案・実装手順・検証条件・レビュー結果を含み、GitHub issue だけでも読める形にする
+- 計画本文は背景・制約・判断理由・却下案・実装手順・検証条件・受け入れ済みリスクを含み、GitHub issue だけでも読める形にする
 - agentic review を最大 2 pass 行い、未解決の `CRITICAL` / `HIGH` があれば issue 化しない
+- レビュー履歴（指摘・反映の経緯）は plan 本文・issue body・issue comments のいずれにも残さない。指摘は plan 本文へ直接反映するだけ
 - GitHub 管理 repo では新規 issue を作り、`.plan/` ファイルを `--body-file` に直接渡して全文ミラーする
 - 新規 issue 作成後は URL を `.plan/` に追記し、再度 `gh issue edit --body-file` で同期する
 - 非 GitHub repo / `gh` 未認証なら `.plan/` 出力までで止め、その理由を報告する
 
 ## Trigger Signals
 
-**計画作成・`.plan/`・計画 issue 化** が明示された発話のときだけ使う。
+**計画作成・`.plan/` への materialize・計画の GitHub issue 化** が明示された発話のときだけ使う。
 
-- 例: "計画を作って" / "実装計画を作成して" / ".plan に出して" / "計画を issue にして" / "計画レビューしてから issue 化" / "この計画ファイルをレビューして" / "/km:plan <topic>"
-- 非 trigger: "実装して" / "コミットして" / "PR にして" — これらは計画作成を明示していない
-- 「レビューして」は対象で分岐: 計画ファイル / 計画内容のレビューなら `km:plan`、変更差分のレビューなら `km:review`
+- 例: "計画を作って" / "実装計画を作成して" / ".plan に出して" / "計画を issue にして" / "合意済み計画を issue 化" / "計画レビューしてから issue 化" / "/km:plan <topic>"
+- 非 trigger: "実装して" / "コミットして" / "PR にして" / 単独の "issue にして" / "レビューして" — これらは計画作成を明示していない
+  - 単独の "issue にして" は `km:github-workflow`、変更差分の "レビューして" は `km:review` に寄せる
+  - 計画ファイル単体のレビューは km:plan の trigger にしない
 - 優先度:
   - 「計画を作って PR まで」のように計画と PR delivery が同時依頼された場合は、まず `km:plan` で計画と issue 化まで行い、PR delivery は後続の `km:github-workflow` に委ねる
   - 「issue 化してから PR」だけで計画作成が明示されない場合は `km:github-workflow` を優先する
-  - 「この計画ファイルをレビューして」は `km:plan` の計画レビュー、「この変更をレビューして」は `km:review`
 
 ## Entry Mode
 
@@ -92,7 +93,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
   - Task tool / subagent が使える環境（Claude Code の Agent tool、Codex CLI のサブエージェントなど）では、**別エージェントに `.plan/` ファイルを渡してレビュー**してもらう。メイン agent の視点バイアスを避ける意図
   - 使えない環境では、メイン agent が「第三者レビュー」と明示して同じ観点で critical に読み直す。自分の計画を評価するバイアスを自覚し、通常の Q&A より厳しめに判定する
 - レビュー結果は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` と対象箇所・問題・修正案で記録する
-- **反映した指摘は plan 本文の「計画レビュー結果」相当の節（`references/plan-template.md` の「計画レビューで何が指摘され、どう反映したか」観点）に追記する**。修正後の最終本文を plan file に残し、reviewing の痕跡を読者が追えるようにする
+- **指摘は plan 本文へ直接反映するだけにとどめる**。レビュー履歴（指摘内容・修正経緯）は plan 本文・issue body・issue comments のいずれにも残さない。最終計画と意図的に残す「受け入れ済みリスク」だけが plan 本文に残る
 - review loop は最大 2 pass。1 pass 目で `CRITICAL` / `HIGH` が出たら修正し、2 pass 目で再確認する。2 pass 目でも未解消なら issue 化を止め、ユーザーに判断を委ねる
 - 残す `MEDIUM` / `LOW` は plan 本文の「受け入れ済みリスク」相当の記述に重大度・残す理由・後続対応条件を記録してから issue 化する
 

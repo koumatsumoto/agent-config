@@ -1,12 +1,12 @@
 ---
 name: km:github-workflow
-description: Runs the GitHub PR delivery workflow with optional issue linkage. Use when the user says "PRにして", "issue化してからPRにして", or otherwise explicitly requests PR / issue / delivery completion.
+description: Orchestrates the GitHub PR delivery workflow, delegating planning to km:plan and review to km:review. Use when the user says "PRにして", "issue化してからPRにして", or otherwise explicitly requests PR / issue / delivery completion. Plan-as-issue body management is km:plan's responsibility — this skill does not write or update plan content. Code review during the workflow is km:review's responsibility.
 argument-hint: "[issue-number]"
 ---
 
 # GitHub Workflow
 
-GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完了する。
+GitHub 管理リポジトリで、issue 連携を含む delivery workflow を **orchestrate** する。実装計画を issue 本文として管理する責務は `km:plan`、未コミット変更のレビュー責務は `km:review`。本スキルでは両者の仕事を重複させず、ブランチ準備・コミット・PR 作成・スコープ外 issue 起票に専念する。
 
 ## Context
 
@@ -21,7 +21,8 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 - GitHub 管理リポジトリであることを確認してから進める
 - issue 要求がある場合だけ Phase 2 で issue を扱う
 - issue 連携がある場合だけ PR 本文に `Closes #<num>` または `Refs #<num>` を入れる
-- issue を計画として使うなら、PR 作成前までは計画更新をなるべく issue 本文に反映する
+- 計画を issue 本文として管理する作業は `km:plan` に委ねる。本スキルでは plan 本文を書かない・更新しない
+- レビューは `km:review` に委ねる。本スキルでレビュー観点や指摘判定を直接行わない
 - PR 作成後は PR を実装成果物の正とし、issue の詳細同期を続けない
 - 現 PR スコープ外の改善点を見つけたら、その場で GitHub issue を起票する（後述 Out-of-Scope Findings）
 - PR URL、変更要約、見てほしい論点を共有する
@@ -31,6 +32,8 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 `PR` / `issue` / `delivery` の完了要求が明確なときだけ使う。単なる実装依頼では使わない。
 
 - 例: `PRにして` / `issue化してからPRにして` / `/km:github-workflow 123`
+- 計画を issue 本文として作成・更新したい場合は `km:plan` を先に実行し、その issue 番号を `$ARGUMENTS` で渡してこのスキルを起動する
+- 単独の「レビューして」は `km:review` に寄せ、本スキルを起動しない
 
 ## Entry Point
 
@@ -70,23 +73,25 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を完
 
 ## Phase 2: Issue 連携
 
-Issue 本文や PR 本文を書く前に `references/body-writing-principles.md` と `references/gh-body-file-rules.md` を読む。
+Issue 本文や PR 本文を書く前に `references/body-writing-principles.md` と `references/gh-body-file-rules.md` を読む。本フェーズでは **計画 issue の作成・本文更新は扱わない**。計画 issue が必要な場合はユーザーへ `km:plan` の利用を案内し、issue 番号が確定してから本スキルを `existing-issue` mode で再開する。
 
 ### `issue-first` mode
 
-1. 主キーワード 1-3 語で `gh issue list --state open --search ...` を実行する。結果が 10 件超または弱一致ばかりなら 1 回だけ絞り直す
-2. 1 件一意なら再利用、0 件なら新規作成、2 件以上または曖昧なら作成せずユーザーに確認する
-3. issue を計画として使うなら、再利用でも新規でも、計画更新は issue 本文に反映する。PR 作成前のみ補足や決定履歴を issue comment に残す
-4. issue / PR 本文は `--body-file - <<'EOF'` で流し込む
-5. 実装がまだ終わっていなければ、issue を用意した時点で一度止める。再開時は `/km:github-workflow <issue-number>` を使う
+ad-hoc な（計画 issue ではない）issue を 1 件起こして PR 連携したい場合のみ使う。
+
+1. ユーザー要求が計画 issue の作成を含む場合は、ここで停止して `km:plan` の利用を案内する
+2. 主キーワード 1-3 語で `gh issue list --state open --search ...` を実行する。結果が 10 件超または弱一致ばかりなら 1 回だけ絞り直す
+3. 1 件一意なら再利用、0 件なら新規作成、2 件以上または曖昧なら作成せずユーザーに確認する
+4. issue 本文には現状の問題・影響・想定対応を最低限書く。計画レベルの詳細・レビュー履歴を書かない
+5. issue / PR 本文は `--body-file - <<'EOF'` で流し込む
+6. 実装がまだ終わっていなければ、issue を用意した時点で一度止める。再開時は `/km:github-workflow <issue-number>` を使う
 
 ### `existing-issue` mode
 
 1. 指定された issue 番号が open で存在することを確認する
-2. 既定では issue 本文を編集しない
-3. ユーザーが計画更新を明示要求した場合のみ、必要最小限の本文更新を行う
-4. PR 作成前で、レビュー結果や修正完了報告を残したい場合だけ issue comment に追記する
-5. PR 本文にはその issue 番号だけを連携対象として使う
+2. issue 本文は **本スキルでは編集しない**。本文の更新が必要な場合は `km:plan` に委ねる
+3. PR 作成前で実装上の補足を残したい場合だけ issue comment に短く追記する。レビュー結果は `km:review` のレポートで扱うため issue comment へ書き写さない
+4. PR 本文にはその issue 番号だけを連携対象として使う
 
 ### `standard-pr` mode
 
@@ -94,6 +99,8 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 2. 既存の issue を勝手に探索・作成しない
 
 ## Phase 3: レビューと修正
+
+レビュー観点・指摘判定・重大度の運用は `km:review` の責務。本フェーズでは `km:review` の結果を受けて修正のオーケストレーションだけを担う。
 
 1. 実装後に `/km:review` を実行する
 2. `CRITICAL` は勝手に修正せず、まず共有する
@@ -131,7 +138,8 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 - PR 説明は日本語で書く
 - issue 本文・PR 本文の章立ては固定テンプレートに縛らず、タスクの難しさに応じて必要な情報を過不足なく含める
 - issue が 1 件に定まらない状態で `Closes` を勝手に決めない
-- issue を計画として使うなら、PR 作成前までは計画更新をなるべく issue 本文へ反映する
+- 計画 issue の本文管理は `km:plan` に委ね、本スキルでは PR 本文と ad-hoc issue 本文だけ書く
+- レビュー指摘の検出・重大度判定は `km:review` に委ね、本スキルでは結果を受けて修正のオーケストレーションだけ行う
 - PR を作成したら、以後の実装状態や詳細な差分は PR を正とする
 - 明示 base branch 指定は新規ブランチ作成時だけに効かせ、既存作業ブランチの履歴を書き換える理由には使わない
 
