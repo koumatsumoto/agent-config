@@ -29,10 +29,11 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を **
 
 ## Trigger Signals
 
-`PR` / `issue` / `delivery` の完了要求が明確なときだけ使う。単なる実装依頼では使わない。
+`PR` / `delivery` の完了要求が明確なときだけ使う。単なる実装依頼や、計画 issue / 単独の issue 作成では使わない。
 
-- 例: `PRにして` / `issue化してからPRにして` / `/km:github-workflow 123`
-- 計画を issue 本文として作成・更新したい場合は `km:plan` を先に実行し、その issue 番号を `$ARGUMENTS` で渡してこのスキルを起動する
+- 適用例: `PRにして` / `最後はPRにする` / `/km:github-workflow 123` / `このバグの issue を起こして PR まで`（PR delivery と一体の ad-hoc issue）
+- 不適用例: 単独の `issue にして` / `計画を issue にして` / `Issueで計画して` — これらは `km:plan` の trigger（→ `km:plan` を先に実行し、その issue 番号で本スキルを起動する）
+- 計画 + PR delivery が同時に依頼された場合（例: `計画を issue にして PR にして` / `計画を作って PR まで`）も、まず `km:plan` を実行して issue 番号を確定させ、その番号で本スキルを起動する
 - 単独の「レビューして」は `km:review` に寄せ、本スキルを起動しない
 
 ## Entry Point
@@ -43,9 +44,10 @@ GitHub 管理リポジトリで、issue 連携を含む delivery workflow を **
 次に mode を決める:
 
 1. `$ARGUMENTS` に issue 番号があれば `existing-issue` mode
-2. ユーザー要求に issue 化シグナルがあれば `issue-first` mode
+2. ユーザー要求が **PR delivery と一体の ad-hoc issue 作成**（例: 「このバグの issue を起こして PR まで」「影響範囲を issue 化してから PR にして」）なら `issue-first` mode
 3. それ以外で PR / delivery シグナルが明確なら `standard-pr` mode
-4. どれにも当てはまらなければ停止する
+4. 単独の `issue にして` / `計画を issue にして` / `Issueで計画して` などは本スキルの trigger ではない。`km:plan` の利用を案内して停止する
+5. どれにも当てはまらなければ停止する
 
 `issue-first` と `existing-issue` mode では、ブランチ状態にかかわらず Phase 2 を先に完了してから後続 phase に進む。
 
@@ -77,9 +79,12 @@ Issue 本文や PR 本文を書く前に `references/body-writing-principles.md`
 
 ### `issue-first` mode
 
-ad-hoc な（計画 issue ではない）issue を 1 件起こして PR 連携したい場合のみ使う。
+ad-hoc な（計画 issue ではない）issue を **PR delivery と一体で** 起こす場合のみ使う。
 
-1. ユーザー要求が計画 issue の作成を含む場合は、ここで停止して `km:plan` の利用を案内する
+- 適用する依頼: 「このバグの issue を起こして PR まで」 / 「影響範囲を issue 化してから PR にして」 など、PR delivery と ad-hoc issue 作成が同じ発話で求められているケース
+- 適用しない依頼: 単独の「issue にして」 / 「計画を issue にして」 / 「Issueで計画して」 / 「issue に実装計画を作って」 — いずれも計画 issue や単独の issue 作成として `km:plan` に委譲し、本スキルはこの場で停止する
+
+1. ユーザー要求が計画 issue の作成、または PR delivery を伴わない単独の issue 作成の場合は、ここで停止して `km:plan` の利用を案内する
 2. 主キーワード 1-3 語で `gh issue list --state open --search ...` を実行する。結果が 10 件超または弱一致ばかりなら 1 回だけ絞り直す
 3. 1 件一意なら再利用、0 件なら新規作成、2 件以上または曖昧なら作成せずユーザーに確認する
 4. issue 本文には現状の問題・影響・想定対応を最低限書く。計画レベルの詳細・レビュー履歴を書かない
