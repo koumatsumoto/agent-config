@@ -4,42 +4,23 @@
 
 ## 主要原則
 
-1. **Clarify First**: 不明点を解消し、検証可能な完了条件を言語化してから着手する
-2. **Working Code First**: 最小限の動くコードを素早く提示する。投機的な機能・抽象化・防御的処理を足さない
-3. **Surgical Changes**: 依頼範囲だけを触る。既存コードの様式に合わせ、リファクタも範囲内に留める
-4. **Review Thoroughly**: 完了条件と最初の仕様に立ち返り、見落としを潰す
+1. **Clarify First**: ユーザの指示は曖昧である前提に立つ。思い込みで着手せず、理解・要求・制約・検証可能な完了条件を言語化する。特に「これで何を達成したいのか」というビジネス価値が不明確な場合は、具体的な作業内容より先に質問する
+2. **Build Working Code First**: ビジネス価値を最短で検証できる最小限の設計と動く成果を優先する。過剰な機能・抽象化・防御的処理・早すぎる最適化を足さない。重大な設計手戻りが見込まれないなら、動かして検証を回す
+3. **Change Surgically**: 明示的な指示がない限り、依頼範囲だけを最低限の影響で触る。既存コードの様式・責務境界・周辺設計に合わせ、全体整合を優先する
+4. **Review Thoroughly**: 最初に確認したビジネス価値・要求・完了条件に立ち返り、ゴールを達成しているかを最重視してレビューする。実装量ではなく成果を検証し、見落とし・不要な変更・スコープ外混入・検証不足を潰す
 
 ## ワークフロー
 
-### 1. 仕様の詳細化
+1. Plan: 入念な計画が必要なものは `km:plan` で計画を作り込み、GitHub issue にする。軽微なものは issue にせず、目的・方針・完了条件・検証方法を固めて進める
+2. Develop: Git repo で PR delivery を前提にする作業では基本的に作業ブランチを切り、既存コードの様式・責務境界・周辺設計に合わせて最小限の動く変更を実装する
+3. Record: 作業中に気付いた改善点は現作業に混ぜず記録する。作業方法の改善点は `.plan/` 配下の作業メモへ随時追記する。タスクと無関係な改善項目（作業方法の改善を含む）は完了報告でユーザへ共有し、指示があれば follow-up issue にする
+4. Review: 実装後は主要原則と完了条件に基づいてレビューする。複雑な変更は `km:review` を使って深く確認し、見落とし・不要な変更・検証不足を潰す
+5. Report: レビューと検証が済んだらコミットし、PR にしてユーザへ報告する。PR URL、変更要約、検証結果、記録した改善点を共有する
 
-- ユーザの指示は曖昧である前提に立ち、不明点は積極的に質問して仕様を詳細化する
-- 複雑な作業では Plan Mode で計画を作成してから着手する
+## 運用ルールの参照
 
-### 2. 実装
-
-- 独立したタスクは並列実行し、効率的に作業を進める
-
-### 3. リファクタリング
-
-- 動いた後に、依頼範囲内で読みやすさを整える
-
-### 4. レビュー
-
-- `/km:review` でレビュー強度を選べる統合レビューを実行する（無指定は standard）
-- 個別に実行したい場合だけ `/km:intent-review`, `/km:code-review`, `/km:quality-review`, `/km:doc-review` を直接呼び出す
-
-### 5. 完了
-
-- レビューと検証が完了したら `/km:commit` でコミットする
-
-## Skill 運用
-
-- レビュー系は `/km:review` を入口にし、個別 skill はターゲットが明確なときだけ使う
-- 下位 review skill は明示起動のみ（manual-only）に寄せ、`/km:review` を既定入口として残す
-- `/km:commit` と `/km:github-workflow` はユーザーの自然言語要求から起動しうる workflow skill として扱う
-- `/km:github-workflow` は GitHub 管理リポジトリで PR / delivery 完了が明確な発話にだけ使う。計画 issue 作成や `.plan/` materialize を含む依頼では `/km:plan` を先に実行し、生成された issue 番号で `/km:github-workflow` を起動する
-- `/km:plan` は計画 issue 化 / `.plan/` への materialize が明示された発話で起動し、materialize → review → GitHub repo なら issue 化までを 1 セットで進める。"計画を作って" / "まず計画だけ" 単独は draft-only として `<proposed_plan>` 提示で停止し、ファイル書き込みや issue 化は行わない。実装・PR 化は `/km:github-workflow` に委ねる
-- 単独の "issue にして" / "計画を issue にして" / "Issueで計画して" は `/km:plan`、変更差分の "レビューして" は `/km:review` に寄せる。"PR にして" / "最後は PR" など PR delivery が明確な発話だけが `/km:github-workflow`
-- `.plan/` はローカル一時作業場。共有される成果物（issue 本文・PR 本文・commit message・issue/PR comments）から `.plan/` 配下の **具体的なファイル**（`.plan/YYYYMMDD-*.md` など）を source of truth として参照させない。`.plan/` という機能や概念に言及する必要があれば書いてよい。共有用の正本は GitHub issue / PR の URL に集約する
-- skill を更新する場合は SKILL 本体を概要に保ち、詳細な例や参照情報は別ファイルに分離する
+- GitHub delivery の詳細手順は `km:github-workflow` を参照する。`CLAUDE.md` には全体の流れだけを書き、ブランチ・commit・PR・issue 連携・follow-up issue・完了報告の詳細は skill 側に寄せる
+- 計画 issue 化や `.plan/` への materialize が必要な場合は `km:plan` を参照する
+- レビューは `km:review` を入口にする。個別 review skill はターゲットが明確な場合だけ使う
+- コミット作成は `km:commit` を参照する
+- `.plan/` はローカル一時作業場。共有成果物では GitHub issue / PR / comment を正本にし、`.plan/` 配下の具体的なファイルを source of truth として参照しない

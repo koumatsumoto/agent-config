@@ -27,7 +27,7 @@
   - `description` と `when_to_use` の合算長
   - 本文行数上限
 - supporting file の実在
-- `AGENTS.md` / `CLAUDE.md` の `Skill 運用` bullets 一致
+- `AGENTS.md` / `CLAUDE.md` の主要原則、ワークフロー、運用ルール参照の一致
 - high-risk skill の stable contract
   - 既存 `Success Criteria`
   - 必要な `Safety Rules`
@@ -76,6 +76,7 @@ rubric や docs に残す。
 
 - `## Success Criteria`
 - high-risk workflow skill における `## Safety Rules`
+- high-risk workflow skill における Phase 見出しと、運用事故につながる key phrase
 
 対象は次の 3 skill。
 
