@@ -95,6 +95,10 @@ def find_section_bullets(text: str, heading: str) -> list[str]:
     return bullets
 
 
+def has_heading(text: str, heading: str) -> bool:
+    return any(re.fullmatch(r"#{2,3}\s+" + re.escape(heading), line) for line in text.splitlines())
+
+
 def extract_backtick_paths(text: str) -> list[str]:
     results: list[str] = []
     for token in re.findall(r"`([^`\n]+)`", text):
@@ -245,8 +249,8 @@ def main() -> int:
     if agents_md.is_file() and claude_md.is_file():
         agents_text = load_text(agents_md) or ""
         claude_text = load_text(claude_md) or ""
-        check("Skill 運用" not in agents_text, "templates/AGENTS.md should not reintroduce Skill 運用 section")
-        check("Skill 運用" not in claude_text, "templates/CLAUDE.md should not reintroduce Skill 運用 section")
+        check(not has_heading(agents_text, "Skill 運用"), "templates/AGENTS.md should not reintroduce Skill 運用 section")
+        check(not has_heading(claude_text, "Skill 運用"), "templates/CLAUDE.md should not reintroduce Skill 運用 section")
         for heading in ("## 主要原則", "## ワークフロー", "## 運用ルールの参照"):
             agents_bullets = find_section_bullets(agents_text, heading)
             claude_bullets = find_section_bullets(claude_text, heading)
@@ -285,6 +289,15 @@ def main() -> int:
             ],
             "phrases": [
                 "issue / PR 本文は `--body-file - <<'EOF'` で流し込む",
+                "ユーザー指示がある場合だけ follow-up issue 化または既存 issue 参照を行う",
+                "作業方法の改善点を見つけたら `.plan/` 配下の作業メモへ追記",
+            ],
+            "phase_headings": [
+                "## Phase 1: Plan",
+                "## Phase 2: Develop",
+                "## Phase 3: Record",
+                "## Phase 4: Review",
+                "## Phase 5: Report",
             ],
         },
         "plan": {
@@ -355,6 +368,13 @@ def main() -> int:
                     check(bullet in safety_bullets, f"{skill_path}: missing stable Safety Rules bullet: {bullet}")
             for phrase in stable_contracts[skill_name]["phrases"]:
                 check(phrase in text, f"{skill_path}: missing stable contract phrase: {phrase}")
+            expected_phase_headings = stable_contracts[skill_name].get("phase_headings")
+            if expected_phase_headings is not None:
+                actual_phase_headings = [line for line in text.splitlines() if line.startswith("## Phase ")]
+                check(
+                    actual_phase_headings == expected_phase_headings,
+                    f"{skill_path}: GitHub workflow phases must stay Plan/Develop/Record/Review/Report",
+                )
 
         oa_path = skill_dir / "agents" / "openai.yaml"
         if skill_name in manual_only_codex:

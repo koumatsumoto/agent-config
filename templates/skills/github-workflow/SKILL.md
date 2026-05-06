@@ -54,12 +54,12 @@ GitHub 管理リポジトリで作業し、最終的に branch / commit / PR / i
 | 状態 | 開始位置 |
 | --- | --- |
 | 既定 base branch 上 | Phase 1 |
-| 作業ブランチ + 未コミット変更あり | Phase 2 |
-| 作業ブランチ + 未 push コミットあり | Phase 5 |
-| push 済みで PR 未作成 | Phase 5 |
-| push 済みで既存 PR あり | Phase 5 |
+| 作業ブランチ + 未コミット変更あり | Phase 3 |
+| 作業ブランチ + 未 push コミットあり | Phase 4 |
+| push 済みで PR 未作成 | Phase 4 |
+| push 済みで既存 PR あり | Phase 4 |
 
-無関係な未コミット変更や別件ブランチの疑いがあれば、先にユーザーへ確認する。
+無関係な未コミット変更や別件ブランチの疑いがあれば、先にユーザーへ確認する。push 済みで既存 PR がある場合も、レビュー済み・検証済みを確認できる場合だけ Phase 5 から再開する。
 
 ## Phase 1: Plan
 
@@ -133,15 +133,16 @@ PR delivery と一体の ad-hoc issue 作成だけを扱う。
 
 ## Phase 5: Report
 
-1. `/km:commit` でコミットする
-2. ブランチを push する
-3. PR 本文を書く前に `references/pr-conventions.md` と `references/gh-body-file-rules.md` を読む
-4. issue が 1 件に決まっている場合:
+1. Phase 4 のレビューと検証が完了していることを確認してから進む
+2. `/km:commit` でコミットする
+3. ブランチを push する
+4. PR 本文を書く前に `references/pr-conventions.md` と `references/gh-body-file-rules.md` を読む
+5. issue が 1 件に決まっている場合:
    - 単一 PR なら独立行で `Closes #<num>` を入れる
    - 複数 PR に分割する場合は、中間 PR では `Refs #<num>`、最終 PR だけ `Closes #<num>` を入れる
-5. 既存 PR があれば更新し、なければ新規作成する
-6. PR 作成・更新時は `--body "..."` を使わず、`--body-file - <<'EOF'` を使う
-7. PR URL、変更要約、検証結果、見てほしい論点、記録した改善点を共有する
+6. 既存 PR があれば更新し、なければ新規作成する
+7. PR 作成・更新時は `--body "..."` を使わず、`--body-file - <<'EOF'` を使う
+8. PR URL、変更要約、検証結果、見てほしい論点、記録した改善点を共有する
 
 ## Out-of-Scope Findings
 
