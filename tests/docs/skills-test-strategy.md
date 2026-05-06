@@ -27,7 +27,7 @@
   - `description` と `when_to_use` の合算長
   - 本文行数上限
 - supporting file の実在
-- `AGENTS.md` / `CLAUDE.md` の最小ワークフローと運用ルール参照の一致
+- `AGENTS.md` / `CLAUDE.md` の主要原則、ワークフロー、運用ルール参照の一致
 - high-risk skill の stable contract
   - 既存 `Success Criteria`
   - 必要な `Safety Rules`

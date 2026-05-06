@@ -88,6 +88,10 @@ def find_section_bullets(text: str, heading: str) -> list[str]:
             break
         if line.startswith("- "):
             bullets.append(line[2:].strip())
+            continue
+        ordered_match = re.match(r"^\d+\.\s+(.+)$", line)
+        if ordered_match:
+            bullets.append(ordered_match.group(1).strip())
     return bullets
 
 
@@ -243,7 +247,7 @@ def main() -> int:
         claude_text = load_text(claude_md) or ""
         check("Skill 運用" not in agents_text, "templates/AGENTS.md should not reintroduce Skill 運用 section")
         check("Skill 運用" not in claude_text, "templates/CLAUDE.md should not reintroduce Skill 運用 section")
-        for heading in ("## 最小ワークフロー", "## 運用ルールの参照"):
+        for heading in ("## 主要原則", "## ワークフロー", "## 運用ルールの参照"):
             agents_bullets = find_section_bullets(agents_text, heading)
             claude_bullets = find_section_bullets(claude_text, heading)
             check(bool(agents_bullets), f"templates/AGENTS.md missing bullets under {heading}")
