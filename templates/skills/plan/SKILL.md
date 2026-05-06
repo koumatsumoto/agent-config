@@ -47,7 +47,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 
 - `draft-only`: Plan Mode 中、または「まず計画だけ」と依頼された場合。調査、質問、計画下案作成、`<proposed_plan>` 提示まで行い、書き込み前に停止する。停止時は「通常実行モードで `.plan` と issue に出すには、この計画を `.plan` と issue に出して、と依頼する」と報告する
 - `materialize-existing-plan`: Plan Mode ではない状態で、直近の合意済み計画を会話から復元できる場合。計画内容を再設計せず、詳細本文化 → `.plan/` 出力 → 計画レビュー → issue 化に進む
-- `full-normal-mode`: Plan Mode ではない状態で、最初から「計画を作って `.plan` と issue に出して」と依頼された場合。必要な質問と調査を行い、書き込み前に高影響の未決事項を解消してから materialize まで進む
+- `full-normal-mode`: Plan Mode ではない状態で、計画作成 / `.plan/` 出力 / 計画 issue 化のいずれかの trigger が明示された場合（"計画を作って" / ".plan に出して" / "計画を issue にして" など。"まず計画だけ" のような draft-only 指示が無い）。必要な質問と調査を行い、書き込み前に高影響の未決事項を解消してから materialize → review → GitHub repo なら issue 化まで進む
 
 直近の合意済み計画を会話から復元できない場合は推測で書き出さず、計画内容を再確認する。
 
@@ -135,10 +135,21 @@ plan 本文は GitHub issue に全文ミラーされるため、秘密情報の�
 - marker がない既存 issue は `km:plan` 管理外の可能性があるため、自動で全文置換しない。更新前にユーザーへ確認する
 - **title 更新ポリシー**: 更新対象は原則 body のみ。計画タイトルが大きく変わり既存 issue title と齟齬が出る場合だけ、ユーザーに変更可否を確認してから `gh issue edit <number> --title <new-title>` を追加実行する。タイトル変更を自動判定しない
 
+## Incorporating External Review Feedback
+
+ユーザーが外部レビュー結果を持ち込んだ場合（複数レビュアー分・指摘多数を含むことがある）、以下を必ず実施する。指摘が多い時に「まとめて確認」して漏らす事故を避ける目的。
+
+1. **レビュアー別・指摘別にタスク化**: TaskCreate で各指摘を 1 件 1 タスクへ分解する。複数レビュアー分は出典別に併記し、内容が似ていても統合せずに別タスクで扱う
+2. **対応要否を個別判断**: タスクごとに「本当に対応する価値があるか」を丁寧に分析する。`CRITICAL` / `HIGH` は原則反映、`MEDIUM` / `LOW` は反映するか「受け入れ済みリスク」へ移すかを個別判定する
+3. **個別反映**: 対応すると決めた指摘だけを plan 本文へ直接反映する。複数件をまとめて 1 編集にせず、論点ごとに修正する
+4. **plan 本文はクリーンに保つ**: 最終版の計画だけを本文に残す。レビュー結果・採否判断・反映経緯を **本文には書かない**
+5. **更新背景は issue コメントへ**: 計画の更新やレビュー反映の背景・採否判断を共有用に残したい場合は `gh issue comment <number> --body-file -` で issue コメントに置く（任意）。本文には移さない
+6. **plan 本文の re-sync**: 反映が終わったら `.plan/` ファイルを更新し、`gh issue edit <number> --body-file <plan-file>` で issue body を再同期する
+
 ## Decision Rules
 
 - 計画本文の章立ては固定せず、タスクの難しさに応じて必要な情報を過不足なく含める
-- `.plan/` はローカル一時作業場であり、issue 本文・PR 本文・commit message・issue/PR comments など共有される成果物から `.plan/` への参照リンクやパス表記を書かない（GitHub 読者は `.plan/` を読めない）。共有用の正本は GitHub issue / PR の URL に集約する
+- `.plan/` はローカル一時作業場。共有される成果物（issue 本文・PR 本文・commit message・issue/PR comments）から `.plan/` 配下の **具体的なファイル**（`.plan/YYYYMMDD-*.md` など）を source of truth として参照させない（GitHub 読者は `.plan/` を読めない）。`.plan/` という機能や概念への言及は許容する。共有用の正本は GitHub issue / PR の URL に集約する
 - issue body は `.plan/` の **全文ミラー**。要約や抜粋ではなく、同じ markdown を渡す
 - issue body 同期は `.plan/` ファイルをそのまま `--body-file` に渡す。別ファイルや heredoc の本文を組み立て直さない
 - `--body "..."` を使わない
