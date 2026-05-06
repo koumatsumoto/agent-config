@@ -1,6 +1,6 @@
 ---
 name: km:plan
-description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and mirrors the final plan body into a GitHub issue. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", or "計画レビューしてから issue 化" — i.e. plan creation, materialization to `.plan/`, or planning-issue creation. Not for "実装して", "コミットして", "PR にして", or bare "issue にして" — those belong to km:github-workflow / km:commit. For "レビューして" on changes, use km:review (km:plan does not handle plan-file review on its own anymore). For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
+description: Creates a reviewed implementation plan in `.plan/YYYYMMDD-<slug>.md` and, on a GitHub-managed repo, mirrors the final plan body into a GitHub issue as a single workflow. Use when the user says "計画を作って", ".plan に出して", "計画を issue にして", or "計画レビューしてから issue 化" — i.e. plan creation, materialization to `.plan/`, or planning-issue creation. On GitHub repos these triggers all run the same `.plan/`-then-issue flow; on non-GitHub repos or when `gh` is unavailable, the workflow stops at `.plan/` output and reports the reason. Not for "実装して", "コミットして", "PR にして", or bare "issue にして" — those belong to km:github-workflow / km:commit. For "レビューして" on changes, use km:review; plan-file review on its own is not a km:plan trigger anymore. For "計画を作って PR まで", km:plan runs first and hands the PR step off to km:github-workflow.
 argument-hint: "[title-or-topic]"
 ---
 
@@ -31,12 +31,12 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 
 ## Trigger Signals
 
-**計画作成・`.plan/` への materialize・計画の GitHub issue 化** が明示された発話のときだけ使う。
+**計画作成・`.plan/` への materialize・計画の GitHub issue 化** が明示された発話のときだけ使う。GitHub 管理 repo では `.plan/` 出力 → 計画レビュー → issue 化を **1 セットの workflow** として進める（trigger ごとに途中で止めない）。非 GitHub repo / `gh` 未認証では `.plan/` 出力で停止する。
 
 - 例: "計画を作って" / "実装計画を作成して" / ".plan に出して" / "計画を issue にして" / "合意済み計画を issue 化" / "計画レビューしてから issue 化" / "/km:plan <topic>"
 - 非 trigger: "実装して" / "コミットして" / "PR にして" / 単独の "issue にして" / "レビューして" — これらは計画作成を明示していない
   - 単独の "issue にして" は `km:github-workflow`、変更差分の "レビューして" は `km:review` に寄せる
-  - 計画ファイル単体のレビューは km:plan の trigger にしない
+  - 計画ファイル単体のレビューは km:plan の trigger にしない（必要なら手動で plan-review-checklist.md を参照する）
 - 優先度:
   - 「計画を作って PR まで」のように計画と PR delivery が同時依頼された場合は、まず `km:plan` で計画と issue 化まで行い、PR delivery は後続の `km:github-workflow` に委ねる
   - 「issue 化してから PR」だけで計画作成が明示されない場合は `km:github-workflow` を優先する
@@ -69,7 +69,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 
 ## `.plan/` 出力ルール
 
-- ファイル名は `.plan/YYYYMMDD-<slug>.md`。日付 prefix は区切りなしの `YYYYMMDD`（例: `.plan/20260423-km-plan-skill.md`）
+- ファイル名は `.plan/YYYYMMDD-<slug>.md`。日付 prefix は区切りなしの `YYYYMMDD`（例: `20260423-km-plan-skill.md` を `.plan/` 配下に置く）
 - slug は英小文字 ASCII の kebab-case（`[a-z0-9-]+`）、長さは 50 文字以下を目安にする。日本語依頼でも repo 名や issue title から短い英語 slug を作る
 - 適切な英語 slug が作れない場合は `plan`。同日付内で既存の `.plan/YYYYMMDD-*.md` と衝突する場合は `-2`, `-3` の suffix を付ける（衝突判定は同日付内のみ）
 - plan 本文の先頭近くに `<!-- km:plan:managed -->` marker を入れる（`km:plan` 管理 issue の識別に使う）
@@ -92,8 +92,8 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 - レビュー実行者の選び方:
   - Task tool / subagent が使える環境（Claude Code の Agent tool、Codex CLI のサブエージェントなど）では、**別エージェントに `.plan/` ファイルを渡してレビュー**してもらう。メイン agent の視点バイアスを避ける意図
   - 使えない環境では、メイン agent が「第三者レビュー」と明示して同じ観点で critical に読み直す。自分の計画を評価するバイアスを自覚し、通常の Q&A より厳しめに判定する
-- レビュー結果は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` と対象箇所・問題・修正案で記録する
-- **指摘は plan 本文へ直接反映するだけにとどめる**。レビュー履歴（指摘内容・修正経緯）は plan 本文・issue body・issue comments のいずれにも残さない。最終計画と意図的に残す「受け入れ済みリスク」だけが plan 本文に残る
+- レビュー指摘は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` と対象箇所・問題・修正案を **その場の作業メモ** として整理する。永続化しない（ファイル・本文・comments に書き出さない）
+- **指摘は plan 本文へ直接反映するだけにとどめる**。レビュー履歴（作業メモの中身、指摘内容、修正経緯）は plan 本文・issue body・issue comments のいずれにも残さない。最終計画と意図的に残す「受け入れ済みリスク」だけが plan 本文に残る
 - review loop は最大 2 pass。1 pass 目で `CRITICAL` / `HIGH` が出たら修正し、2 pass 目で再確認する。2 pass 目でも未解消なら issue 化を止め、ユーザーに判断を委ねる
 - 残す `MEDIUM` / `LOW` は plan 本文の「受け入れ済みリスク」相当の記述に重大度・残す理由・後続対応条件を記録してから issue 化する
 
@@ -138,7 +138,7 @@ plan 本文は GitHub issue に全文ミラーされるため、秘密情報の�
 ## Decision Rules
 
 - 計画本文の章立ては固定せず、タスクの難しさに応じて必要な情報を過不足なく含める
-- issue body にローカル `.plan/` への参照リンクを置かない（GitHub 読者は `.plan/` を読めないため）
+- `.plan/` はローカル一時作業場であり、issue 本文・PR 本文・commit message・issue/PR comments など共有される成果物から `.plan/` への参照リンクやパス表記を書かない（GitHub 読者は `.plan/` を読めない）。共有用の正本は GitHub issue / PR の URL に集約する
 - issue body は `.plan/` の **全文ミラー**。要約や抜粋ではなく、同じ markdown を渡す
 - issue body 同期は `.plan/` ファイルをそのまま `--body-file` に渡す。別ファイルや heredoc の本文を組み立て直さない
 - `--body "..."` を使わない

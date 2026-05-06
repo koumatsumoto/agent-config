@@ -1,6 +1,6 @@
 ---
 name: km:github-workflow
-description: Orchestrates the GitHub PR delivery workflow, delegating planning to km:plan and review to km:review. Use when the user says "PRにして", "issue化してからPRにして", or otherwise explicitly requests PR / issue / delivery completion. Plan-as-issue body management is km:plan's responsibility — this skill does not write or update plan content. Code review during the workflow is km:review's responsibility.
+description: Orchestrates the GitHub PR delivery workflow, delegating planning to km:plan and review to km:review. Use when the user says "PRにして", "issue化してからPRにして", or otherwise explicitly requests PR / issue / delivery completion. If the request involves plan creation, `.plan/` materialization, or planning-issue creation (e.g. "計画を作って PR まで", "計画を issue にして PR にして"), do NOT trigger this skill directly — let km:plan run first, then resume here with the issue number via `$ARGUMENTS`. Plan-as-issue body management belongs to km:plan; code review belongs to km:review.
 argument-hint: "[issue-number]"
 ---
 
@@ -140,6 +140,7 @@ ad-hoc な（計画 issue ではない）issue を 1 件起こして PR 連携�
 - issue が 1 件に定まらない状態で `Closes` を勝手に決めない
 - 計画 issue の本文管理は `km:plan` に委ね、本スキルでは PR 本文と ad-hoc issue 本文だけ書く
 - レビュー指摘の検出・重大度判定は `km:review` に委ね、本スキルでは結果を受けて修正のオーケストレーションだけ行う
+- `.plan/` はローカル一時作業場。PR 本文・issue 本文・commit message・PR/issue comments など共有される成果物から `.plan/` への参照リンクやパス表記を書かない。共有用の正本は GitHub issue / PR の URL に集約する
 - PR を作成したら、以後の実装状態や詳細な差分は PR を正とする
 - 明示 base branch 指定は新規ブランチ作成時だけに効かせ、既存作業ブランチの履歴を書き換える理由には使わない
 
