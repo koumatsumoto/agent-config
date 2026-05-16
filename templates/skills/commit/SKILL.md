@@ -1,6 +1,6 @@
 ---
 name: km:commit
-description: Creates a Conventional Commits git commit for the current changes. Use when the user says "コミットして", "変更を保存して", or asks to commit, save, or record the work.
+description: Creates a Conventional Commits git commit for the current staged/unstaged changes. Use whenever the user says "commit" / "コミットして" or otherwise asks to commit the current work.
 argument-hint: "[message]"
 ---
 
@@ -18,7 +18,6 @@ argument-hint: "[message]"
 ## Success Criteria
 
 - ステージ対象を最小限に絞る
-- 明らかな機密情報をステージしない
 - Conventional Commits 形式で、背景と判断が分かるメッセージにする
 - 複数の独立した作業がまとまっている場合、明確に分割できるならコミットを分ける
 
@@ -26,18 +25,11 @@ argument-hint: "[message]"
 
 1. Context を読み、`$ARGUMENTS` があればタイトルのヒントとして使う
 2. 対象ファイルだけを個別に `git add <file>` でステージする
-3. ステージ済み内容を見て、機密情報や誤ステージがないか確認する
+3. ステージ済み内容を見て誤ステージがないか確認する
 4. Conventional Commits 形式でコミットする
 5. `git log -1 --stat` で結果を確認する
 
 変更が複数の独立した作業を含み、明確に分割できる場合のみ作業単位ごとに 1–5 を繰り返す。迷ったら分けない。
-
-## Secret Check
-
-以下を検出したらコミットを止めて報告する:
-
-- ファイル名: `.env*`, `*.pem`, `*.key`, `*credentials*`
-- 文字列: `AKIA`, `sk-`, `password=`, `secret=`
 
 ## Commit Message
 
@@ -70,5 +62,4 @@ feat(auth): add refresh token flow
 
 - `git add -A` / `git add .` は使わない
 - `git commit --no-verify` は使わない
-- 要求が曖昧でコミット実行の意図を確認できない場合は、コミット前にユーザーへ確認する
 - push はこのスキルのスコープ外
