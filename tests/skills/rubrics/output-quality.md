@@ -45,8 +45,21 @@
 - `thorough` 指定なのに Phase 3 を起動していない
 - Phase 3 の 3 専門家が sequential 発行になっている (並列発行されていない)
 - Phase 4 を Phase 3 と並走させている (Phase 3 完了後の sequential 実行が原則)
-- `--skip-gating` 指定時に Phase 進行ゲートが動いている (本来は escape されるべき)
 - Phase 2 と Phase 3 architect の指摘が大量に重複している (`scope-alignment.md` の住み分けが守られていない)
 - docs update recommendation を出すべきケースで沈黙する
 - 接点変更がないのに WCAG 2.2 やブラウザ固有の指摘を出す
 - LLM/AI 機能の変更があるのに Security 専門家が prompt injection 観点を見ていない
+
+## km:review-loop 特有
+
+### Pass 条件
+- 完了報告に **loop 回数 / 受け入れ済みリスク / 修正サマリー (CRITICAL/HIGH/MEDIUM/LOW 件数)** が含まれる
+- Phase C PASS ルートで累積 MEDIUM/LOW を自動修正した後、**km:review 再検証** が走ったことが分かる (修正対象ゼロでスキップした場合はその旨明示)
+- ループ上限到達 / 収束しない場合に **判断 3 択 (受け入れ / 再起動 / 中止)** を提示する
+- 受け入れ済みリスクは「重大度 / 残す理由 / 後続対応条件」を明示
+
+### Fail 条件
+- 自動修正で新規 HIGH を埋め込んだまま PASS と報告する (Phase C 再検証が走っていない)
+- ループ上限到達時にユーザ判断を仰がず自動継続する
+- 例外条項該当指摘を「受け入れ済みリスク」と明示せずスキップする
+- 完了報告の重大度件数がプレースホルダのまま (`<count>` が残る)

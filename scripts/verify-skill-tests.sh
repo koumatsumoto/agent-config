@@ -107,7 +107,7 @@ def extract_backtick_paths(text: str) -> list[str]:
             continue
         if not cleaned.endswith((".md", ".yaml", ".json", ".toml", ".sh")):
             continue
-        if cleaned.startswith(("http://", "https://", "<", "$", "/", "git ", "gh ", "python3 ", "bash ")):
+        if cleaned.startswith(("http://", "https://", "<", "$", "/", "~", "git ", "gh ", "python3 ", "bash ")):
             continue
         if any(ch in cleaned for ch in (" ", "*", "<", ">", "(", ")", "|")):
             continue
@@ -152,7 +152,7 @@ def main() -> int:
     check(isinstance(cases, list) and len(cases) > 0, "manifest cases missing")
     if not isinstance(cases, list):
         return 1
-    check(15 <= len(cases) <= 22, f"manifest should stay in canonical range (15-22 cases), got {len(cases)}")
+    check(15 <= len(cases) <= 28, f"manifest should stay in canonical range (15-28 cases), got {len(cases)}")
 
     seen_case_ids: set[str] = set()
     case_ids: list[str] = []
@@ -266,7 +266,7 @@ def main() -> int:
 
     skills_root = repo_root / "templates" / "skills"
     manual_only_codex = {"third-party-oss-security-review"}
-    workflow_codex = {"commit", "github-workflow", "plan", "review"}
+    workflow_codex = {"commit", "github-workflow", "plan", "review", "review-loop"}
     manual_only_claude = {"third-party-oss-security-review"}
 
     stable_contracts = {
@@ -277,6 +277,18 @@ def main() -> int:
                 "実行した Phase とスキップした Phase の両方が分かるレポートにする",
             ],
             "safety": None,
+            "phrases": [],
+        },
+        "review-loop": {
+            "success": [
+                "km:review が PASS を返す状態まで自動反復する",
+                "CRITICAL/HIGH の修正は LOW を含む全指摘を Edit tool で適用 (例外条項を除く)",
+                "ループ上限 (`--max-loops` 既定 5) 到達時はユーザ判断を仰ぐ",
+            ],
+            "safety": [
+                "自動修正は **diff snapshot の中だけ** で完結する。本 skill 単体では git commit / push は行わない (`km:commit` / `km:github-workflow` の責務)",
+                "ループ上限を必ず尊重する。`--max-loops` を超えて自動継続しない",
+            ],
             "phrases": [],
         },
         "github-workflow": {

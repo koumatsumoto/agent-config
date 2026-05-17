@@ -3,7 +3,7 @@ name: km:review
 description: >
   Reviews code changes (uncommitted, commits, PRs, subtrees) for bugs, design, security, and
   quality. Use when the user says "レビューして" or "PR をレビューして".
-argument-hint: "[target] [level] [--skip-gating]"
+argument-hint: "[target] [level]"
 ---
 
 # Review
@@ -20,7 +20,7 @@ argument-hint: "[target] [level] [--skip-gating]"
 - 要求されたレベルに応じて Phase を絞り込む
 - Phase 2 / Phase 3 (3 専門家) / Phase 4 のいずれかで CRITICAL または HIGH があれば BLOCKED とする
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
-- `--skip-gating` 指定時は CRITICAL/HIGH 残置でも進行し、Phase 5 でユーザに判断を委ねる
+- CRITICAL/HIGH 検出時はその Phase で停止し、Phase 5 で BLOCKED 報告して終了 (修正反復は `km:review-loop` の責務)
 
 ## Workflow
 
@@ -37,7 +37,6 @@ argument-hint: "[target] [level] [--skip-gating]"
 `$ARGUMENTS` は単一文字列。**tokenize + classify の 2 段アルゴリズム** で解析する。
 
 1. **flag 抽出 (位置不問)**: `--` プレフィックスの token を先に抽出
-   - `--skip-gating`: gating 無効化フラグ (escape hatch)
    - `--uncommitted`: 明示の未コミットモード
    - `--repo`: リポジトリ全体モード (サブツリー指定が後続必要)
 2. **残り token を順序評価**: flag 抽出後の残り token を以下の優先順位で分類
@@ -171,7 +170,7 @@ Phase 1c で確定した変更構成に基づいて以下のいずれかで起�
 - **`docs-only`** (docs 変更のみ) → **full モード**。Phase 2/3 は skip して直接 Phase 4 へ
 - **`code+docs`** (コード + docs 両方) → **full モード**
 - **`mixed`** (`--repo` 経由) → **full モード**
-- **`code-only`** (コードのみ、docs 変更なし) → **need-check モード** (軽量、ループなし、CRITICAL/HIGH 出さない)
+- **`code-only`** (コードのみ、docs 変更なし) → **need-check モード** (軽量、CRITICAL/HIGH 出さない)
 - **`test-or-config-or-chore-only`** → **Phase 4 skip**
 
 なお need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場合は **MEDIUM に強制降格** して報告する (gating を発火させない)。
@@ -197,39 +196,26 @@ Phase 1c で確定した変更構成に基づいて以下のいずれかで起�
 
 詳細フォーマットは `report-format.md` を参照。
 
-## Sequential gating
+## 進行ゲート (1 回完結)
 
-### 進行ゲート
+km:review は **1 回完結の診断 skill**。指摘リストを返して終了し、修正反復は行わない。修正反復が必要な場合は `km:review-loop` を使う。
 
-**Phase N で `CRITICAL` または `HIGH` の検出件数が 0 でない限り、Phase N+1 を起動してはならない** (`--skip-gating` 指定時を除く)。LOW/MEDIUM は次 Phase の起動を阻まない。
+### ゲートルール
 
-### ループ上限 (`--skip-gating` 未指定時)
+**Phase N で `CRITICAL` または `HIGH` の検出件数が 0 でない限り、Phase N+1 を起動しない**。LOW/MEDIUM は次 Phase の起動を阻まない。
 
-- Phase 2: 同 Phase 連続再実行 5 周まで。超過は警告してユーザ判断
-- Phase 3 / Phase 4-full: 同 Phase 連続再実行 3 周まで。超過は現状の指摘リストを提示してユーザ判断
-- Phase 4-need-check: ループ対象外 (1 回のみ実行)
+CRITICAL/HIGH 検出時の動作:
+1. 当該 Phase で停止し、それまでに収集した指摘を保持
+2. Phase 5 (統合 + コミット判定) を実行して `BLOCKED` を報告
+3. 終了 (ユーザへの修正促し・再実行ループは km:review-loop の責務)
 
-### 修正の担当
+全 Phase 通過時:
+1. Phase 5 で重大度ごとに合算
+2. `PASS` を報告して終了
 
-orchestrator が編集ツールで自動修正しない。CRITICAL/HIGH が検出されたら **ユーザに修正を促し、次回の入力で同 Phase を再実行** する。
+### Phase 3 内並列性
 
-### カウンタリセット
-
-上流 Phase に戻った場合 (例: Phase 3 で修正後に Phase 2 観点が崩れた場合) は下流 Phase のカウンタをリセット。
-
-### `--skip-gating` のセマンティクス
-
-1. **Phase 内ループのスキップ**: 各 Phase 内で CRITICAL/HIGH を検知しても再実行ループに入らず、1 周のみ実行
-2. **Phase 進行ゲートのスキップ**: 下流 Phase への進入可否判定をスキップし、CRITICAL/HIGH 残置でも進行
-3. **Phase 5 判定は通常どおり**: CRITICAL/HIGH があれば `BLOCKED` を表示するが、orchestrator はユーザに「以下の指摘があるが続行するか / 中止するか」を提示して判断を仰ぐ (自動で中止しない)
-
-### Phase 内並列性
-
-- **Phase 2 → Phase 3**: Phase 2 の CRITICAL/HIGH がゼロになった時点で Phase 3 (3 名並列) を起動する。Phase 2 で残っている MEDIUM/LOW は Phase 5 で統合判定する (diff snapshot を維持するため Phase 3 起動前にユーザに修正を促さない)
-- **Phase 3 内**: 3 名 (architect / qa / security) は **同一メッセージ内で並列発行**。各 expert の進行は独立
-- **Phase 3 部分失敗時**: 一部 expert のみ CRITICAL/HIGH 検出 → ループ次周は **3 名全員を再実行** する (diff snapshot 整合性のため。ユーザ修正で他観点が崩れる可能性を考慮)
-- **Phase 3 → Phase 4**: Phase 3 完了後に Phase 4 を sequential 実行 (並走させない)
-- **上流 Phase に戻る場合**: ユーザの修正後は Phase 2 から再開する (シンプルかつ安全側)。下流 Phase のループカウンタはリセット
+3 expert (architect / qa / security) は **同一メッセージ内で並列発行**。各 expert の出力は Phase 3 完了時に統合され、いずれかに CRITICAL/HIGH があれば Phase 4 を起動しない。
 
 ## レベル別実行マトリクス
 
@@ -265,25 +251,18 @@ flowchart TD
   P1 -->|docs-only| P4full[Phase 4 full]
   P1 -->|test-or-config-or-chore-only| P2tc[Phase 2 only, Phase 3/4 skip]
   P1 -->|code-only / code+docs / mixed| P2[Phase 2: generalist code-review]
-  P2 -->|CRITICAL/HIGH ゼロ or --skip-gating| P3decide{level == thorough?}
-  P2 -->|CRITICAL/HIGH あり 最大 5 周| P2
-  P2 -->|5 周超過| UserJudge[ユーザ判断]
+  P2 -->|CRITICAL/HIGH ゼロ| P3decide{level == thorough?}
+  P2 -->|CRITICAL/HIGH あり| P5b[Phase 5: BLOCKED 報告 + 終了]
   P3decide -->|no| P4route{code-only?}
   P3decide -->|yes| P3[Phase 3: 3 experts 並列]
-  P3 -->|全 expert CRITICAL/HIGH ゼロ or --skip-gating| P4route
-  P3 -->|あり、最大 3 周 全員再実行| P3
-  P3 -->|3 周超過| UserJudge
+  P3 -->|全 expert CRITICAL/HIGH ゼロ| P4route
+  P3 -->|あり| P5b
   P4route -->|yes| P4check[Phase 4 need-check]
   P4route -->|no| P4full
-  P4full -->|CRITICAL/HIGH ゼロ or --skip-gating| P5[Phase 5: 統合 + コミット判定]
-  P4full -->|あり、最大 3 周| P4full
-  P4full -->|3 周超過| UserJudge
+  P4full -->|CRITICAL/HIGH ゼロ| P5[Phase 5: PASS 報告]
+  P4full -->|あり| P5b
   P4check --> P5
   P2tc --> P5
-  UserJudge -->|Continue| P5
-  UserJudge -->|Abort| End[終了]
 ```
-
-UserJudge の振る舞い: 現在の指摘リストを表示し、ユーザに「続行 / 中止」を提示して次のメッセージで判断を仰ぐ (orchestrator が独自に判断しない)。`--skip-gating` 指定時はループに入らないため到達せず、Phase 5 で BLOCKED 表示してユーザに同様の判断を促す。
 
 出力形式は `report-format.md` を参照。

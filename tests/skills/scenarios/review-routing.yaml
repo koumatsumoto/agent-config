@@ -95,20 +95,6 @@ scenarios:
         phase_4_doc_review: full
         phase_5_integration: executed
 
-  - id: review-routing-skip-gating
-    title: --skip-gating bypasses Phase progression gate
-    prompt: "PR をレビューして"
-    args: "pr:124 --skip-gating thorough"
-    context:
-      pr_number: 124
-      change_type: feat
-      change_composition: code-only
-    expected:
-      primary_skill: km:review
-      target_resolution: pr
-      level: thorough
-      skip_gating: true
-      phase_progression_despite_high: true
 
   - id: review-routing-ambiguous-numeric
     title: Bare numeric argument is rejected as ambiguous

@@ -5,7 +5,7 @@ km:review Phase 3 の 3 専門家 (architect / qa / security) が返すレポー
 ## 出力構造
 
 ```
-### <専門家名> (architect / QA / security)
+### <システムアーキテクト | QA 専門家 | セキュリティ専門家>
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 0
 
 ## HIGH: [問題タイトル] [confirmed | likely | possible]
@@ -51,7 +51,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 - `MEDIUM`: 設計不整合、品質特性の低下、テスト不足、技術負債蓄積の兆候
 - `LOW`: 小さな改善、意図的に残してもよい指摘
 
-`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻む (Sequential gating)。
+`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻み、Phase 5 で BLOCKED 報告して終了する (修正反復は `km:review-loop` の責務)。
 
 ## 偽陽性フィルタリング
 

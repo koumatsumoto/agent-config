@@ -116,7 +116,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`co
 - `MEDIUM`: 設計不整合、保守性低下、テスト不足
 - `LOW`: 小さな改善
 
-`CRITICAL` または `HIGH` があれば orchestrator の Sequential gating により Phase 3 (experts) の起動が阻まれる。検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザに判断を委ねる。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 experts の規約であり本ステップでは必須ではない (任意添付可)。
+`CRITICAL` または `HIGH` があれば orchestrator の進行ゲートにより Phase 3 (experts) の起動が阻まれ、Phase 5 で BLOCKED 報告して終了する (修正反復は `km:review-loop` の責務)。検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザに判断を委ねる。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 experts の規約であり本ステップでは必須ではない (任意添付可)。
 
 ## 出力フォーマット
 
