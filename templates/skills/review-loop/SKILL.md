@@ -85,14 +85,22 @@ km:review がどこかの Phase で停止し BLOCKED を返した。
 
 4. **例外条項判定の集計**:
    - 自動修正対象が 1 件以上ある → Phase E (ループ判定) へ
-   - **全 CRITICAL/HIGH が例外条項該当だった** (= 自動修正できる CRITICAL/HIGH がゼロ) → 即時ユーザ判断 (続行 = 受け入れ済みリスクで PASS 扱い / 中止 = 手動修正待ち)。Phase E のループには進まない
+   - **全 CRITICAL/HIGH が例外条項該当だった** (= 自動修正できる CRITICAL/HIGH がゼロ) → 即時ユーザ判断を仰ぐ (下記「ユーザ判断 3 択」)。Phase E のループには進まない
+
+### ユーザ判断 3 択
+
+例外条項全該当時、ループ上限到達時、収束しないとき orchestrator が以下を提示:
+
+- **受け入れ**: 残った CRITICAL/HIGH を「受け入れ済みリスク」として承認し、PASS 扱いで完了報告 → 次は km:commit へ
+- **再起動**: `--max-loops` を拡張して再度 `/km:review-loop` を実行 (ユーザが新コマンドを発話)
+- **中止**: 手動修正に切り替え、完了後にユーザが再度 `/km:review-loop` を実行
 
 ### Phase E: ループ判定
 
 Phase D で自動修正が 1 件以上発生した後にここへ来る。次のいずれか:
 
-- **ループ上限 (`--max-loops`) 到達** → ユーザ判断 (続行 / 中止 / 受け入れ) を仰ぐ
-- **会話履歴で同一指摘が繰り返し出現** (収束しない兆候) → ユーザ判断を仰ぐ
+- **ループ上限 (`--max-loops`) 到達** → ユーザ判断 3 択 (受け入れ / 再起動 / 中止) を仰ぐ
+- **会話履歴で同一指摘が繰り返し出現** (収束しない兆候) → ユーザ判断 3 択を仰ぐ
 - **それ以外** → loop カウンタ +1 して **Phase B に戻る** (km:review を再走)
 
 ## 状態管理
@@ -117,7 +125,7 @@ Claude Code セッションをまたぐ反復が必要な場合は、ユーザ�
 - 修正済み MEDIUM: <count> 件
 - 修正済み LOW: <count> 件
 
-### 受け入れ済みリスク (LOW 残置)
+### 受け入れ済みリスク (例外条項該当指摘)
 - **<重大度>**: <問題タイトル>
   - 場所: <file:line>
   - 残す理由: <理由>
@@ -139,10 +147,10 @@ Claude Code セッションをまたぐ反復が必要な場合は、ユーザ�
 - HIGH: ...
 - ...
 
-### 判断のお願い
-- **続行**: `--max-loops <N+M>` で再起動
+### 判断のお願い (3 択)
+- **受け入れ**: 残指摘を「受け入れ済みリスク」として承認し、PASS 扱いで完了 → km:commit へ進む
+- **再起動**: `--max-loops <N+M>` で `/km:review-loop` を再実行
 - **中止**: 現状の指摘を手動で確認し、修正後に再度 `/km:review-loop` を実行
-- **受け入れ**: 残指摘を「受け入れ済みリスク」として承認し、km:commit へ進む
 ```
 
 ## Mermaid 図
@@ -152,20 +160,22 @@ flowchart TD
   Start[/km:review-loop/] --> A[Phase A: 引数解析]
   A --> B[Phase B: km:review を呼ぶ]
   B --> C{Phase C: 結果判定}
-  C -->|PASS| FinalFix[累積 MEDIUM/LOW 自動修正 例外条項除く]
+  C -->|PASS| HasFix{累積 MEDIUM/LOW あり?}
+  HasFix -->|no| Done[完了報告]
+  HasFix -->|yes| FinalFix[累積 MEDIUM/LOW 自動修正 例外条項除く]
   FinalFix --> Recheck{再 km:review = PASS?}
-  Recheck -->|yes / 修正なし| Done[完了報告]
-  Recheck -->|no, BLOCKED| D
+  Recheck -->|yes| Done
+  Recheck -->|no, BLOCKED, loop+1| D
   C -->|BLOCKED| D[Phase D: 修正フェーズ]
   D --> AutoFix[例外条項非該当 → Edit で自動修正<br/>例外条項該当 → 受け入れ済みリスク記録]
   AutoFix --> AllException{全 CRITICAL/HIGH が例外条項該当?}
-  AllException -->|yes| User[ユーザ判断<br/>続行 PASS 扱い / 中止 / 受け入れ]
+  AllException -->|yes| User[ユーザ判断 3 択]
   AllException -->|no| E{Phase E: max_loops?}
-  E -->|未到達| B
+  E -->|未到達, loop+1| B
   E -->|到達 / 収束しない| User
-  User -->|続行 受け入れ済みリスク承認| Done
+  User -->|受け入れ| Done
   User -->|再起動 max-loops 拡張| Restart[/再 km:review-loop --max-loops N+M/]
-  User -->|中止| Abort[終了]
+  User -->|中止 手動修正に切替| Abort[終了]
 ```
 
 ## 自動修正の方針

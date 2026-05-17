@@ -25,6 +25,18 @@
 - 3 専門家が sequential 発行されている (並列発行されていない)
 - 裸の数字を target として解釈してしまう (`/km:review 42` が PR 42 を試行)
 - `--repo` 単独で warning なくレビューを開始する (サブツリー指定が必要)
+
+## km:review-loop 特有
+
+### Pass 条件
+- 「レビューを繰り返す」が `km:review-loop` を起動する (`km:review` 単独起動と区別)
+- `km:review-loop` が `km:review` を main コンテキストで Read して実行する (Task tool は km:review 内部の Phase 3 のみで発火)
+- `--max-loops` の既定 5、引数なし呼び出しは km:review のフォールバック (uncommitted → push 済 PR → 終了) に委譲される
+
+### Fail 条件
+- `/km:review` 単独起動の場面で誤って `km:review-loop` が起動する
+- `km:review-loop` が km:review を Read せずに独自実装する
+- ループ上限超過時にユーザ判断 3 択 (受け入れ / 再起動 / 中止) が提示されない
 - existing PR があるのに新規 PR を作ろうとする (これは `km:github-workflow` 側の Pass 条件だが、`km:plan` 等から委譲される際に守られているか確認)
 
 ## 記録テンプレート

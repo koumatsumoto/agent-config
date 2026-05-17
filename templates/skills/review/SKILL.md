@@ -265,6 +265,4 @@ flowchart TD
   P2tc --> P5
 ```
 
-km:review は **1 回完結**。修正反復が必要な場合は `km:review-loop` を使う。
-
 出力形式は `report-format.md` を参照。
