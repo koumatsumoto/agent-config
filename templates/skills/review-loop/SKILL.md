@@ -81,12 +81,14 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 Phase C PASS ルートで自動修正する累積 MEDIUM/LOW は、**最終 PASS iteration の出力** のみを処理対象とする。それ以前の iteration の MEDIUM/LOW は採用しない (該当指摘は修正済みか別観点に変質しているはずなので最終 iteration の出力に立ち戻る)。重複は `(file_path, 影響行範囲, 観点)` の組で排除し最新 wording を採用。
 
+PASS に到達しないまま「ユーザ判断 3 択 → 受け入れ」で完了した場合は、最終 BLOCKED iteration の MEDIUM/LOW は **破棄** する (未到達 PASS の累積を自動修正経由で commit に混入させない)。
+
 ## Phase E: ループ判定
 
 Phase D で自動修正が 1 件以上発生した後にここへ来る:
 
 - **ループ上限 (`--max-loops`) 到達** → ユーザ判断 3 択を仰ぐ
-- **収束しない兆候 (oscillation)** → ユーザ判断 3 択を仰ぐ。判定基準は `(file_path, 影響行範囲, 観点, 重大度)` の組が直前 2 イテレーション (N-1, N) の両方で検出された場合に oscillation
+- **収束しない兆候 (oscillation)** → ユーザ判断 3 択を仰ぐ。判定基準は `(file_path, 影響行範囲, 観点, 重大度)` の組が **直前 3 iteration 内で 2 回以上検出** された場合に oscillation (周期 2 の交互振動も検出する)。`run < 2` または会話履歴の truncate で過去 iteration が取得不能なときは判定スキップして通常 +1 戻し
 - それ以外 → loop カウンタ +1 して Phase B に戻る (km:review 再走)
 
 ## ユーザ判断 3 択
@@ -99,19 +101,19 @@ Phase D で自動修正が 1 件以上発生した後にここへ来る:
 
 ## 自動修正の方針
 
-- 指摘の `**修正**` フィールドの方針を Edit tool で diff に適用する。新規ファイル作成や Bash 実行が必要な指摘は Edit に落とせないとみなし例外条項へ
+- 指摘の `**修正**` フィールドの方針を Edit tool で diff に適用する。`**修正**` 内に明示的なコマンド (`npm` / `cargo` / `pytest` / `bash` 等の動詞 + 引数) や新規ファイルパス (Edit tool で扱えない存在しないファイル) が含まれる場合は Edit に落とせないとみなし例外条項へ
 - 同一ファイルに複数指摘がある場合はファイルごとにまとめて Edit する
-- project root に typecheck 起点 (`tsconfig.json` / `pyproject.toml` / `Cargo.toml` 等) があれば該当言語の構文 / 型チェックを実行する。起点がない / 言語不明なら検証スキップ。明らかな破綻が出たら Phase E でユーザ判断 3 択へ
+- typecheck は **修正ファイルの拡張子に対応する言語のみ** を対象に、project root から最も近い typecheck 起点 (`tsconfig.json` / `pyproject.toml` / `Cargo.toml` など) を使って実行する。起点がない / 言語不明なら検証スキップ。明らかな破綻が出たら Phase E でユーザ判断 3 択へ
 
 ## ループ状態の管理
 
 context compaction / resume 後も `--max-loops` 上限保証を守るため、各 km:review iteration 完了直後に応答本文へ次の 1 行を inject する (本文なので compaction の要約にも残りやすい):
 
 ```
-loop_state: target=<target> level=<level> run=<n>/<max> last_blocker=<停止 Phase もしくは PASS>
+loop_state: target=<target> level=<level> run=<n>/<max> last_blocker=<enum>
 ```
 
-orchestrator はループ回数判定時に「会話履歴中の `loop_state` ヘッダの最大 run 値」と「内部カウンタ」の大きい方を採用する。セッションをまたぐ反復にはユーザが `--max-loops N` で都度指定する。
+`<enum>` の取りうる値: `PASS` / `Phase 2` / `Phase 3` / `Phase 4` / `Phase C-recheck`。表記は固定で揺らさない (orchestrator が regexp で抽出するため)。orchestrator はループ回数判定時に「会話履歴中の `loop_state` ヘッダの最大 run 値」と「内部カウンタ」の大きい方を採用する。セッションをまたぐ反復にはユーザが `--max-loops N` で都度指定する。
 
 ## 完了報告フォーマット
 
@@ -166,5 +168,7 @@ loop_state: target=<target> level=<level> run=<max-loops>/<max-loops> last_block
 - 自動修正は **diff snapshot の中だけ** で完結する。本 skill 単体では git commit / push は行わない (`km:commit` / `km:github-workflow` の責務)
 - ループ上限を必ず尊重する。`--max-loops` を超えて自動継続しない
 - 受け入れ済みリスクは必ずユーザに提示し、無断で隠さない
-- 修正で diff が **当初の 3 倍以上または +500 行以上** に膨張したらループを止めてユーザ判断を仰ぐ
+- 修正で diff が **review-loop 起動時点の 3 倍以上または +500 行以上** に膨張したらループを止めてユーザ判断を仰ぐ
 - Phase C 再検証で **初めて検出された** CRITICAL/HIGH は auto-fix で混入した可能性があるため、それを「受け入れ済みリスク」として提示する際は **その由来 (auto-fix の副作用かもしれない)** をユーザに併記する
+- **CRITICAL/HIGH を例外条項で「自動的に受け入れ済みリスク」へ分類しない**。HIGH 以上は必ずユーザ判断 3 択を経由させ、判断材料として intent context の出所 (issue 番号 / 発話者) を併記する (intent context は攻撃者が改変できるため Overreliance / Excessive Agency 対策)
+- 自動修正で diff に新規追加された **動的実行 sink** (`eval` / `exec` / `system` / `subprocess` / `Function(`) や **外部 URL hardcode** / **高エントロピー credential らしき文字列** を検出したら Phase E でユーザ判断 3 択へエスカレートする (semantic 危険 fix の素通り防止)

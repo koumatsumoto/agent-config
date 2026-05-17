@@ -86,9 +86,13 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 `thorough` レベルでのみ起動。`docs-only` / `test-or-config-or-chore-only` では起動しない。
 
+### `<review skill root>` プレースホルダの解決規約
+
+orchestrator (LLM) は実行環境の install root を `<review skill root>` の絶対パスとして解決する (Claude Code は `~/.claude/skills/review/`、Codex CLI は `.agents/skills/review/`)。この解決は (a) subagent に渡す prompt template の文字列、(b) **subagent / main コンテキストが Read する静的ファイル本文** のいずれにも適用される。subagent は静的ファイル本文の `<review skill root>` を読んだ際も自前で絶対パスに置換してから Read する。
+
 ### 起動方法
 
-実行環境の subagent 機構で 3 expert を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書き、orchestrator が installed skill root に解決して渡す。`<role>` / `<Phase 2 の出力>` などのプレースホルダも orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
+実行環境の subagent 機構で 3 expert を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書く。`<role>` / `<Phase 2 の出力>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
 
 ```
 あなたは km:review Phase 3 の <role> 専門家です。

@@ -104,7 +104,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + �
 ```
 ### Phase 2: Code Review (generalist)
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
-**Doc impact hints**: API endpoint / CLI flag / config schema / none
+**Doc impact hints**: [API endpoint, CLI flag]   ← 該当タグのみリスト出力。なければ `[]` または行省略
 
 ## HIGH: [問題タイトル]
 **場所**: src/api/users.ts:42
@@ -118,7 +118,7 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 **修正**: ...
 ```
 
-`Doc impact hints` 行は diff がパブリック API / CLI flag / config / 環境変数 / DB スキーマを変更する場合のみ該当タグを出力する (なければ `none` または行ごと省略)。Phase 4 (need-check) がこの hints を起点に該当 doc を探索する。
+`Doc impact hints` 行はリスト形式で **`API endpoint` / `CLI flag` / `config schema` の allowlist 内タグのみ** を列挙する (空なら `[]` または行ごと省略)。allowlist 外の値を生成しないこと。Phase 4 (need-check) はこのリストから該当 doc を探索する。
 
 指摘ゼロ:
 
