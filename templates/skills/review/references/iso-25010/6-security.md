@@ -10,7 +10,8 @@ ISO/IEC 25010:2023。「製品が情報・データを保護し、許可され�
 - [ ] 通信 (TLS 1.2+ / 適切な cipher suite) と保存時暗号化が適用されるか
 - [ ] 鍵管理 (KMS / HSM) と rotation が設計されているか
 - [ ] バックアップ / スナップショット / メトリクス側で機密情報が漏れないか
-- [ ] アクセス制御 (RBAC / ABAC) で最小権限の原則が成立しているか
+- [ ] 新規エンドポイント / handler に認可チェック (middleware / `@authorize` / policy gate / RLS 等) が設定されているか
+- [ ] ロール定義の追加で wildcard (`admin:*`) / `super-admin` 濫用が発生していないか
 - [ ] 認可粒度 (BOLA / BOPLA — オブジェクト所有者検証) が成立しているか
 - [ ] secret rotation の自動化 / 秘密の検出 (gitleaks / trufflehog) が CI に組み込まれているか
 
@@ -56,10 +57,14 @@ ISO/IEC 25010:2023。「製品が情報・データを保護し、許可され�
 
 - [ ] 認証 / 高コスト API にレート制限 / サイズ上限があるか
 - [ ] 全件更新 / 削除を単一リクエストでできないか
+- [ ] 業務ロジック乱用 (bulk 購入 bot / ポイント乱獲 / 投機的アクセス) を検知 / 制限する仕組みがあるか
+- [ ] 廃止 / 旧バージョンの API endpoint / staging / debug endpoint が本番に残置していないか
 - [ ] 依存関係に既知脆弱性がなく、ロックファイル / SBOM / vulnerability scan / SCA / EOL 管理があるか
 - [ ] アーティファクト来歴 (SLSA / Sigstore) が確認可能か
 - [ ] LLM/AI: prompt injection 防御 / tool 実行境界 / テナント分離 / Excessive Agency 制限が成立するか
 - [ ] LLM/AI 出力の tool execution 経路を sandbox / allowlist で隔離するか (攻撃面視点)
+- [ ] RAG / vector DB へのドキュメント取込で sanitize / source attestation があるか
+- [ ] LLM 推論 API key / endpoint に rate limit / abuse detection (Model Theft 対策) があるか
 - [ ] DDoS / Slowloris / algorithmic complexity (regex catastrophic backtracking / hash collision) / 増幅攻撃に対する基本防御が成立しているか
 - [ ] CSP / HSTS / Referrer-Policy / Permissions-Policy / COEP / COOP のブラウザ多層防御が設定されているか
 - [ ] Security Misconfiguration (debug endpoint の本番露出、default credential 残置) を回避するか
@@ -67,7 +72,7 @@ ISO/IEC 25010:2023。「製品が情報・データを保護し、許可され�
 ## 参照
 
 - ISO/IEC 25010:2023
-- OWASP ASVS, OWASP Top 10 (2021)
+- OWASP ASVS, OWASP Top 10 (現行版を確認: 2025 リリース済)
 - OWASP API Security Top 10 (2023)
 - OWASP LLM Top 10
 - CWE Top 25

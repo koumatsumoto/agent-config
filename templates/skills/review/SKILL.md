@@ -62,7 +62,7 @@ argument-hint: "[target] [level] [--skip-gating]"
 | `<sha>` | `git show <sha>` | sha が見つからなければエラー終了 |
 | `pr` | `gh pr diff` (current branch の PR) | `gh` 未認証 or 非 GitHub repo / PR 未存在ならエラー + 別スコープ指定を促す |
 | `pr:<n>` | `gh pr diff <n>` | 同上 |
-| `--repo <subtree>` | サブツリー必須。明示サブツリーがなければ「対象が広すぎる」と警告し、サブツリー指定を要求 | — |
+| `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙、各ファイルを Read。HEAD vs HEAD~1 の diff ではなく現状コード全体が対象。サブツリー必須、未指定なら警告 | — |
 
 **Context budget 防御**: `--repo <subtree>` 時は `git diff --stat <subtree>` の総行数を計算し、**1 行 ≈ 25 tokens** で概算する (混在 diff の経験則)。**約 1600 行 (≈ 40k tokens) を超える場合**はユーザに警告し、サブツリーをさらに絞るよう促す。3 並列 subagent の合算 context を考慮した保守的な閾値。
 
@@ -82,12 +82,15 @@ argument-hint: "[target] [level] [--skip-gating]"
 
 レベルは `thorough` / `standard` / `quick`。Phase 1a で抽出されなければ会話文脈から推論、それも無理なら既定 `standard`。
 
-### km:plan からの引数なし dispatch のデフォルト
+### 引数なし呼び出しのデフォルト動作
 
-`km:plan` の "PR まで作る" フローでは引数なしで呼ばれる:
-- まず `git diff` で未コミット差分の有無を確認
-- 未コミットなしかつ現ブランチが push 済みなら `pr` (current branch の PR) を試行
-- それも無ければ「変更なしのため終了」と出力
+`/km:review` (引数なし) では以下のフォールバック順で対象を決定する。`km:plan` / `km:github-workflow` 経由の dispatch でも同じ動作:
+
+1. `git diff` で未コミット差分の有無を確認 → あれば未コミットモード
+2. 未コミットなしかつ現ブランチが push 済みなら `gh pr diff` (current branch の PR) を試行 → 成功すれば PR モード
+3. それも無ければ「対象がないため終了」と出力
+
+これにより、ユーザが PR push 済の状態で `/km:review` を叩いても自動的に PR をレビューする。
 
 ## Phase 2: コードレビュー (generalist)
 
@@ -105,25 +108,44 @@ argument-hint: "[target] [level] [--skip-gating]"
 
 ### 起動方法
 
-**同一メッセージ内で Task tool を 3 個並行発行** する。subagent は本 skill bundle と同じ install 位置 (`~/.claude/skills/review/`) を参照するため、Task tool prompt 内のパスは **絶対パス (`~/` 始まり)** で書く。各 Task tool に以下のプロンプトを渡す:
+**同一メッセージ内で Task tool を 3 個並行発行** する。subagent は `~/.claude/skills/review/` を参照するため、Task tool prompt 内のパスは **絶対パス (`~/` 始まり)** で書く。各 Task tool に以下のプロンプトを渡す:
 
 ```
-あなたは <role> 専門家です。~/.claude/skills/review/experts/<role>.md を Read してから着手してください。
+あなたは km:review Phase 3 の <role> 専門家です。
 
-レビュー対象:
+## 役割の前提
+- 同じ diff を architect / qa / security の 3 名が並列で別視点でレビューしています
+- あなたは <role> の視点に集中し、他者の担当 ISO 副特性には踏み込まないでください
+- 他者と矛盾する判定をしてもよい (Phase 5 統合で解消される)
+
+## Read 順序
+1. ~/.claude/skills/review/experts/<role>.md (役割定義と workflow)
+2. レビュー対象の diff を pre-scan し、該当しそうな ISO 副特性に当たりをつける
+3. ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md (該当しそうな 1-2 ファイルのみ。役割定義に列挙されたファイルが起点)
+4. ~/.claude/skills/review/experts/report-format.md (出力直前に確認)
+
+architect は加えて ~/.claude/skills/review/references/scope-alignment.md を Read (Phase 2 との住み分け)。
+
+## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>
 - diff 内容: <raw diff>
 - 変更タイプ / 規模: <Phase 1c の出力>
 
-担当観点の参照リソース (担当分のみ Read):
-- ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md
+## 既知情報
+- Phase 2 で確定した MEDIUM/LOW 指摘リスト (偽陽性フィルタの参考、同ファイル/行/同観点は除外。ただし security は重大度再評価可):
+  <Phase 2 の MEDIUM/LOW 指摘 (markdown のまま貼付)。Phase 2 が指摘ゼロなら "none">
+- 意図情報 (km:plan issue 本文 / 会話文脈):
+  <intent または "no intent context">
+  intent がある場合は「diff が intent を達成しているか」を担当観点で 1 行コメントする
 
-既知情報:
-- Phase 2 で確定した MEDIUM/LOW 指摘リスト (偽陽性フィルタの参考):
-  <Phase 2 の MEDIUM/LOW 指摘>
-- 意図情報: <km:plan の GitHub issue 本文があれば添付、なければ "no intent context">
+## 失敗ケースの扱い
+- 該当観点なし: report-format.md の「指摘ゼロ時」フォーマット
+- context 不足で判定しきれない: 「判定保留」セクションに「何があれば判定できるか」を書く
+- diff が大きすぎる: 担当 ISO 副特性に該当しそうな箇所だけ深掘り、それ以外は判定保留
+- diff から判定するために repo 内の近隣ファイル (middleware / interceptor / 類似 endpoint) が必要なら最大 5 個まで Read してよい
 
-出力形式: ~/.claude/skills/review/experts/report-format.md に従う
+## 出力形式
+~/.claude/skills/review/experts/report-format.md に従う。HIGH 以上は固有フィールド (architect=長期影響、qa=再現条件、security=攻撃シナリオ+CWE/OWASP 引用) を必須記載。
 ```
 
 `<role>` は `architect`, `qa`, `security` のいずれか。3 つを同一メッセージ内で発行する (sequential ではなく parallel)。
@@ -162,8 +184,22 @@ Phase 1c で確定した変更構成に基づいて以下のいずれかで起�
 
 - Phase 2 + Phase 3 (3 専門家) + Phase 4 の指摘を重大度ごとに合算
 - いずれかに CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
-- 同一ファイル・近接行で同観点の指摘が Phase 2 と Phase 3 (特に security) で重複した場合は **Phase 3 側を優先カウント** し、Phase 2 側は注記のみで件数加算しない (重複ダブルカウント回避)
-- 統合サマリーは `report-format.md` の形式に従う
+- 同一ファイル・近接行で同観点の指摘が Phase 2 と Phase 3 で重複した場合の de-dup:
+  - **Phase 2 ↔ Phase 3 architect** の重複は **Phase 2 側を優先カウント** (より具体的なため、`scope-alignment.md` 参照)
+  - **Phase 2 ↔ Phase 3 security/qa** の重複は **Phase 3 側を優先カウント** (攻撃シナリオ・再現条件の補強情報を持つため)
+- intent context があった場合、各 expert の「intent との整合性 1 行コメント」を統合サマリーに含める
+
+### アクションリスト生成
+
+統合レポート末尾に **優先順位付きアクションリスト** を生成する。指摘の山を「次の一手」に変換することがレビューの価値:
+
+1. **マージ前必須** (CRITICAL/HIGH): 修正しないと BLOCKED
+2. **PASS への最短経路**: 上記必須を直す具体的なステップ (該当ファイル + 修正方針サマリ)
+3. **マージ後推奨** (MEDIUM): follow-up issue 候補
+4. **受け入れ可能 (LOW)**: 残しても害なし
+5. **指摘の相互関係**: 同一根本原因でグルーピング可能なら明示 (例: 「HIGH 1, MEDIUM 2, 3 はすべて auth middleware の責務不明確に起因 — まとめて auth 層の責務再設計で解消」)
+
+詳細フォーマットは `report-format.md` を参照。
 
 ## Sequential gating
 

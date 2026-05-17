@@ -26,15 +26,18 @@
 
 orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`) + 実行 level (`quick` / `standard` / `thorough`)」を受け取る。`docs-only` なら本ファイルは起動されない。
 
-変更構成と level からレビュー深度を決める:
+変更構成 + コミットメッセージのプレフィックス (`feat:` / `fix:` / `refactor:` 等) からレビュー深度を決める:
 
-| 変更構成 | 設計・実装の深度 | 規約・可読性の深度 |
+| 変更内容 | 設計・実装の深度 | 規約・可読性の深度 |
 |---|---|---|
-| `code+docs` / `mixed` (新機能 / 振る舞い変更) | Full | Full |
-| `code-only` (既存実装の修正) | Focused | Focused |
+| `feat` (新機能 / 新規ファイル中心) | Full | Full |
+| `code+docs` / `mixed` (振る舞い変更を含む) | Full | Full |
+| `fix` / `refactor` (`code-only` の既存実装修正) | Focused | Focused |
 | `test-or-config-or-chore-only` | Skip | Quick |
 
 `quick` レベルでは「規約・可読性」を Quick に降格、`thorough` レベルでは上記どおり、`standard` は中間。
+
+新規ファイル中心の `feat` 変更では「既存パターンとの整合性」も確認する: 類似 endpoint / module の既存実装を必要なら 1-3 ファイル Read して、設計判断 (パターン選択、責務分割) が repo の他箇所と揃っているか確認する。
 
 ## Step 2: 設計・実装 (3 層)
 

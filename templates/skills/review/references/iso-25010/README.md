@@ -57,7 +57,7 @@
 ## 関連標準 (2026 年 5 月時点最新)
 
 - ISO/IEC 25010:2023
-- OWASP Top 10 (2021), OWASP API Security Top 10 (2023), OWASP LLM Top 10
+- OWASP Top 10 (現行版を確認: 2025 リリース済), OWASP API Security Top 10 (2023), OWASP LLM Top 10
 - CWE Top 25
 - SLSA, Sigstore (アーティファクト来歴)
 - Anthropic AI safety policy
