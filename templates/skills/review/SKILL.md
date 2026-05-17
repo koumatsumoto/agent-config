@@ -90,7 +90,7 @@ argument-hint: "[target] [level]"
 
 ### 起動方法
 
-**同一メッセージ内で Task tool を 3 個並行発行** する。subagent は `~/.claude/skills/review/` を参照するため、Task tool prompt 内のパスは **絶対パス (`~/` 始まり)** で書く。`<role>` / `<Phase 2 の出力>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 Task tool に以下のプロンプトを渡す:
+実行環境の subagent 機構で 3 expert を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書き、orchestrator が installed skill root に解決して渡す。`<role>` / `<Phase 2 の出力>` などのプレースホルダも orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
 
 ```
 あなたは km:review Phase 3 の <role> 専門家です。
@@ -101,10 +101,7 @@ argument-hint: "[target] [level]"
 - 他者と矛盾する判定をしてもよい (Phase 5 統合で解消される)
 
 ## Read 順序
-1. ~/.claude/skills/review/experts/<role>.md (役割定義と workflow)
-2. ~/.claude/skills/review/experts/report-format.md (判定・確信度・重複時 SOT を先に把握)
-3. レビュー対象の diff を pre-scan し、該当しそうな ISO 副特性に当たりをつける
-4. ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md (該当しそうな 1-2 ファイルのみ)
+まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・重複時 SOT を把握)、その後 diff を pre-scan して該当しそうな ISO 副特性に当たりをつける。`<review skill root>/references/iso-25010/<該当ファイル>.md` は **判断に必要なものだけ** Read する (該当 1-2 ファイル、判断保留や thorough 深掘りが必要なら追加で担当 reference を読む)。
 
 ## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>
@@ -125,7 +122,7 @@ argument-hint: "[target] [level]"
 - diff から判定するために repo 内の近隣ファイル (middleware / interceptor / 類似 endpoint) が必要なら最大 5 個まで Read してよい
 
 ## 出力形式
-~/.claude/skills/review/experts/report-format.md に従う。判定基準・確信度・偽陽性フィルタ・役割固有フィールド (HIGH 以上必須) はすべてそこに集約されている。
+`<review skill root>/experts/report-format.md` に従う。判定基準・確信度・偽陽性フィルタ・役割固有フィールド (HIGH 以上必須) はすべてそこに集約されている。
 ```
 
 `<role>` は `architect`, `qa`, `security` のいずれか。3 つを同一メッセージ内で発行する (sequential ではなく parallel)。

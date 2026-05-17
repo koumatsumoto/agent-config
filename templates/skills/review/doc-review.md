@@ -20,7 +20,7 @@ orchestrator が保持する diff + Phase 2 の結果 (Phase 3 が実行され�
 確認観点:
 
 - パブリック API、CLI、設定、インターフェースの変更があるか (Phase 2 が出力する `Doc impact hints` を起点にする)
-- `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
+- `README.md` / `AGENTS.md` / `CLAUDE.md` / `docs/` に関連記述があるか (Codex CLI では `AGENTS.md` が主、`CLAUDE.md` は fallback)
 - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 
 判定: MEDIUM (更新推奨) または LOW のみ。CRITICAL/HIGH は出さない。
