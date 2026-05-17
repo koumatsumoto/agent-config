@@ -1,34 +1,15 @@
 # Phase 2 と Phase 3 architect の住み分け
 
-`templates/skills/review/code-review.md` (Phase 2) と `templates/skills/review/experts/architect.md` (Phase 3 architect) は重複しないように設計されている。同じコードを 2 回深く読むのではなく、**異なる視点 (時間軸・関心事・粒度)** からレビューする。
+`code-review.md` (Phase 2) と `experts/architect.md` (Phase 3 architect) は重複しないように設計されている。同じコードを 2 回深く読むのではなく、**異なる視点 (時間軸・関心事・粒度)** からレビューする。
 
 ## 基本原則
 
 | Phase | 視点 | 主たる関心 |
 |---|---|---|
 | Phase 2 (code-review) | コードレベルの正しさ | 現在の diff が壊しうる関数・モジュール・システム境界の bug / 設計不整合 |
-| Phase 3 architect | 長期・横断・非機能 | 時間軸とシステム全体の整合。コード単発の正しさではなく、将来の進化や横断的影響 |
+| Phase 3 architect | 長期・横断・非機能 | 時間軸とシステム全体の整合。将来の進化や横断的影響 |
 
 Phase 2 は「今この diff は正しいか」、Phase 3 architect は「この diff が repo の長期的な健全性や互換性連鎖に与える影響は何か」を見る。
-
-## 具体例
-
-以下の指摘パターンは、それぞれどちらの Phase に属するかが明確に異なる。
-
-### Phase 2 (code-level)
-
-- `api/v2/users.ts:42` の入力検証が抜けている (current diff の bug)
-- 関数 `parseDate` で空文字列の扱いが未定義 (関数レベル正しさ)
-- モジュール `db/orm` が `ui/components` を import している (レイヤー違反)
-- HTTP handler が DB トランザクションを開始したが finally でクローズしていない (リソースリーク)
-
-### Phase 3 architect (長期・横断・非機能)
-
-- この変更で公開 API の型契約が破れ、3 つの consumer に互換性問題が連鎖する可能性 (横断・互換性)
-- 現在の循環参照は実害ないが、今後 N 回のスケール展開で保守性が悪化する (長期・保守性)
-- この実装はチーム全体のアーキ判断 (例: Repository pattern) から逸脱している (横断整合)
-- 性能特性が O(n²) から O(n) に改善しているが、想定するデータ規模では実害なし。逆に複雑度が上がり保守コストが増えた (性能モデリング、トレードオフ)
-- 認証経路の責務が 3 モジュールに散らばっており、今後セキュリティ要件が追加されたときに修正点が増える (長期保守性、変更波及)
 
 ## 判定ルール
 
@@ -46,6 +27,21 @@ Phase 2 は「今この diff は正しいか」、Phase 3 architect は「この
    - 規約準拠 (lint で拾えるレベル、命名、コメント、関数長) → Phase 2
    - アーキ判断との整合 (パターン選択、責務分割、進化方向) → Phase 3 architect
 
+## 具体例
+
+### Phase 2 (code-level: 現在の diff が壊すか)
+
+- `api/v2/users.ts:42` の入力検証が抜けている (current diff の bug)
+- モジュール `db/orm` が `ui/components` を import (レイヤー違反)
+- HTTP handler が DB トランザクションを finally でクローズしていない (リソースリーク)
+
+### Phase 3 architect (長期・横断・非機能: 将来や全体への影響)
+
+- 公開 API の型契約変更で 3 consumer に互換性問題が連鎖 (横断・互換性)
+- 現在の循環参照は実害ないが、今後 N 回のスケール展開で保守性悪化 (長期・保守性)
+- チーム全体のアーキ判断 (例: Repository pattern) からの逸脱 (横断整合)
+- 認証経路の責務が 3 モジュールに散らばり、後続のセキュリティ要件追加で修正点増加 (長期保守性、変更波及)
+
 ## 重複指摘が出た場合
 
-同じファイル・近接行で Phase 2 と Phase 3 architect の両方から指摘が出た場合は、Phase 5 統合時に重複の可能性を注記する。両者が同じ問題を指している場合は Phase 2 側の指摘を採用する (より具体的なため)。
+同じファイル・近接行で Phase 2 と Phase 3 architect の両方から指摘が出た場合は、Phase 5 統合時に重複の可能性を注記する。両者が同じ問題を指している場合は **Phase 2 側の指摘を採用** する (より具体的なため)。

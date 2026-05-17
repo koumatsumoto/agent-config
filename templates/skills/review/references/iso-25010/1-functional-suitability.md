@@ -1,6 +1,6 @@
 # 機能適合性 (Functional Suitability)
 
-ISO/IEC 25010:2023。「製品が明示および暗黙のニーズに合致する機能を提供する程度」を見る。
+明示および暗黙のニーズに合致する機能を提供できているか。
 
 ## 機能完全性 (Functional Completeness)
 

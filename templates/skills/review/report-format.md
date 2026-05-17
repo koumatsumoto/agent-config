@@ -14,7 +14,6 @@ km:review Phase 5 の統合レポート形式。
 **コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
 ```
 
-
 ## 各 Phase の詳細
 
 各 Phase の結果をセクションごとに表示する。スキップした Phase は見出し + `（スキップ）` を出力 (省略しない)。
@@ -52,110 +51,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
 ```
 
-## レベル別の例
-
-### `standard` の例
-
-```md
-## 統合レビュー結果
-
-**実行レベル**: standard
-**対象スコープ**: uncommitted
-**変更概要**: feat | コード 120行 (3ファイル)
-**総検出件数**: CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
-**コミット判定**: ✅ PASS
-
----
-### Phase 2: Code Review (generalist)
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
----
-### Phase 3: 第三者専門家レビュー
-（スキップ - standard レベルのため）
----
-### Phase 4: Doc Review
-（need-check モード）
-- README.md: API エンドポイントの追加に伴い更新推奨
-```
-
-### `quick` の例 (code-only)
-
-```md
-## 統合レビュー結果
-
-**実行レベル**: quick
-**対象スコープ**: uncommitted
-**変更概要**: fix | コード 24行 (1ファイル)
-**総検出件数**: CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 1
-**コミット判定**: ✅ PASS
-
----
-### Phase 2: Code Review (generalist)
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 1
----
-### Phase 3: 第三者専門家レビュー
-（スキップ - quick レベルのため）
----
-### Phase 4: Doc Review
-（need-check モード - 更新必要性なし）
-```
-
-### docs-only の例
-
-```md
-## 統合レビュー結果
-
-**実行レベル**: standard
-**対象スコープ**: uncommitted
-**変更概要**: docs | ドキュメント 80行 (2ファイル)
-**総検出件数**: CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 0
-**コミット判定**: ✅ PASS
-
----
-### Phase 2: Code Review (generalist)
-（スキップ - docs-only のため）
----
-### Phase 3: 第三者専門家レビュー
-（スキップ - docs-only のため）
----
-### Phase 4: Doc Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 0
-```
-
-### `thorough` + BLOCKED の例
-
-```md
-## 統合レビュー結果
-
-**実行レベル**: thorough
-**対象スコープ**: pr:123
-**変更概要**: feat | コード 450行 (8ファイル) + ドキュメント 80行 (3ファイル)
-**総検出件数**: CRITICAL: 0 / HIGH: 2 / MEDIUM: 4 / LOW: 1
-**コミット判定**: ⚠️ BLOCKED（HIGH 以上の問題あり）
-
----
-### Phase 2: Code Review (generalist)
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 0
-...
----
-### Phase 3: 第三者専門家レビュー
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 1
-
-#### システムアーキテクト
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
-...
-
-#### QA 専門家
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
-...
-
-#### セキュリティ専門家
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
-（指摘なし）
----
-### Phase 4: Doc Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
-（指摘なし）
-```
+スキップした Phase の表記例: `### Phase 3: 第三者専門家レビュー\n（スキップ - standard レベルのため）` / `（スキップ - docs-only のため）`。need-check モードは `### Phase 4: Doc Review\n（need-check モード）` または `（need-check モード - 更新必要性なし）`。
 
 ## 共通ルール
 
@@ -166,4 +62,3 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 5. スキップされた Phase は見出しと `（スキップ）` を出力。セクション自体を省略しない
 6. Phase が結果を返さなかった場合は、該当 Phase を `（実行失敗）` として記録し、失敗理由を含める
 7. 指摘がゼロの Phase は件数サマリーと `（指摘なし）` を出力
-
