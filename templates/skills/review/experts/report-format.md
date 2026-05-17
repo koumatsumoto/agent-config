@@ -98,22 +98,20 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 
 ## Phase 2 との重複時 (SOT ルール)
 
-Phase 2 で既に同観点が確定済みの指摘に対し Phase 3 expert が出力する場合の **単一情報源ルール**。本ルールが Phase 2 ↔ Phase 3 重複を扱う唯一の規約で、SKILL.md (orchestrator) と scope-alignment.md (Phase 2 ↔ Phase 3 architect 住み分け) はここを参照する。
+Phase 2 と同観点 (`(file_path, 影響行範囲 ±5 行, ISO 副特性 ID または Phase 2 観点ラベル)` の組が一致) で Phase 3 expert が出力する場合の **単一情報源**。SKILL.md (orchestrator) と scope-alignment.md はここを参照する。
 
-判定: 同観点 = `(file_path, 影響行範囲 ±5 行, ISO 副特性 ID または Phase 2 観点ラベル)` の組が一致。
-
-| パターン | expert 側の出力 | orchestrator 側のカウント / 表示 |
+| パターン | expert 側 | カウント / 表示 |
 |---|---|---|
-| **A: 補強情報なし** (= 同観点で重大度も一致、追加情報なし) | 出力しない (除外) | Phase 2 側のみカウント・表示 |
-| **B: 補強情報あり** (攻撃シナリオ / 再現条件 / 長期影響などの追加情報あり、重大度は据え置き) | 新規セクションは作らず以下の「重複注記」末尾追記 | Phase 2 側のみカウント、補強注記は Phase 2 セクション直下に併記 |
-| **C: 重大度の再評価あり** (例: Phase 2 で MEDIUM → security で HIGH 相当に再評価) | 新規セクションで出力 (重大度を上書き) | Phase 3 側を採用し、Phase 2 側の同観点指摘は統合レポートから drop。drop された旨は `### Phase 2: Code Review (generalist)` セクションの末尾に注記 |
+| **A: 追加情報なし** | 出力しない | Phase 2 側のみ |
+| **B: 補強情報あり** (攻撃シナリオ / 再現条件 / 長期影響、重大度は据え置き) | 重複注記のみ末尾追記 | Phase 2 側カウント、注記は Phase 2 直下に併記 |
+| **C: 重大度の再評価** (例: Phase 2 MEDIUM → security HIGH) | 新規セクションで出力 | Phase 3 側採用、Phase 2 側の同観点は drop (Phase 2 セクション末尾に注記) |
 
-`qa` が補強できるのは「複数経路の連鎖」「運用での再現条件」が加わる場合のみ (条件未充足なら A 扱いで除外)。`architect` は新規 attack surface 露呈 / 長期影響でしかパターン B/C に進めない。`security` は重大度再評価可。
+補強可能条件: `qa` は「複数経路の連鎖」または「運用での再現条件」が加わる場合のみ。`architect` は新規 attack surface 露呈 / 長期影響のみ。`security` は重大度再評価可。
 
 ### 補強注記フォーマット (パターン B)
 
 ```
 ## 重複注記 (Phase 2 の指摘を補強)
 - Phase 2 指摘: `<Phase 2 の問題タイトル>`
-- Phase 3 視点の追加情報: 攻撃シナリオ / 長期影響 / 再現条件のうち該当する補強情報のみ
+- Phase 3 視点の追加情報: 攻撃シナリオ / 長期影響 / 再現条件のうち該当するものだけ
 ```

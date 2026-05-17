@@ -20,51 +20,49 @@ argument-hint: "[target] [level]"
 
 ### Phase 1a. 引数パース仕様
 
-`$ARGUMENTS` は単一文字列。**tokenize + classify の 2 段アルゴリズム** で解析する。
+`$ARGUMENTS` は単一文字列。flag 抽出 → 残り token 分類の順で解析する。
 
-1. **flag 抽出 (位置不問)**: `--` プレフィックスの token を先に抽出
-   - `--uncommitted`: 値なし。明示の未コミットモード
-   - `--repo <subtree>`: **直後の token を subtree value として同時消費**。直後 token が無い / さらに `--` flag が来る / level token (`quick|standard|thorough`) の場合は「サブツリー必須」エラー + 終了。subtree 候補として消費した token は step 2 の評価対象から除外
-   - 同一 flag が複数回現れた場合は最後の指定を有効として警告
-2. **残り token を順序評価**: flag 抽出後の残り token を以下の優先順位で分類
-   1. 完全一致 `^pr$` または `^pr:[0-9]+$` → PR モード (複数指定された場合は最後を有効として警告)
+1. **flag 抽出 (位置不問)**: `--` プレフィックス token を先に取り出す
+   - `--uncommitted`: 明示の未コミットモード (値なし)
+   - `--repo <subtree>`: 直後の token を subtree value として同時消費。直後が無い / level token / 別 flag なら「サブツリー必須」エラー終了
+2. **残り token を順序評価**: 先頭一致で以下に分類 (同種が複数あれば最後を有効)
+   1. `^pr$` または `^pr:[0-9]+$` → PR モード
    2. `..` を含む → コミット範囲モード
    3. `^[0-9a-f]{7,40}$` → 単一コミットモード (sha)
-   4. `^(quick|standard|thorough)$` → level 指定 (複数指定は最後を有効)
+   4. `^(quick|standard|thorough)$` → level 指定
    5. それ以外 → 曖昧入力として警告
    6. 全 token なし → 既定 (未コミット差分)
 3. **裸の数字 `42` は曖昧入力として警告**。`km:github-workflow` の `[issue-number]` 引数との混同を防ぐ。明示的に `pr:42` を要求する
-4. **`pr` 系と `--repo` が同時指定された場合** は「対象モードが重複」エラー + 終了する (両者排他)
+4. **`pr` 系と `--repo` の同時指定はエラー終了** (排他モード)
 
 ### Phase 1b. 対象スコープ解決
 
-| 対象 | コマンド | フォールバック |
-|---|---|---|
-| 未コミット (既定) | `git diff` + `git diff --name-only` | — |
-| `<base>..<head>` | `git diff <base>..<head>` | base/head が解決できなければエラー終了 |
-| `<sha>` | `git show <sha>` | sha が見つからなければエラー終了 |
-| `pr` | `gh pr diff` (current branch の PR) | `gh` 未認証 or 非 GitHub repo / PR 未存在ならエラー + 別スコープ指定を促す |
-| `pr:<n>` | `gh pr diff <n>` | 同上 |
-| `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙、各ファイルを Read。HEAD vs HEAD~1 の diff ではなく現状コード全体が対象。サブツリー必須、未指定なら警告 | — |
+| 対象 | コマンド |
+|---|---|
+| 未コミット (既定) | `git diff` + `git diff --name-only` |
+| `<base>..<head>` | `git diff <base>..<head>` |
+| `<sha>` | `git show <sha>` |
+| `pr` / `pr:<n>` | `gh pr diff [<n>]` (失敗時は別スコープ指定を促す) |
+| `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙し各ファイルを Read (diff ではなく現状コード全体が対象) |
 
-**Context budget 防御**: `--repo <subtree>` 時は `git ls-files <subtree>` の対象テキストファイル総行数を計算し、**1 行 ≈ 25 tokens** で概算する。**約 1600 行 (≈ 40k tokens) を超える場合**はサブツリーをさらに絞るよう促し、Phase 2 以降の起動を **強制停止** する (3 並列 subagent の合算 context を考慮した保守的な閾値)。binary / lockfile / generated ファイルは概算から除外。
+base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / experts / Phase 4) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る。
 
-下位コンポーネント (Phase 2 / experts / Phase 4) は **「解決済みのファイル一覧 + diff 内容」** を共通コンテキストで受け取る。
+**Context budget 防御 (`--repo` のみ)**: 対象テキストファイル総行数を `1 行 ≈ 25 tokens` で概算し、**約 1600 行 (≈ 40k tokens) を超える場合は Phase 2 以降を強制停止** してサブツリーを絞るよう促す (3 並列 subagent の合算 context を考慮した閾値)。binary / lockfile / generated は除外。
 
 ### Phase 1c. 変更タイプ判定とレベル選択
 
-変更タイプの判定入力は対象スコープに応じて変える:
+変更タイプの判定入力:
 
-| 対象 | 変更タイプ判定の入力 | 入力欠落時のフォールバック |
-|---|---|---|
-| 未コミット | ファイル拡張子・変更パターン (コミットメッセージは存在しないため不使用) | — |
-| `<base>..<head>` / `<sha>` | ファイル拡張子・変更パターン + コミットメッセージ (`refactor:` 等の Conventional 接頭辞) | コミットメッセージ取得失敗時は拡張子のみで判定 |
-| `pr` / `pr:<n>` | `gh pr view` のタイトル/ラベル + diff | `gh pr view` 失敗 (auth / rate limit / ラベル未付与) 時は diff のみで判定し変更構成を `mixed` にフォールバック |
-| `--repo <subtree>` | 変更タイプ判定を行わず常に `mixed` 扱い。全 Phase を有効化 | — |
+| 対象 | 判定入力 |
+|---|---|
+| 未コミット | ファイル拡張子・変更パターン |
+| `<base>..<head>` / `<sha>` | 拡張子・変更パターン + コミットメッセージ (`refactor:` 等の Conventional 接頭辞) |
+| `pr` / `pr:<n>` | `gh pr view` のタイトル/ラベル + diff |
+| `--repo <subtree>` | 常に `mixed` 扱い (判定省略) |
 
-変更構成 (正規ラベル): `docs-only` / `code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`。`--repo` は常に `mixed` 扱い。
+コミットメッセージ取得失敗 / `gh pr view` 失敗時は拡張子のみで判定し変更構成は `mixed` にフォールバック。
 
-レベルは `thorough` / `standard` / `quick`。Phase 1a で抽出されなければ会話文脈から推論、それも無理なら既定 `standard`。
+変更構成 (正規ラベル): `docs-only` / `code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`。レベルは `thorough` / `standard` / `quick` で、Phase 1a で抽出されなければ会話文脈から推論、それも無理なら既定 `standard`。
 
 ### 引数なし呼び出しのデフォルト動作
 
@@ -157,55 +155,38 @@ need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場
 
 ## Phase 5: 統合 + コミット判定
 
-- Phase 2 + Phase 3 (3 専門家) + Phase 4 の指摘を重大度ごとに合算
-- いずれかに CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
-- Phase 2 と Phase 3 で同観点が重複した場合の取り扱いは **`experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」** が唯一の規約。本 SKILL.md は重複ルールを重ねて書かない (SOT)
-- intent context があった場合、各 expert の「intent との整合性 1 行コメント」を統合サマリーに含める
+- Phase 2 / Phase 3 (3 専門家) / Phase 4 の指摘を重大度ごとに合算し、CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
+- Phase 2 と Phase 3 で同観点が重複した場合の取り扱いは `experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」が唯一の規約
+- intent context があった場合は各 expert の「intent との整合性 1 行コメント」を統合サマリーに含める
 
-### アクションリスト生成
+統合レポート末尾に **優先順位付きアクションリスト** を生成する:
 
-統合レポート末尾に **優先順位付きアクションリスト** を生成する。指摘の山を「次の一手」に変換することがレビューの価値:
+1. **マージ前必須** (CRITICAL/HIGH): 該当ファイル + 修正方針サマリで「PASS への最短経路」を示す
+2. **マージ後推奨** (MEDIUM): follow-up issue 候補
+3. **受け入れ可能** (LOW): 残しても害なし
+4. **指摘の相互関係**: 同一根本原因でグルーピング可能なら明示
 
-1. **マージ前必須** (CRITICAL/HIGH): 修正しないと BLOCKED
-2. **PASS への最短経路**: 上記必須を直す具体的なステップ (該当ファイル + 修正方針サマリ)
-3. **マージ後推奨** (MEDIUM): follow-up issue 候補
-4. **受け入れ可能** (LOW): 残しても害なし
-5. **指摘の相互関係**: 同一根本原因でグルーピング可能なら明示 (例: 「HIGH 1, MEDIUM 2, 3 はすべて auth middleware の責務不明確に起因」)
-
-詳細フォーマットは `report-format.md` を参照。
+詳細フォーマットは `report-format.md`。
 
 ## 進行ゲート
 
-**Phase N で `CRITICAL` または `HIGH` の検出件数が 0 でない限り、Phase N+1 を起動しない**。LOW/MEDIUM は次 Phase の起動を阻まない。
-
-- CRITICAL/HIGH 検出時: 当該 Phase で停止し、Phase 5 で `BLOCKED` を報告して終了
-- 全 Phase 通過時: Phase 5 で重大度ごとに合算、`PASS` を報告して終了
-- Phase 3 内: 3 expert は同一メッセージ内で並列発行、全員完了後に統合して CRITICAL/HIGH 判定
+**Phase N で CRITICAL/HIGH があれば Phase N+1 を起動しない**。当該 Phase で停止し Phase 5 で `BLOCKED` を報告して終了。LOW/MEDIUM は次 Phase 起動を阻まない。Phase 3 は 3 expert 全員完了後に合算判定する。
 
 ## レベル別実行マトリクス
 
-| Level | Phase 1 | Phase 2 (generalist) | Phase 3 (3 experts) | Phase 4 (doc) | Phase 5 |
-|---|---|---|---|---|---|
-| `quick` | ✓ | ✓ | スキップ | 変更構成依存 (Phase 4 起動モード参照) | ✓ |
-| `standard` | ✓ | ✓ | スキップ | 同上 | ✓ |
-| `thorough` | ✓ | ✓ | ✓ (3 名並列) | 同上 | ✓ |
+| Level | Phase 2 | Phase 3 | Phase 4 |
+|---|---|---|---|
+| `quick` | ✓ (浅) | スキップ | 変更構成依存 |
+| `standard` | ✓ | スキップ | 変更構成依存 |
+| `thorough` | ✓ | ✓ (3 名並列) | 変更構成依存 |
 
-**変更構成による override**:
+変更構成による override:
 
 - `docs-only` → Phase 2/3 skip、Phase 4 full のみ
 - `test-or-config-or-chore-only` → Phase 3/4 skip (Phase 2 のみ実行)
-- 上記以外 (`code-only` / `code+docs` / `mixed`) → 上記マトリクスどおり
 
-**`quick` と `standard` の違い**: Phase の起動条件は同じだが、Phase 2 / Phase 4 内部の検査深度を `quick` では絞る。詳細は `code-review.md` / `doc-review.md` の深度表を参照。
+`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / Phase 4 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。
 
 ## 指摘対応の方針
 
-検出された指摘は `LOW` を含め原則すべて対応する。以下の場合のみユーザ判断に委ねる:
-
-- 大規模な修正が必要で影響範囲が広い
-- 仕様変更を伴う
-- 設計判断のトレードオフがある
-
-合意済み判断や影響大の修正で残す場合は「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。
-
-出力形式は `report-format.md` を参照。
+検出された指摘は `LOW` を含め原則すべて対応する。大規模修正 / 仕様変更 / 設計トレードオフのいずれかに該当する場合のみユーザ判断に委ね、残す場合は「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。出力形式は `report-format.md` を参照。
