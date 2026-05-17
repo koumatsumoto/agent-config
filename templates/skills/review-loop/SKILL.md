@@ -36,7 +36,7 @@ km:review は「1 回完結の診断」を返す。修正反復が必要なと�
 - 残り token: km:review にそのまま渡す (`target` + `level`)
 
 例:
-- `/km:review-loop` → 既定 (km:review に引数なし渡し、max-loops=5)
+- `/km:review-loop` → 既定 (km:review に引数なし渡し、max-loops=5)。km:review 側の「引数なしフォールバック」(uncommitted → push 済なら PR → 終了) に委譲
 - `/km:review-loop pr:123 thorough` → km:review に `pr:123 thorough` 渡し、max-loops=5
 - `/km:review-loop --max-loops 10 thorough` → km:review に `thorough` 渡し、max-loops=10
 
@@ -57,39 +57,43 @@ km:review が Phase 5 まで通過して PASS を返した。
 1. レポートから累積した **MEDIUM/LOW 指摘リスト** を抽出
 2. 例外条項該当指摘を除外し、残りを Edit tool で自動修正
 3. 例外条項該当指摘を「受け入れ済みリスク」として記録
-4. 完了報告 (後述) を出力して終了
+4. **修正後の再検証**: km:review をもう 1 回呼んで PASS を再確認 (自動修正で新規 HIGH を埋め込んでいないか確認)
+   - 再検証で PASS → 完了報告 (後述) を出力して終了
+   - 再検証で BLOCKED → loop カウンタ +1 して Phase D へ
+5. 修正対象がゼロ (累積 MEDIUM/LOW なし) なら再検証はスキップして即時完了報告
 
 #### BLOCKED の場合
 
 km:review がどこかの Phase で停止し BLOCKED を返した。
 
-1. 停止 Phase の指摘リスト (CRITICAL/HIGH + MEDIUM + LOW) を抽出
+1. 停止 Phase の指摘リスト (CRITICAL/HIGH + MEDIUM + LOW) を抽出 (それ以前の Phase で出た MEDIUM/LOW は最終 PASS 後の Phase C ルートで処理される)
 2. Phase D (修正フェーズ) へ進む
 
 ### Phase D: 修正フェーズ
 
-停止 Phase で出た全指摘 (CRITICAL/HIGH/MEDIUM/LOW) について:
+停止 Phase で出た全指摘 (CRITICAL/HIGH/MEDIUM/LOW) について (それ以前の Phase の MEDIUM/LOW は最終 PASS 後にまとめて自動修正される):
 
 1. **例外条項該当判定**: 以下に該当する指摘か?
    - 合意済み判断 (intent context / 過去のレビューで決定済み)
    - 影響が大きい修正 (大規模な構造変更を伴う)
    - 設計判断のトレードオフ (どちらでも正解になりうる選択)
+   - 修正方針が指摘内に明示されていない / 曖昧で Edit に落とせない
 
-2. **例外条項該当時**: 「受け入れ済みリスク」として記録 (重大度 / 残す理由 / 後続対応条件)、ユーザ判断を仰ぐ
+2. **例外条項該当時**: 「受け入れ済みリスク」として記録 (重大度 / 残す理由 / 後続対応条件)
 
 3. **例外条項非該当時**: Edit tool で自動修正
 
-修正が完了したら Phase E へ。
+4. **例外条項判定の集計**:
+   - 自動修正対象が 1 件以上ある → Phase E (ループ判定) へ
+   - **全 CRITICAL/HIGH が例外条項該当だった** (= 自動修正できる CRITICAL/HIGH がゼロ) → 即時ユーザ判断 (続行 = 受け入れ済みリスクで PASS 扱い / 中止 = 手動修正待ち)。Phase E のループには進まない
 
 ### Phase E: ループ判定
 
-修正対象の重大度を確認:
+Phase D で自動修正が 1 件以上発生した後にここへ来る。次のいずれか:
 
-- **修正対象に CRITICAL/HIGH が含まれていた** → loop カウンタ +1 して **Phase B に戻る** (km:review を Phase 2 から再走)
-  - ※ km:review は 1 回完結なので Phase 1 から自然に再実行されるが、対象スコープが同じなら結果は Phase 2 以降の再評価と等価
-- **修正対象が MEDIUM 以下のみ** → 修正済みなので **Phase B に戻る** (km:review が次の Phase に進むことを期待)
-- **ループ上限 (`--max-loops`) 到達** → ユーザ判断 (続行 / 中止) を仰ぐ
+- **ループ上限 (`--max-loops`) 到達** → ユーザ判断 (続行 / 中止 / 受け入れ) を仰ぐ
 - **会話履歴で同一指摘が繰り返し出現** (収束しない兆候) → ユーザ判断を仰ぐ
+- **それ以外** → loop カウンタ +1 して **Phase B に戻る** (km:review を再走)
 
 ## 状態管理
 
@@ -108,7 +112,7 @@ Claude Code セッションをまたぐ反復が必要な場合は、ユーザ�
 **最終判定**: ✅ PASS
 
 ### 修正サマリー
-- 修正済み CRITICAL: 0 件
+- 修正済み CRITICAL: <count> 件
 - 修正済み HIGH: <count> 件
 - 修正済み MEDIUM: <count> 件
 - 修正済み LOW: <count> 件
@@ -148,17 +152,19 @@ flowchart TD
   Start[/km:review-loop/] --> A[Phase A: 引数解析]
   A --> B[Phase B: km:review を呼ぶ]
   B --> C{Phase C: 結果判定}
-  C -->|PASS| FinalFix[累積 MEDIUM/LOW 自動修正]
-  FinalFix --> Done[完了報告]
+  C -->|PASS| FinalFix[累積 MEDIUM/LOW 自動修正 例外条項除く]
+  FinalFix --> Recheck{再 km:review = PASS?}
+  Recheck -->|yes / 修正なし| Done[完了報告]
+  Recheck -->|no, BLOCKED| D
   C -->|BLOCKED| D[Phase D: 修正フェーズ]
-  D --> Exception{例外条項該当?}
-  Exception -->|yes| Risk[受け入れ済みリスク記録 + ユーザ判断]
-  Exception -->|no| AutoFix[Edit で自動修正]
-  Risk --> E{Phase E: max_loops?}
-  AutoFix --> E
+  D --> AutoFix[例外条項非該当 → Edit で自動修正<br/>例外条項該当 → 受け入れ済みリスク記録]
+  AutoFix --> AllException{全 CRITICAL/HIGH が例外条項該当?}
+  AllException -->|yes| User[ユーザ判断<br/>続行 PASS 扱い / 中止 / 受け入れ]
+  AllException -->|no| E{Phase E: max_loops?}
   E -->|未到達| B
-  E -->|到達 / 収束しない| User[ユーザ判断]
-  User -->|続行| B
+  E -->|到達 / 収束しない| User
+  User -->|続行 受け入れ済みリスク承認| Done
+  User -->|再起動 max-loops 拡張| Restart[/再 km:review-loop --max-loops N+M/]
   User -->|中止| Abort[終了]
 ```
 

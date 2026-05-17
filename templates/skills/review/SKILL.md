@@ -170,7 +170,7 @@ Phase 1c で確定した変更構成に基づいて以下のいずれかで起�
 - **`docs-only`** (docs 変更のみ) → **full モード**。Phase 2/3 は skip して直接 Phase 4 へ
 - **`code+docs`** (コード + docs 両方) → **full モード**
 - **`mixed`** (`--repo` 経由) → **full モード**
-- **`code-only`** (コードのみ、docs 変更なし) → **need-check モード** (軽量、ループなし、CRITICAL/HIGH 出さない)
+- **`code-only`** (コードのみ、docs 変更なし) → **need-check モード** (軽量、CRITICAL/HIGH 出さない)
 - **`test-or-config-or-chore-only`** → **Phase 4 skip**
 
 なお need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場合は **MEDIUM に強制降格** して報告する (gating を発火させない)。

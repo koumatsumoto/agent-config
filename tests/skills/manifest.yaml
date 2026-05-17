@@ -48,10 +48,6 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-pr-thorough
     tags: [routing, review, pr, thorough]
-  - id: review-routing-skip-gating
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-skip-gating
-    tags: [routing, review, gating]
   - id: review-routing-ambiguous-numeric
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-ambiguous-numeric

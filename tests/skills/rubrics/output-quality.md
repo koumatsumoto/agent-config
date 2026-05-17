@@ -45,7 +45,6 @@
 - `thorough` 指定なのに Phase 3 を起動していない
 - Phase 3 の 3 専門家が sequential 発行になっている (並列発行されていない)
 - Phase 4 を Phase 3 と並走させている (Phase 3 完了後の sequential 実行が原則)
-- `--skip-gating` 指定時に Phase 進行ゲートが動いている (本来は escape されるべき)
 - Phase 2 と Phase 3 architect の指摘が大量に重複している (`scope-alignment.md` の住み分けが守られていない)
 - docs update recommendation を出すべきケースで沈黙する
 - 接点変更がないのに WCAG 2.2 やブラウザ固有の指摘を出す

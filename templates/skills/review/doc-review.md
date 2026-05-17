@@ -8,8 +8,8 @@
 
 orchestrator から渡された変更構成に応じて以下のいずれかで起動:
 
-- **full モード**: docs-only / code+docs / `--repo` などドキュメント変更を含む場合。Phase 1〜4 のフル workflow を実行。Sequential gating ループ (最大 3 周) の対象
-- **need-check モード**: code-only (コードのみ変更、docs 変更なし) の場合。「ドキュメント更新の必要性チェック」軽量モード。検出は MEDIUM 以下に降格固定とし CRITICAL/HIGH は出さない。ループ対象外 (1 回のみ実行)
+- **full モード**: docs-only / code+docs / `--repo` などドキュメント変更を含む場合。Phase 1〜4 のフル workflow を 1 回実行
+- **need-check モード**: code-only (コードのみ変更、docs 変更なし) の場合。「ドキュメント更新の必要性チェック」軽量モード。検出は MEDIUM 以下に降格固定とし CRITICAL/HIGH は出さない (1 回のみ実行)
 
 ## レビューの目的
 
@@ -38,7 +38,7 @@ orchestrator が既に保持する diff・Phase 2 の結果 (Phase 3 が実行�
 - `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
 - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 
-判定: MEDIUM (更新推奨) または LOW のみ。CRITICAL/HIGH は出さない。Sequential gating の対象外なので 1 回のみ実行。
+判定: MEDIUM (更新推奨) または LOW のみ。CRITICAL/HIGH は出さない (1 回のみ実行、km:review は 1 回完結)。
 
 need-check モードでの出力例:
 
@@ -142,7 +142,7 @@ orchestrator から渡された変更ファイル一覧を集める。下の表�
 - `MEDIUM`: 整合性不足、曖昧さ、更新漏れ、構造上の違和感や読者を迷わせる構成問題
 - `LOW`: 微小改善
 
-`CRITICAL` または `HIGH` があれば orchestrator の Sequential gating により Phase 5 (統合) への進行が阻まれる。need-check モードでは CRITICAL/HIGH を出さない (検出された場合は MEDIUM に降格)。
+`CRITICAL` または `HIGH` があれば orchestrator の進行ゲートにより Phase 5 で BLOCKED 報告して終了する (修正反復は `km:review-loop` の責務)。need-check モードでは CRITICAL/HIGH を出さない (検出された場合は MEDIUM に降格)。
 
 ## 出力フォーマット
 

@@ -15,7 +15,6 @@
 | `review-routing-config-chore` | config/chore path executes Phase 2 only, no Phase 3/4 |
 | `review-routing-code-and-docs-thorough` | thorough code+docs path runs Phase 3 with 3 experts in parallel |
 | `review-routing-pr-thorough` | PR target with thorough level resolves and runs all phases |
-| `review-routing-skip-gating` | `--skip-gating` bypasses Phase progression gate |
 | `review-routing-ambiguous-numeric` | bare numeric argument is rejected as ambiguous |
 | `review-routing-quick-code-only` | quick level on code-only triggers Phase 4 need-check mode |
 | `review-routing-repo-thorough` | --repo subtree with thorough runs all phases in mixed mode |
@@ -34,6 +33,7 @@
 
 ## Retired Cases
 
+| `review-routing-skip-gating` | retired in PR #45 — `--skip-gating` was removed from km:review when iteration moved to km:review-loop |
 | Retired Group | Destination |
 | --- | --- |
 | detailed review-quality scenarios | `tests/skills/rubrics/output-quality.md` |
