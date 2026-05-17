@@ -33,9 +33,9 @@
 
 ## Retired Cases
 
-| `review-routing-skip-gating` | retired in PR #45 — `--skip-gating` was removed from km:review when iteration moved to km:review-loop |
-| Retired Group | Destination |
+| Retired Case / Group | Reason / Destination |
 | --- | --- |
+| `review-routing-skip-gating` | retired in PR #45 — `--skip-gating` was removed from km:review when iteration moved to km:review-loop |
 | detailed review-quality scenarios | `tests/skills/rubrics/output-quality.md` |
 | non-canonical routing variations | `tests/skills/rubrics/routing.md` |
 | detailed plan file naming / sync permutations | stable contract checks in `verify-skill-tests.sh` plus this catalog |

@@ -1,6 +1,5 @@
 version: 1
-# 注: `loop_count` は Phase B 到達回数 (= km:review 起動回数) を指す。
-# Phase C PASS ルートの再検証 (累積 MEDIUM/LOW 修正後の km:review 再呼び出し) は別カウントしない。
+# 注: `loop_count` は km:review が起動された総回数 (Phase B + Phase C PASS ルートの Recheck を含む)。
 scenarios:
   - id: review-loop-trigger-natural-language
     title: Natural language iteration request should trigger km:review-loop
@@ -25,7 +24,7 @@ scenarios:
       simulated_review_result: pass
     expected:
       primary_skill: km:review-loop
-      loop_count: 1
+      loop_count: 2   # 初回 km:review (PASS) + Recheck (PASS)
       final_judgment: PASS
       final_fix_applied:
         - cumulative MEDIUM/LOW (例外条項除く)

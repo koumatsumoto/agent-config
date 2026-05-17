@@ -57,10 +57,10 @@ km:review が Phase 5 まで通過して PASS を返した。
 1. レポートから累積した **MEDIUM/LOW 指摘リスト** を抽出
 2. 例外条項該当指摘を除外し、残りを Edit tool で自動修正
 3. 例外条項該当指摘を「受け入れ済みリスク」として記録
-4. **修正後の再検証**: km:review をもう 1 回呼んで PASS を再確認 (自動修正で新規 HIGH を埋め込んでいないか確認)
+4. **修正後の再検証**: km:review をもう 1 回呼んで PASS を再確認 (自動修正で新規 HIGH を埋め込んでいないか確認)。この再検証も km:review 起動 1 回として **loop カウンタに算入** する
    - 再検証で PASS → 完了報告 (後述) を出力して終了
-   - 再検証で BLOCKED → loop カウンタ +1 して Phase D へ
-5. 修正対象がゼロ (累積 MEDIUM/LOW なし) なら再検証はスキップして即時完了報告
+   - 再検証で BLOCKED → Phase D へ (loop カウンタは既に +1 済み)
+5. 修正対象がゼロ (累積 MEDIUM/LOW なし) なら再検証はスキップして即時完了報告 (loop カウンタは増えない)
 
 #### BLOCKED の場合
 
@@ -71,7 +71,7 @@ km:review がどこかの Phase で停止し BLOCKED を返した。
 
 ### Phase D: 修正フェーズ
 
-停止 Phase で出た全指摘 (CRITICAL/HIGH/MEDIUM/LOW) について (それ以前の Phase の MEDIUM/LOW は最終 PASS 後にまとめて自動修正される):
+直前 km:review (Phase B 直接 BLOCKED でも、Phase C PASS ルートの Recheck-BLOCKED でも) が止まった停止 Phase の指摘 (CRITICAL/HIGH + MEDIUM + LOW) について (それ以前の Phase の MEDIUM/LOW は最終 PASS 後にまとめて自動修正される):
 
 1. **例外条項該当判定**: 以下に該当する指摘か?
    - 合意済み判断 (intent context / 過去のレビューで決定済み)
@@ -165,12 +165,12 @@ flowchart TD
   HasFix -->|yes| FinalFix[累積 MEDIUM/LOW 自動修正 例外条項除く]
   FinalFix --> Recheck{再 km:review = PASS?}
   Recheck -->|yes| Done
-  Recheck -->|no, BLOCKED, loop+1| D
+  Recheck -->|no, BLOCKED, Recheck も loop+1| D
   C -->|BLOCKED| D[Phase D: 修正フェーズ]
   D --> AutoFix[例外条項非該当 → Edit で自動修正<br/>例外条項該当 → 受け入れ済みリスク記録]
   AutoFix --> AllException{全 CRITICAL/HIGH が例外条項該当?}
   AllException -->|yes| User[ユーザ判断 3 択]
-  AllException -->|no| E{Phase E: max_loops?}
+  AllException -->|no| E{Phase E: --max-loops 到達?}
   E -->|未到達, loop+1| B
   E -->|到達 / 収束しない| User
   User -->|受け入れ| Done
@@ -201,6 +201,7 @@ km:review の例外条項を継承する。検出された指摘は `LOW` を含
 - ループ上限を必ず尊重する。`--max-loops` を超えて自動継続しない
 - 受け入れ済みリスクは必ずユーザに提示し、無断で隠さない
 - 修正で diff が大幅に膨張した場合 (例: 当初 100 行 → 500 行) はループを止めてユーザ判断を仰ぐ
+- Phase C 再検証で **初めて検出された** CRITICAL/HIGH は auto-fix で混入した可能性があるため、それを「受け入れ済みリスク」として提示する際は **その由来 (auto-fix の副作用かもしれない)** をユーザに併記する
 
 ## 関連
 
