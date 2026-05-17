@@ -8,27 +8,13 @@ argument-hint: "[target] [level]"
 
 # Review
 
-複数の review 観点を統合する review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
-
-## レビューの目的
-
-開発者は目の前の実装に集中するため、設計上の問題・品質特性の見落とし・ドキュメント不整合が視野外になりやすい。本 skill は Phase 2 (generalist code review)、Phase 3 (3 専門家による別視点レビュー)、Phase 4 (doc review) を統合し、CRITICAL/HIGH を漏れなく検出する。
+複数の review 観点を統合する 1 回完結の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。修正反復が必要な場合は `km:review-loop` を使う。
 
 ## Success Criteria
 
 - 変更タイプと対象スコープに応じた Phase / 専門家を正しく選ぶ
-- 要求されたレベルに応じて Phase を絞り込む
 - Phase 2 / Phase 3 (3 専門家) / Phase 4 のいずれかで CRITICAL または HIGH があれば BLOCKED とする
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
-- CRITICAL/HIGH 検出時はその Phase で停止し、Phase 5 で BLOCKED 報告して終了 (修正反復は `km:review-loop` の責務)
-
-## Workflow
-
-1. **Phase 1**: 引数解析 + 対象スコープ解決 + 変更タイプ/レベル決定
-2. **Phase 2**: コードレビュー (generalist) — main コンテキスト、`code-review.md` を Read して実行
-3. **Phase 3**: 第三者専門家レビュー (3 名並列、Task tool) — `thorough` のみ
-4. **Phase 4**: doc-review — main コンテキスト、`doc-review.md` を Read して実行
-5. **Phase 5**: 統合 + コミット判定
 
 ## Phase 1: 引数解析 + 対象スコープ解決 + 変更タイプ/レベル決定
 
@@ -59,7 +45,7 @@ argument-hint: "[target] [level]"
 | `pr:<n>` | `gh pr diff <n>` | 同上 |
 | `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙、各ファイルを Read。HEAD vs HEAD~1 の diff ではなく現状コード全体が対象。サブツリー必須、未指定なら警告 | — |
 
-**Context budget 防御**: `--repo <subtree>` 時は `git diff --stat <subtree>` の総行数を計算し、**1 行 ≈ 25 tokens** で概算する (混在 diff の経験則)。**約 1600 行 (≈ 40k tokens) を超える場合**はユーザに警告し、サブツリーをさらに絞るよう促す。3 並列 subagent の合算 context を考慮した保守的な閾値。
+**Context budget 防御**: `--repo <subtree>` 時は `git diff --stat <subtree>` の総行数を計算し、**1 行 ≈ 25 tokens** で概算する。**約 1600 行 (≈ 40k tokens) を超える場合**はユーザに警告し、サブツリーをさらに絞るよう促す (3 並列 subagent の合算 context を考慮した保守的な閾値)。
 
 下位コンポーネント (Phase 2 / experts / Phase 4) は **「解決済みのファイル一覧 + diff 内容」** を共通コンテキストで受け取る。
 
@@ -85,8 +71,6 @@ argument-hint: "[target] [level]"
 2. 未コミットなしかつ現ブランチが push 済みなら `gh pr diff` (current branch の PR) を試行 → 成功すれば PR モード
 3. それも無ければ「対象がないため終了」と出力
 
-これにより、ユーザが PR push 済の状態で `/km:review` を叩いても自動的に PR をレビューする。
-
 ## Phase 2: コードレビュー (generalist)
 
 `code-review.md` を Read してその指示に従って main コンテキストでレビューを実施する。
@@ -99,7 +83,7 @@ argument-hint: "[target] [level]"
 
 ## Phase 3: 第三者専門家レビュー (3 名並列)
 
-`thorough` レベルでのみ起動。`docs-only` / `test-or-config-or-chore-only` では起動しない (level 不問で常に skip)。
+`thorough` レベルでのみ起動。`docs-only` / `test-or-config-or-chore-only` では起動しない。
 
 ### 起動方法
 
@@ -118,8 +102,6 @@ argument-hint: "[target] [level]"
 2. レビュー対象の diff を pre-scan し、該当しそうな ISO 副特性に当たりをつける
 3. ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md (該当しそうな 1-2 ファイルのみ。役割定義に列挙されたファイルが起点)
 4. ~/.claude/skills/review/experts/report-format.md (出力直前に確認)
-
-architect は加えて ~/.claude/skills/review/references/scope-alignment.md を Read (Phase 2 との住み分け)。
 
 ## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>
@@ -140,7 +122,7 @@ architect は加えて ~/.claude/skills/review/references/scope-alignment.md を
 - diff から判定するために repo 内の近隣ファイル (middleware / interceptor / 類似 endpoint) が必要なら最大 5 個まで Read してよい
 
 ## 出力形式
-~/.claude/skills/review/experts/report-format.md に従う。HIGH 以上は固有フィールド (architect=長期影響、qa=再現条件、security=攻撃シナリオ+CWE/OWASP 引用) を必須記載。
+~/.claude/skills/review/experts/report-format.md に従う。判定基準・確信度・偽陽性フィルタ・役割固有フィールド (HIGH 以上必須) はすべてそこに集約されている。
 ```
 
 `<role>` は `architect`, `qa`, `security` のいずれか。3 つを同一メッセージ内で発行する (sequential ではなく parallel)。
@@ -155,9 +137,7 @@ architect は加えて ~/.claude/skills/review/references/scope-alignment.md を
 | qa | 異常系・境界・運用品質 | 1 (機能適合性), 4 (インタラクション能力), 5 (信頼性) |
 | security | 脅威モデル・攻撃面 | 6 (セキュリティ), 9 (安全性) |
 
-### Phase 2 との住み分け
-
-`references/scope-alignment.md` を参照。Phase 2 は code-level (関数・モジュール・システム境界の正しさ)、Phase 3 architect は「異なる視点 (長期・横断・非機能)」。住み分けの具体例 4 件もここに集約。
+Phase 2 ↔ Phase 3 architect の住み分けは `references/scope-alignment.md` に集約。
 
 ## Phase 4: doc-review
 
@@ -167,20 +147,20 @@ architect は加えて ~/.claude/skills/review/references/scope-alignment.md を
 
 Phase 1c で確定した変更構成に基づいて以下のいずれかで起動:
 
-- **`docs-only`** (docs 変更のみ) → **full モード**。Phase 2/3 は skip して直接 Phase 4 へ
-- **`code+docs`** (コード + docs 両方) → **full モード**
+- **`docs-only`** → **full モード**。Phase 2/3 は skip して直接 Phase 4 へ
+- **`code+docs`** → **full モード**
 - **`mixed`** (`--repo` 経由) → **full モード**
-- **`code-only`** (コードのみ、docs 変更なし) → **need-check モード** (軽量、CRITICAL/HIGH 出さない)
+- **`code-only`** → **need-check モード** (軽量、CRITICAL/HIGH 出さない)
 - **`test-or-config-or-chore-only`** → **Phase 4 skip**
 
-なお need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場合は **MEDIUM に強制降格** して報告する (gating を発火させない)。
+need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場合は **MEDIUM に強制降格** して報告する。
 
 ## Phase 5: 統合 + コミット判定
 
 - Phase 2 + Phase 3 (3 専門家) + Phase 4 の指摘を重大度ごとに合算
 - いずれかに CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
 - 同一ファイル・近接行で同観点の指摘が Phase 2 と Phase 3 で重複した場合の de-dup:
-  - **Phase 2 ↔ Phase 3 architect** の重複は **Phase 2 側を優先カウント** (より具体的なため、`scope-alignment.md` 参照)
+  - **Phase 2 ↔ Phase 3 architect** の重複は **Phase 2 側を優先カウント** (より具体的なため)
   - **Phase 2 ↔ Phase 3 security/qa** の重複は **Phase 3 側を優先カウント** (攻撃シナリオ・再現条件の補強情報を持つため)
 - intent context があった場合、各 expert の「intent との整合性 1 行コメント」を統合サマリーに含める
 
@@ -191,31 +171,18 @@ Phase 1c で確定した変更構成に基づいて以下のいずれかで起�
 1. **マージ前必須** (CRITICAL/HIGH): 修正しないと BLOCKED
 2. **PASS への最短経路**: 上記必須を直す具体的なステップ (該当ファイル + 修正方針サマリ)
 3. **マージ後推奨** (MEDIUM): follow-up issue 候補
-4. **受け入れ可能 (LOW)**: 残しても害なし
-5. **指摘の相互関係**: 同一根本原因でグルーピング可能なら明示 (例: 「HIGH 1, MEDIUM 2, 3 はすべて auth middleware の責務不明確に起因 — まとめて auth 層の責務再設計で解消」)
+4. **受け入れ可能** (LOW): 残しても害なし
+5. **指摘の相互関係**: 同一根本原因でグルーピング可能なら明示 (例: 「HIGH 1, MEDIUM 2, 3 はすべて auth middleware の責務不明確に起因」)
 
 詳細フォーマットは `report-format.md` を参照。
 
-## 進行ゲート (1 回完結)
-
-km:review は **1 回完結の診断 skill**。指摘リストを返して終了し、修正反復は行わない。修正反復が必要な場合は `km:review-loop` を使う。
-
-### ゲートルール
+## 進行ゲート
 
 **Phase N で `CRITICAL` または `HIGH` の検出件数が 0 でない限り、Phase N+1 を起動しない**。LOW/MEDIUM は次 Phase の起動を阻まない。
 
-CRITICAL/HIGH 検出時の動作:
-1. 当該 Phase で停止し、それまでに収集した指摘を保持
-2. Phase 5 (統合 + コミット判定) を実行して `BLOCKED` を報告
-3. 終了 (ユーザへの修正促し・再実行ループは km:review-loop の責務)
-
-全 Phase 通過時:
-1. Phase 5 で重大度ごとに合算
-2. `PASS` を報告して終了
-
-### Phase 3 内並列性
-
-3 expert (architect / qa / security) は **同一メッセージ内で並列発行**。各 expert の出力は Phase 3 完了時に統合され、いずれかに CRITICAL/HIGH があれば Phase 4 を起動しない。
+- CRITICAL/HIGH 検出時: 当該 Phase で停止し、Phase 5 で `BLOCKED` を報告して終了 (修正反復は `km:review-loop` の責務)
+- 全 Phase 通過時: Phase 5 で重大度ごとに合算、`PASS` を報告して終了
+- Phase 3 内: 3 expert は同一メッセージ内で並列発行、全員完了後に統合して CRITICAL/HIGH 判定
 
 ## レベル別実行マトリクス
 
@@ -226,11 +193,12 @@ CRITICAL/HIGH 検出時の動作:
 | `thorough` | ✓ | ✓ | ✓ (3 名並列) | 同上 | ✓ |
 
 **変更構成による override**:
+
 - `docs-only` → Phase 2/3 skip、Phase 4 full のみ
 - `test-or-config-or-chore-only` → Phase 3/4 skip (Phase 2 のみ実行)
 - 上記以外 (`code-only` / `code+docs` / `mixed`) → 上記マトリクスどおり
 
-**`quick` と `standard` の違い**: 現状 Phase の起動条件は同じだが、Phase 2 / Phase 4 内部の検査深度を `quick` では絞る (例: Phase 2 の Step "規約・可読性" を Quick に、Phase 4 を Focused に)。詳細は `code-review.md` / `doc-review.md` の深度表を参照。
+**`quick` と `standard` の違い**: Phase の起動条件は同じだが、Phase 2 / Phase 4 内部の検査深度を `quick` では絞る。詳細は `code-review.md` / `doc-review.md` の深度表を参照。
 
 ## 指摘対応の方針
 
@@ -241,28 +209,5 @@ CRITICAL/HIGH 検出時の動作:
 - 設計判断のトレードオフがある
 
 合意済み判断や影響大の修正で残す場合は「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。
-
-## Mermaid 図
-
-```mermaid
-flowchart TD
-  Args[$ARGUMENTS] --> P1[Phase 1: 引数解析 + 対象解決 + 変更タイプ/レベル決定]
-  P1 -->|曖昧入力 / 解決失敗 / context >40k| Err[警告 + ユーザ指定要求]
-  P1 -->|docs-only| P4full[Phase 4 full]
-  P1 -->|test-or-config-or-chore-only| P2tc[Phase 2 only, Phase 3/4 skip]
-  P1 -->|code-only / code+docs / mixed| P2[Phase 2: generalist code-review]
-  P2 -->|CRITICAL/HIGH ゼロ| P3decide{level == thorough?}
-  P2 -->|CRITICAL/HIGH あり| P5b[Phase 5: BLOCKED 報告 + 終了]
-  P3decide -->|no| P4route{code-only?}
-  P3decide -->|yes| P3[Phase 3: 3 experts 並列]
-  P3 -->|全 expert CRITICAL/HIGH ゼロ| P4route
-  P3 -->|あり| P5b
-  P4route -->|yes| P4check[Phase 4 need-check]
-  P4route -->|no| P4full
-  P4full -->|CRITICAL/HIGH ゼロ| P5[Phase 5: PASS 報告]
-  P4full -->|あり| P5b
-  P4check --> P5
-  P2tc --> P5
-```
 
 出力形式は `report-format.md` を参照。

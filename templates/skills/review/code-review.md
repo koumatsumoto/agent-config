@@ -1,32 +1,14 @@
 # Phase 2: Code Review (generalist)
 
-本ファイルは km:review orchestrator の **Phase 2** として呼ばれることを前提とした、**コードレベル (関数・モジュール・システム境界) 全部** の generalist code review 指示書。Phase 3 の architect 専門家は「同じ場所をもう一度深く見る」のではなく「長期・横断・非機能視点という異なる高さ」からレビューする。住み分け詳細は `references/scope-alignment.md` を参照。
+km:review orchestrator の **Phase 2**。**コードレベル (関数・モジュール・システム境界) 全部** の generalist code review を行う。Phase 3 architect 専門家との住み分けは `references/scope-alignment.md` に集約。
 
-> 注: 以下のセクション見出しの "Step N" は本ファイル内のワークフロー番号であり、orchestrator (SKILL.md) の "Phase N" とは別の番号空間。
-
-## レビューの目的
-
-開発者は目の前の実装に集中し、設計上の問題・明らかなバグ・プロジェクト規約との乖離が視野外になりやすい。本フェーズの最大の価値はプロジェクトの設計方針への準拠の確認にある。
-
-## Success Criteria
-
-- diff から裏づけられる設計問題とバグを優先して拾う
-- lint や formatter に任せるだけの指摘を減らす
-- プロジェクト固有ルールと既存コメントの重要な制約を見落とさない
-- 関数・モジュール・システム境界の 3 層を漏れなく確認する
-
-## Workflow
-
-1. **Step 1**: 変更を把握してレビュー深度を決める
-2. **Step 2**: 関数→モジュール→システム境界の 3 層で設計・実装を確認する
-3. **Step 3**: 規約・可読性を確認する
-4. **Step 4**: 偽陽性を落として報告する
+> 本ファイル内の "Step N" は workflow 番号で、orchestrator (SKILL.md) の "Phase N" とは別の番号空間。
 
 ## Step 1: 変更把握
 
-orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`) + 実行 level (`quick` / `standard` / `thorough`)」を受け取る。`docs-only` なら本ファイルは起動されない。
+orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + 実行 level」を受け取る。`docs-only` なら本ファイルは起動されない。
 
-変更構成 + コミットメッセージのプレフィックス (`feat:` / `fix:` / `refactor:` 等) からレビュー深度を決める:
+変更構成 + コミットメッセージのプレフィックスからレビュー深度を決める:
 
 | 変更内容 | 設計・実装の深度 | 規約・可読性の深度 |
 |---|---|---|
@@ -41,7 +23,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`co
 
 ## Step 2: 設計・実装 (3 層)
 
-関数 (単体) → モジュール (結合) → システム境界 (総合) の 3 層で段階的に確認する。各層で深くレビューし、層を跨ぐ問題も見逃さない。**ここでは「現在の diff で破綻するか否か」に限定する**。将来の波及・進化方向との整合は Phase 3 architect の責務。
+関数 (単体) → モジュール (結合) → システム境界 (総合) の 3 層で段階的に確認する。**ここでは「現在の diff で破綻するか否か」に限定する**。将来の波及・進化方向との整合は Phase 3 architect の責務 (`references/scope-alignment.md` 参照)。
 
 ### 2a. 関数 / メソッドレベル
 
@@ -53,6 +35,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`co
 - off-by-one エラー (`<` vs `<=`、0-indexed vs 1-indexed)
 
 見落としやすいパターン:
+
 - サイレント型変換 (暗黙比較、truthy/falsy の誤用)
 - ミュータブルオブジェクトのデフォルト引数・共有参照
 - 未検証の外部入力がロジックに直接到達
@@ -66,6 +49,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`co
 - モジュール間の結合度と凝集度のバランス
 
 見落としやすいパターン:
+
 - 循環依存の導入
 - import 時の副作用や初期化順序への暗黙依存
 - 内部型や内部事情の公開 API へのリーク
@@ -80,22 +64,19 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`co
 - 変更の波及範囲が意図した範囲に収まっているか
 
 見落としやすいパターン:
+
 - 分散トランザクションや複数サービス間の整合性に関する誤った仮定
 - 非同期処理やイベント駆動でのデータ整合性の欠如
 - 複数システム間の障害伝播経路の見落とし
-
-**Phase 3 architect との住み分け**: 上記は「現在の diff が壊しうる code-level の正しさ」を見る。長期保守性影響・互換性連鎖・性能モデリング・進化方向との整合性は orchestrator Phase 3 architect の責務。`references/scope-alignment.md` 参照。
 
 ## Step 3: 規約・可読性
 
 以下に限定して確認する:
 
-- `CLAUDE.md` や repo ルールに書かれた実質的な制約
+- `CLAUDE.md` や repo ルールに書かれた実質的な制約 (**コード規約に限定**。設計方針 / アーキ判断記述は Phase 3 architect の責務)
 - システム設計・アーキテクチャへの準拠
 - 変更対象ファイル内の既存コメントや TODO の重要な指示
 - 意図が伝わる命名、過度なネスト、不要な複雑性
-
-本ステップで参照する `CLAUDE.md` は **コード規約** に限定する。設計方針 / アーキ判断記述は Phase 3 architect の責務。
 
 純粋な好み、機械的に直せるスタイル、未変更行への一般論は優先しない。
 
@@ -116,7 +97,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`co
 - `MEDIUM`: 設計不整合、保守性低下、テスト不足
 - `LOW`: 小さな改善
 
-`CRITICAL` または `HIGH` があれば orchestrator の進行ゲートにより Phase 3 (experts) の起動が阻まれ、Phase 5 で BLOCKED 報告して終了する (修正反復は `km:review-loop` の責務)。検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザに判断を委ねる。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 experts の規約であり本ステップでは必須ではない (任意添付可)。
+`CRITICAL` または `HIGH` があれば orchestrator の進行ゲートにより Phase 3 (experts) の起動が阻まれ、Phase 5 で BLOCKED 報告して終了する。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 experts の規約であり本ステップでは任意添付可。
 
 ## 出力フォーマット
 
@@ -136,7 +117,7 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 **修正**: ...
 ```
 
-指摘がゼロのときは:
+指摘ゼロ:
 
 ```
 ### Phase 2: Code Review (generalist)

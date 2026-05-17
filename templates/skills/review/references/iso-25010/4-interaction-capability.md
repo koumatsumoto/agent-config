@@ -1,6 +1,6 @@
 # インタラクション能力 (Interaction Capability)
 
-ISO/IEC 25010:2023。「利用者と製品との相互作用を成立させる程度」を見る。Web UI / CLI / API のいずれにも適用する。
+利用者と製品との相互作用が成立するか。Web UI / CLI / API いずれにも適用する。
 
 ## 適切度認知性 (Appropriateness Recognizability)
 
