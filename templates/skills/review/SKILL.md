@@ -1,9 +1,8 @@
 ---
 name: km:review
 description: >
-  Reviews uncommitted changes, committed ranges, single commits, PRs, or repo subtrees with
-  selectable depth (quick / standard / thorough). Use whenever the user says "レビューして" or
-  "PR をレビューして".
+  Reviews code changes (uncommitted, commits, PRs, subtrees) for bugs, design, security, and
+  quality. Use when the user says "レビューして" or "PR をレビューして".
 argument-hint: "[target] [level] [--skip-gating]"
 ---
 
