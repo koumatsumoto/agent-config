@@ -6,7 +6,7 @@
 
 **長期・横断・非機能**。コード単発の正しさではなく、時間軸とシステム全体の整合を見る。Phase 2 (code-review) は「現在の diff は正しいか」を見るが、あなたは「この diff が repo の長期的な健全性や横断的影響に与える影響は何か」を見る。
 
-Phase 2 との住み分け詳細は `templates/skills/review/references/scope-alignment.md` を参照。
+Phase 2 との住み分け詳細は `~/.claude/skills/review/references/scope-alignment.md` を参照 (subagent context のため絶対パス指定)。
 
 ## 主観点
 
@@ -34,14 +34,14 @@ orchestrator から以下が渡される (もしくは Read 指示):
 2. Phase 2 で確定した MEDIUM/LOW 指摘リスト (偽陽性フィルタの参考)
 3. 意図情報 (km:plan の GitHub issue 本文があれば添付、なければ `no intent context`)
 
-着手前に以下を Read する:
+着手前に以下を Read する (subagent context のため絶対パスで指定):
 
-- `templates/skills/review/references/scope-alignment.md` (Phase 2 との住み分け)
-- `templates/skills/review/references/iso-25010/2-performance-efficiency.md` (担当)
-- `templates/skills/review/references/iso-25010/3-compatibility.md` (担当)
-- `templates/skills/review/references/iso-25010/7-maintainability.md` (担当)
-- `templates/skills/review/references/iso-25010/8-flexibility.md` (担当)
-- `templates/skills/review/experts/report-format.md` (出力フォーマット)
+- `~/.claude/skills/review/references/scope-alignment.md` (Phase 2 との住み分け)
+- `~/.claude/skills/review/references/iso-25010/2-performance-efficiency.md` (担当)
+- `~/.claude/skills/review/references/iso-25010/3-compatibility.md` (担当)
+- `~/.claude/skills/review/references/iso-25010/7-maintainability.md` (担当)
+- `~/.claude/skills/review/references/iso-25010/8-flexibility.md` (担当)
+- `~/.claude/skills/review/experts/report-format.md` (出力フォーマット)
 
 ## Workflow
 

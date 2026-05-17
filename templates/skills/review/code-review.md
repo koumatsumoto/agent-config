@@ -1,6 +1,8 @@
 # Phase 2: Code Review (generalist)
 
-本ファイルは km:review orchestrator の Phase 2 として呼ばれることを前提とした、**コードレベル (関数・モジュール・システム境界) 全部** の generalist code review 指示書。Phase 3 の architect 専門家は「同じ場所をもう一度深く見る」のではなく「長期・横断・非機能視点という異なる高さ」からレビューする。住み分け詳細は `references/scope-alignment.md` を参照。
+本ファイルは km:review orchestrator の **Phase 2** として呼ばれることを前提とした、**コードレベル (関数・モジュール・システム境界) 全部** の generalist code review 指示書。Phase 3 の architect 専門家は「同じ場所をもう一度深く見る」のではなく「長期・横断・非機能視点という異なる高さ」からレビューする。住み分け詳細は `references/scope-alignment.md` を参照。
+
+> 注: 以下のセクション見出しの "Step N" は本ファイル内のワークフロー番号であり、orchestrator (SKILL.md) の "Phase N" とは別の番号空間。
 
 ## レビューの目的
 
@@ -15,26 +17,28 @@
 
 ## Workflow
 
-1. 変更を把握してレビュー深度を決める
-2. 関数→モジュール→システム境界の 3 層で設計・実装を確認する
-3. 規約・アーキテクチャ・可読性を確認する
-4. 偽陽性を落として報告する
+1. **Step 1**: 変更を把握してレビュー深度を決める
+2. **Step 2**: 関数→モジュール→システム境界の 3 層で設計・実装を確認する
+3. **Step 3**: 規約・可読性を確認する
+4. **Step 4**: 偽陽性を落として報告する
 
-## Phase 1: 変更把握
+## Step 1: 変更把握
 
-orchestrator から渡された「変更ファイル一覧 + diff 内容 + 変更タイプ」を受け取る。docs-only なら本フェーズは起動されない。
+orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 (`code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`) + 実行 level (`quick` / `standard` / `thorough`)」を受け取る。`docs-only` なら本ファイルは起動されない。
 
-| 変更タイプ | 設計・実装の深度 | 規約・可読性の深度 |
+変更構成と level からレビュー深度を決める:
+
+| 変更構成 | 設計・実装の深度 | 規約・可読性の深度 |
 |---|---|---|
-| feat | Full | Full |
-| fix | Focused | Focused |
-| refactor | Full | Focused |
-| test | Skip | Quick |
-| config / chore | Skip | Quick |
+| `code+docs` / `mixed` (新機能 / 振る舞い変更) | Full | Full |
+| `code-only` (既存実装の修正) | Focused | Focused |
+| `test-or-config-or-chore-only` | Skip | Quick |
 
-## Phase 2: 設計・実装 (3 層)
+`quick` レベルでは「規約・可読性」を Quick に降格、`thorough` レベルでは上記どおり、`standard` は中間。
 
-関数 (単体) → モジュール (結合) → システム境界 (総合) の 3 層で段階的に確認する。各層で深くレビューし、層を跨ぐ問題も見逃さない。
+## Step 2: 設計・実装 (3 層)
+
+関数 (単体) → モジュール (結合) → システム境界 (総合) の 3 層で段階的に確認する。各層で深くレビューし、層を跨ぐ問題も見逃さない。**ここでは「現在の diff で破綻するか否か」に限定する**。将来の波及・進化方向との整合は Phase 3 architect の責務。
 
 ### 2a. 関数 / メソッドレベル
 
@@ -77,9 +81,9 @@ orchestrator から渡された「変更ファイル一覧 + diff 内容 + 変�
 - 非同期処理やイベント駆動でのデータ整合性の欠如
 - 複数システム間の障害伝播経路の見落とし
 
-**Phase 3 architect との住み分け**: 上記は「現在の diff が壊しうる code-level の正しさ」を見る。長期保守性影響・互換性連鎖・性能モデリング・進化方向との整合性は Phase 3 architect の責務。`references/scope-alignment.md` 参照。
+**Phase 3 architect との住み分け**: 上記は「現在の diff が壊しうる code-level の正しさ」を見る。長期保守性影響・互換性連鎖・性能モデリング・進化方向との整合性は orchestrator Phase 3 architect の責務。`references/scope-alignment.md` 参照。
 
-## Phase 3: 規約・可読性
+## Step 3: 規約・可読性
 
 以下に限定して確認する:
 
@@ -88,9 +92,11 @@ orchestrator から渡された「変更ファイル一覧 + diff 内容 + 変�
 - 変更対象ファイル内の既存コメントや TODO の重要な指示
 - 意図が伝わる命名、過度なネスト、不要な複雑性
 
+本ステップで参照する `CLAUDE.md` は **コード規約** に限定する。設計方針 / アーキ判断記述は Phase 3 architect の責務。
+
 純粋な好み、機械的に直せるスタイル、未変更行への一般論は優先しない。
 
-## Phase 4: 偽陽性フィルタリング
+## Step 4: 偽陽性フィルタリング
 
 以下は原則除外する:
 
@@ -107,7 +113,7 @@ orchestrator から渡された「変更ファイル一覧 + diff 内容 + 変�
 - `MEDIUM`: 設計不整合、保守性低下、テスト不足
 - `LOW`: 小さな改善
 
-`CRITICAL` または `HIGH` があれば Phase 3 の起動を阻む (orchestrator の Sequential gating)。検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザに判断を委ねる。
+`CRITICAL` または `HIGH` があれば orchestrator の Sequential gating により Phase 3 (experts) の起動が阻まれる。検出された指摘は `LOW` を含め原則すべて対応する。影響が大きい修正のみユーザに判断を委ねる。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 experts の規約であり本ステップでは必須ではない (任意添付可)。
 
 ## 出力フォーマット
 
@@ -115,7 +121,7 @@ orchestrator から渡された「変更ファイル一覧 + diff 内容 + 変�
 ### Phase 2: Code Review (generalist)
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 
-## HIGH: [問題タイトル] [confirmed]
+## HIGH: [問題タイトル]
 **場所**: src/api/users.ts:42
 **問題**: 何が問題か (2-4 文で具体的に)
 **修正**: どう直すべきか (具体的な対応)

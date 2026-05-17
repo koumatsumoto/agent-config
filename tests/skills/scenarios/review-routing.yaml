@@ -137,3 +137,21 @@ scenarios:
         phase_3_experts: []
         phase_4_doc_review: need-check
         phase_5_integration: executed
+
+  - id: review-routing-repo-thorough
+    title: --repo subtree with thorough runs all phases in mixed mode (Phase 4 full)
+    prompt: "リポジトリ全体をレビューして"
+    args: "--repo src/api thorough"
+    context:
+      target_subtree: src/api
+      change_composition: mixed
+    expected:
+      primary_skill: km:review
+      target_resolution: repo-subtree
+      level: thorough
+      phases:
+        phase_2_code_review: executed
+        phase_3_experts: [architect, qa, security]
+        phase_4_doc_review: full
+        phase_5_integration: executed
+      experts_emitted_in_same_turn: true

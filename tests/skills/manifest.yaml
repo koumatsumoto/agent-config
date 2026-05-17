@@ -60,6 +60,10 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-quick-code-only
     tags: [routing, review, quick]
+  - id: review-routing-repo-thorough
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-repo-thorough
+    tags: [routing, review, repo, thorough]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr

@@ -18,6 +18,7 @@
 | `review-routing-skip-gating` | `--skip-gating` bypasses Phase progression gate |
 | `review-routing-ambiguous-numeric` | bare numeric argument is rejected as ambiguous |
 | `review-routing-quick-code-only` | quick level on code-only triggers Phase 4 need-check mode |
+| `review-routing-repo-thorough` | --repo subtree with thorough runs all phases in mixed mode |
 | `workflow-existing-pr` | existing PR is reused |
 | `workflow-issue-ambiguous-candidates` | ambiguous issue candidates stop for clarification |
 | `workflow-body-file-only` | issue / PR body submission stays on the body-file path |

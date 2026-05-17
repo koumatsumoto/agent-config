@@ -3,9 +3,10 @@ name: km:review
 description: >
   Reviews uncommitted changes, committed ranges, single commits, PRs, or repo subtrees with
   selectable depth (quick / standard / thorough). Use whenever the user says "レビューして" or
-  any target-aware variant such as "PR をレビューして", "<sha>..<sha> をレビューして",
-  "リポジトリ全体をレビューして", or "深くレビューして". Prefer this skill over running individual
-  phases.
+  any target-aware variant such as "PR をレビューして", "<sha>..<sha> をレビューして", "リポジトリ
+  全体をレビューして", "深くレビューして", "軽くレビューして", or "thorough でレビューして". Always
+  prefer this single skill over invoking individual phases — Phase 2 (code-review), Phase 3
+  (experts), Phase 4 (doc-review) are internal to this skill and not separately dispatchable.
 argument-hint: "[target] [level] [--skip-gating]"
 ---
 
@@ -63,7 +64,7 @@ argument-hint: "[target] [level] [--skip-gating]"
 | `pr:<n>` | `gh pr diff <n>` | 同上 |
 | `--repo <subtree>` | サブツリー必須。明示サブツリーがなければ「対象が広すぎる」と警告し、サブツリー指定を要求 | — |
 
-**Context budget 防御**: `--repo <subtree>` 時は diff サイズを実測し、**40k tokens を超える場合**はユーザに警告し、サブツリーをさらに絞るよう促す (3 並列 subagent の合算考慮)。
+**Context budget 防御**: `--repo <subtree>` 時は `git diff --stat <subtree>` の総行数を計算し、**1 行 ≈ 25 tokens** で概算する (混在 diff の経験則)。**約 1600 行 (≈ 40k tokens) を超える場合**はユーザに警告し、サブツリーをさらに絞るよう促す。3 並列 subagent の合算 context を考慮した保守的な閾値。
 
 下位コンポーネント (Phase 2 / experts / Phase 4) は **「解決済みのファイル一覧 + diff 内容」** を共通コンテキストで受け取る。
 
@@ -77,7 +78,7 @@ argument-hint: "[target] [level] [--skip-gating]"
 | `pr` / `pr:<n>` | `gh pr view` のタイトル/ラベル + diff |
 | `--repo <subtree>` | 変更タイプ判定を行わず常に `mixed` 扱い。全 Phase を有効化 |
 
-変更構成: `docs-only` / `code-only` / `code+docs` / `test/config/chore` のいずれか。
+変更構成 (正規ラベル): `docs-only` / `code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`。`--repo` は常に `mixed` 扱い。
 
 レベルは `thorough` / `standard` / `quick`。Phase 1a で抽出されなければ会話文脈から推論、それも無理なら既定 `standard`。
 
@@ -100,14 +101,14 @@ argument-hint: "[target] [level] [--skip-gating]"
 
 ## Phase 3: 第三者専門家レビュー (3 名並列)
 
-`thorough` レベルでのみ起動。docs-only / `test/config/chore` 単独では起動しない。
+`thorough` レベルでのみ起動。`docs-only` / `test-or-config-or-chore-only` では起動しない (level 不問で常に skip)。
 
 ### 起動方法
 
-**同一メッセージ内で Task tool を 3 個並行発行** する。各 Task tool に以下のプロンプトを渡す:
+**同一メッセージ内で Task tool を 3 個並行発行** する。subagent は本 skill bundle と同じ install 位置 (`~/.claude/skills/review/`) を参照するため、Task tool prompt 内のパスは **絶対パス (`~/` 始まり)** で書く。各 Task tool に以下のプロンプトを渡す:
 
 ```
-あなたは <role> 専門家です。templates/skills/review/experts/<role>.md を Read してから着手してください。
+あなたは <role> 専門家です。~/.claude/skills/review/experts/<role>.md を Read してから着手してください。
 
 レビュー対象:
 - 変更ファイル一覧: <Phase 1b の出力>
@@ -115,17 +116,19 @@ argument-hint: "[target] [level] [--skip-gating]"
 - 変更タイプ / 規模: <Phase 1c の出力>
 
 担当観点の参照リソース (担当分のみ Read):
-- templates/skills/review/references/iso-25010/<該当ファイル>.md
+- ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md
 
 既知情報:
 - Phase 2 で確定した MEDIUM/LOW 指摘リスト (偽陽性フィルタの参考):
   <Phase 2 の MEDIUM/LOW 指摘>
 - 意図情報: <km:plan の GitHub issue 本文があれば添付、なければ "no intent context">
 
-出力形式: templates/skills/review/experts/report-format.md に従う
+出力形式: ~/.claude/skills/review/experts/report-format.md に従う
 ```
 
 `<role>` は `architect`, `qa`, `security` のいずれか。3 つを同一メッセージ内で発行する (sequential ではなく parallel)。
+
+**ロール識別子と出力見出しのマッピング**: `architect` → `### システムアーキテクト`、`qa` → `### QA 専門家`、`security` → `### セキュリティ専門家`。
 
 ### 担当配分
 
@@ -137,7 +140,7 @@ argument-hint: "[target] [level] [--skip-gating]"
 
 ### Phase 2 との住み分け
 
-`templates/skills/review/references/scope-alignment.md` を参照。Phase 2 は code-level (関数・モジュール・システム境界の正しさ)、Phase 3 architect は「異なる視点 (長期・横断・非機能)」。
+`references/scope-alignment.md` を参照。Phase 2 は code-level (関数・モジュール・システム境界の正しさ)、Phase 3 architect は「異なる視点 (長期・横断・非機能)」。住み分けの具体例 4 件もここに集約。
 
 ## Phase 4: doc-review
 
@@ -147,15 +150,19 @@ argument-hint: "[target] [level] [--skip-gating]"
 
 Phase 1c で確定した変更構成に基づいて以下のいずれかで起動:
 
-- **docs-only** (docs 変更のみ) → **full モード**。Phase 2/3 は skip して直接 Phase 4 へ
-- **code+docs** (コード変更とドキュメント変更の両方) → **full モード**
-- **code-only** (コードのみ変更、docs 変更なし) → **need-check モード** (軽量、ループなし、CRITICAL/HIGH 出さない)
-- **test / config / chore のみ** → **Phase 4 skip**
+- **`docs-only`** (docs 変更のみ) → **full モード**。Phase 2/3 は skip して直接 Phase 4 へ
+- **`code+docs`** (コード + docs 両方) → **full モード**
+- **`mixed`** (`--repo` 経由) → **full モード**
+- **`code-only`** (コードのみ、docs 変更なし) → **need-check モード** (軽量、ループなし、CRITICAL/HIGH 出さない)
+- **`test-or-config-or-chore-only`** → **Phase 4 skip**
+
+なお need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場合は **MEDIUM に強制降格** して報告する (gating を発火させない)。
 
 ## Phase 5: 統合 + コミット判定
 
 - Phase 2 + Phase 3 (3 専門家) + Phase 4 の指摘を重大度ごとに合算
 - いずれかに CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
+- 同一ファイル・近接行で同観点の指摘が Phase 2 と Phase 3 (特に security) で重複した場合は **Phase 3 側を優先カウント** し、Phase 2 側は注記のみで件数加算しない (重複ダブルカウント回避)
 - 統合サマリーは `report-format.md` の形式に従う
 
 ## Sequential gating
@@ -184,19 +191,28 @@ orchestrator が編集ツールで自動修正しない。CRITICAL/HIGH が検�
 2. **Phase 進行ゲートのスキップ**: 下流 Phase への進入可否判定をスキップし、CRITICAL/HIGH 残置でも進行
 3. **Phase 5 判定は通常どおり**: CRITICAL/HIGH があれば `BLOCKED` を表示するが、orchestrator はユーザに「以下の指摘があるが続行するか / 中止するか」を提示して判断を仰ぐ (自動で中止しない)
 
-### Phase 内並列性 (Phase 2 → Phase 3)
+### Phase 内並列性
 
-Phase 2 の CRITICAL/HIGH がゼロになった時点で Phase 3 (3 名並列) を起動する。Phase 2 の MEDIUM/LOW 修正は Phase 3 と並走可。Phase 4 は Phase 3 完了後に sequential 実行 (並走させない)。
+- **Phase 2 → Phase 3**: Phase 2 の CRITICAL/HIGH がゼロになった時点で Phase 3 (3 名並列) を起動する。Phase 2 で残っている MEDIUM/LOW は Phase 5 で統合判定する (diff snapshot を維持するため Phase 3 起動前にユーザに修正を促さない)
+- **Phase 3 内**: 3 名 (architect / qa / security) は **同一メッセージ内で並列発行**。各 expert の進行は独立
+- **Phase 3 部分失敗時**: 一部 expert のみ CRITICAL/HIGH 検出 → ループ次周は **3 名全員を再実行** する (diff snapshot 整合性のため。ユーザ修正で他観点が崩れる可能性を考慮)
+- **Phase 3 → Phase 4**: Phase 3 完了後に Phase 4 を sequential 実行 (並走させない)
+- **上流 Phase に戻る場合**: ユーザの修正後は Phase 2 から再開する (シンプルかつ安全側)。下流 Phase のループカウンタはリセット
 
 ## レベル別実行マトリクス
 
 | Level | Phase 1 | Phase 2 (generalist) | Phase 3 (3 experts) | Phase 4 (doc) | Phase 5 |
 |---|---|---|---|---|---|
-| `quick` | ✓ | ✓ | スキップ | code-only → need-check / その他 → full | ✓ |
-| `standard` | ✓ | ✓ | スキップ | code-only → need-check / その他 → full | ✓ |
-| `thorough` | ✓ | ✓ | ✓ (3 名並列) | code-only → need-check / その他 → full | ✓ |
+| `quick` | ✓ | ✓ | スキップ | 変更構成依存 (Phase 4 起動モード参照) | ✓ |
+| `standard` | ✓ | ✓ | スキップ | 同上 | ✓ |
+| `thorough` | ✓ | ✓ | ✓ (3 名並列) | 同上 | ✓ |
 
-docs-only 変更は level によらず Phase 4 full モードのみ実行する (Phase 2/3 skip)。
+**変更構成による override**:
+- `docs-only` → Phase 2/3 skip、Phase 4 full のみ
+- `test-or-config-or-chore-only` → Phase 3/4 skip (Phase 2 のみ実行)
+- 上記以外 (`code-only` / `code+docs` / `mixed`) → 上記マトリクスどおり
+
+**`quick` と `standard` の違い**: 現状 Phase の起動条件は同じだが、Phase 2 / Phase 4 内部の検査深度を `quick` では絞る (例: Phase 2 の Step "規約・可読性" を Quick に、Phase 4 を Focused に)。詳細は `code-review.md` / `doc-review.md` の深度表を参照。
 
 ## 指摘対応の方針
 
@@ -212,28 +228,30 @@ docs-only 変更は level によらず Phase 4 full モードのみ実行する 
 
 ```mermaid
 flowchart TD
-  Args[$ARGUMENTS] --> P1a[Phase 1a: 引数パース]
-  P1a -->|曖昧入力| Err[警告 + ユーザ指定要求]
-  P1a --> P1b[Phase 1b: 対象スコープ解決]
-  P1b -->|gh 不可 / sha 未存在 / context >40k| Err
-  P1b --> P1c[Phase 1c: 変更タイプ + レベル決定]
-  P1c -->|docs-only| P4full[Phase 4 full: doc-review main]
-  P1c -->|code change| P2[Phase 2: code-review generalist main]
+  Args[$ARGUMENTS] --> P1[Phase 1: 引数解析 + 対象解決 + 変更タイプ/レベル決定]
+  P1 -->|曖昧入力 / 解決失敗 / context >40k| Err[警告 + ユーザ指定要求]
+  P1 -->|docs-only| P4full[Phase 4 full]
+  P1 -->|test-or-config-or-chore-only| P2tc[Phase 2 only, Phase 3/4 skip]
+  P1 -->|code-only / code+docs / mixed| P2[Phase 2: generalist code-review]
   P2 -->|CRITICAL/HIGH ゼロ or --skip-gating| P3decide{level == thorough?}
   P2 -->|CRITICAL/HIGH あり 最大 5 周| P2
   P2 -->|5 周超過| UserJudge[ユーザ判断]
-  P3decide -->|yes| P3[Phase 3: 3 experts 並列 Task tool]
-  P3decide -->|no, code-only| P4check[Phase 4 need-check: 軽量 main]
-  P3decide -->|no, code+docs| P4full
-  P3 -->|各 expert CRITICAL/HIGH ゼロ or --skip-gating| P4full
-  P3 -->|CRITICAL/HIGH あり 最大 3 周| P3
+  P3decide -->|no| P4route{code-only?}
+  P3decide -->|yes| P3[Phase 3: 3 experts 並列]
+  P3 -->|全 expert CRITICAL/HIGH ゼロ or --skip-gating| P4route
+  P3 -->|あり、最大 3 周 全員再実行| P3
   P3 -->|3 周超過| UserJudge
+  P4route -->|yes| P4check[Phase 4 need-check]
+  P4route -->|no| P4full
   P4full -->|CRITICAL/HIGH ゼロ or --skip-gating| P5[Phase 5: 統合 + コミット判定]
-  P4full -->|CRITICAL/HIGH あり 最大 3 周| P4full
+  P4full -->|あり、最大 3 周| P4full
   P4full -->|3 周超過| UserJudge
   P4check --> P5
+  P2tc --> P5
   UserJudge -->|Continue| P5
-  UserJudge -->|Abort| End[終了 - 統合レポートなし]
+  UserJudge -->|Abort| End[終了]
 ```
+
+UserJudge の振る舞い: 現在の指摘リストを表示し、ユーザに「続行 / 中止」を提示して次のメッセージで判断を仰ぐ (orchestrator が独自に判断しない)。`--skip-gating` 指定時はループに入らないため到達せず、Phase 5 で BLOCKED 表示してユーザに同様の判断を促す。
 
 出力形式は `report-format.md` を参照。

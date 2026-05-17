@@ -1,6 +1,6 @@
 # ISO/IEC 25010:2023 References
 
-ソフトウェア品質特性の参照リソース。9 特性 × 38 副特性 を網羅。`km:review` Phase 3 の 3 専門家が担当分を Read するほか、人間が一般知識として学習する用途にも使う。
+ソフトウェア品質特性の参照リソース。9 特性 × 39 副特性 を網羅 (ISO/IEC 25010:2023 公式 + 業界実務で重要な拡張観点を一部含む)。`km:review` Phase 3 の 3 専門家が担当分を Read するほか、人間が一般知識として学習する用途にも使う。
 
 ## File Index
 
@@ -9,14 +9,14 @@
 | 1 | 機能適合性 (Functional Suitability) | [1-functional-suitability.md](1-functional-suitability.md) | 3 |
 | 2 | 性能効率性 (Performance Efficiency) | [2-performance-efficiency.md](2-performance-efficiency.md) | 3 |
 | 3 | 互換性 (Compatibility) | [3-compatibility.md](3-compatibility.md) | 2 |
-| 4 | インタラクション能力 (Interaction Capability) | [4-interaction-capability.md](4-interaction-capability.md) | 8 |
+| 4 | インタラクション能力 (Interaction Capability) | [4-interaction-capability.md](4-interaction-capability.md) | 7 |
 | 5 | 信頼性 (Reliability) | [5-reliability.md](5-reliability.md) | 4 |
 | 6 | セキュリティ (Security) | [6-security.md](6-security.md) | 6 |
 | 7 | 保守性 (Maintainability) | [7-maintainability.md](7-maintainability.md) | 5 |
 | 8 | 柔軟性 (Flexibility) | [8-flexibility.md](8-flexibility.md) | 4 |
 | 9 | 安全性 (Safety) | [9-safety.md](9-safety.md) | 5 |
 
-合計 38 副特性。
+合計 39 副特性 (`3+3+2+7+4+6+5+4+5`)。
 
 ## Expert Mapping (km:review Phase 3)
 

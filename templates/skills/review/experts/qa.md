@@ -33,12 +33,12 @@ orchestrator から以下が渡される:
 2. Phase 2 で確定した MEDIUM/LOW 指摘リスト (偽陽性フィルタの参考)
 3. 意図情報 (km:plan の GitHub issue 本文があれば添付、なければ `no intent context`)
 
-着手前に以下を Read する:
+着手前に以下を Read する (subagent context のため絶対パスで指定):
 
-- `templates/skills/review/references/iso-25010/1-functional-suitability.md` (担当)
-- `templates/skills/review/references/iso-25010/4-interaction-capability.md` (担当)
-- `templates/skills/review/references/iso-25010/5-reliability.md` (担当)
-- `templates/skills/review/experts/report-format.md` (出力フォーマット)
+- `~/.claude/skills/review/references/iso-25010/1-functional-suitability.md` (担当)
+- `~/.claude/skills/review/references/iso-25010/4-interaction-capability.md` (担当)
+- `~/.claude/skills/review/references/iso-25010/5-reliability.md` (担当)
+- `~/.claude/skills/review/experts/report-format.md` (出力フォーマット)
 
 ## Workflow
 
