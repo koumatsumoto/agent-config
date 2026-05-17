@@ -58,4 +58,4 @@
 - IEC 61508 (Functional Safety) 概念
 - AWS Well-Architected Framework — Operational Excellence pillar
 - OWASP API Security Top 10 (2023) — Server Side Request Forgery / Broken Authorization
-- Anthropic AI safety / responsible scaling policy (agentic AI の自律実行)
+- NIST AI RMF / ISO/IEC 23894 / 主要 LLM ベンダの AI safety policy (agentic AI の自律実行に関する責任ある運用)

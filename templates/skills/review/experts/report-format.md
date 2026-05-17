@@ -43,7 +43,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 - `MEDIUM`: 設計不整合、品質特性の低下、テスト不足、技術負債蓄積の兆候
 - `LOW`: 小さな改善、意図的に残してもよい指摘
 
-`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻み、Phase 5 で BLOCKED 報告して終了する (修正反復は `km:review-loop` の責務)。
+`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻み、Phase 5 で BLOCKED 報告して終了する。
 
 ## 確信度ラベル
 
@@ -59,7 +59,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 
 - 今回の diff で導入されていない既存問題 (security は新規 attack surface に既存問題が露呈する場合のみ報告)
 - 担当外 ISO 副特性に該当する指摘 (他の専門家の担当)
-- Phase 2 で既に確定済みの MEDIUM/LOW と同じ観点 (ただし security は重大度を再評価可、qa は「複数経路の連鎖」「運用での再現条件」が加わる場合のみ補強)
+- Phase 2 で既に確定済みの MEDIUM/LOW と同じ観点で **補強情報も重大度再評価もない** もの (詳細は本ファイル末尾「Phase 2 との重複時 (SOT ルール)」)
 - 合意済みの設計判断 (intent context があれば確認)
 - 未変更行だけに対する指摘
 - diff から裏づけられない一般論だけの推測 (security では「攻撃シナリオが現実的でない」を含む)
@@ -96,12 +96,22 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 - **暫定見解**: 認証 middleware が他で適用済なら問題なし、なければ HIGH 相当
 ```
 
-## Phase 2 との重複時 (補強注記)
+## Phase 2 との重複時 (SOT ルール)
 
-Phase 2 で既に同観点が確定済みで、専門家視点で補強情報を追加したい場合は新規セクションを作らず以下を末尾に記載:
+Phase 2 と同観点 (`(file_path, 影響行範囲 ±5 行, 観点 / ISO 副特性 / 根本原因)` の組が一致) で Phase 3 expert が出力する場合の **単一情報源**。SKILL.md (orchestrator) と scope-alignment.md はここを参照する。問題タイトル (例: Phase 2 「所有者検証なし」 vs security 「BOLA」) は wording が揺れるため照合の補助情報として扱う。
+
+| パターン | expert 側 | カウント / 表示 |
+|---|---|---|
+| **A: 追加情報なし** | 出力しない | Phase 2 側のみ |
+| **B: 補強情報あり** (攻撃シナリオ / 再現条件 / 長期影響、重大度は据え置き) | 重複注記のみ末尾追記 | Phase 2 側カウント、注記は Phase 2 直下に併記 |
+| **C: 重大度の再評価** (例: Phase 2 MEDIUM → security HIGH) | 新規セクションで出力 | Phase 3 側採用、Phase 2 側の同観点は drop (Phase 2 セクション末尾に注記) |
+
+補強可能条件: `qa` は「複数経路の連鎖」または「運用での再現条件」が加わる場合のみ。`architect` は新規 attack surface 露呈 / 長期影響のみ。`security` は重大度再評価可。
+
+### 補強注記フォーマット (パターン B)
 
 ```
 ## 重複注記 (Phase 2 の指摘を補強)
 - Phase 2 指摘: `<Phase 2 の問題タイトル>`
-- Phase 3 視点の追加情報: 攻撃シナリオ / 長期影響 / 再現条件のうち該当する補強情報のみ
+- Phase 3 視点の追加情報: 攻撃シナリオ / 長期影響 / 再現条件のうち該当するものだけ
 ```
