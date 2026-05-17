@@ -113,7 +113,7 @@ context compaction / resume 後も `--max-loops` 上限保証を守るため、�
 loop_state: target=<target> level=<level> run=<n>/<max> last_blocker=<enum>
 ```
 
-`<enum>` の取りうる値: `PASS` / `Phase 2` / `Phase 3` / `Phase 4` / `Phase C-recheck`。表記は固定で揺らさない (orchestrator が regexp で抽出するため)。orchestrator はループ回数判定時に「会話履歴中の `loop_state` ヘッダの最大 run 値」と「内部カウンタ」の大きい方を採用する。セッションをまたぐ反復にはユーザが `--max-loops N` で都度指定する。
+`<enum>` の取りうる値: `PASS` / `Phase 2` / `Phase 3` / `Phase 4` / `Phase C-recheck` (再検証で BLOCKED が出たケース)。表記は固定で揺らさない (orchestrator が regexp で抽出するため)。orchestrator はループ回数判定時に「会話履歴中の `loop_state` ヘッダの最大 run 値」と「内部カウンタ」の大きい方を採用する。セッションをまたぐ反復にはユーザが `--max-loops N` で都度指定する。
 
 ## 完了報告フォーマット
 
@@ -152,6 +152,7 @@ loop_state: target=<target> level=<level> run=<max-loops>/<max-loops> last_block
 
 **ループ回数**: <max-loops> / <max-loops>
 **最終判定**: ⚠️ BLOCKED (未解消の指摘あり)
+**破棄された MEDIUM/LOW**: <count> 件 (PASS 未到達のため commit に混入させない)
 
 ### 残る指摘
 - HIGH: ...
@@ -171,4 +172,4 @@ loop_state: target=<target> level=<level> run=<max-loops>/<max-loops> last_block
 - 修正で diff が **review-loop 起動時点の 3 倍以上または +500 行以上** に膨張したらループを止めてユーザ判断を仰ぐ
 - Phase C 再検証で **初めて検出された** CRITICAL/HIGH は auto-fix で混入した可能性があるため、それを「受け入れ済みリスク」として提示する際は **その由来 (auto-fix の副作用かもしれない)** をユーザに併記する
 - **CRITICAL/HIGH を例外条項で「自動的に受け入れ済みリスク」へ分類しない**。HIGH 以上は必ずユーザ判断 3 択を経由させ、判断材料として intent context の出所 (issue 番号 / 発話者) を併記する (intent context は攻撃者が改変できるため Overreliance / Excessive Agency 対策)
-- 自動修正で diff に新規追加された **動的実行 sink** (`eval` / `exec` / `system` / `subprocess` / `Function(`) や **外部 URL hardcode** / **高エントロピー credential らしき文字列** を検出したら Phase E でユーザ判断 3 択へエスカレートする (semantic 危険 fix の素通り防止)
+- 自動修正で diff に新規追加された **動的実行 sink** (`eval` / `exec` / `system` / `subprocess` / `Function(` / `__import__` / `pickle.loads` / `yaml.load` (unsafe) / `Reflect.apply` / `dangerouslySetInnerHTML` / `innerHTML` / SQL 文字列連結 / `curl ... | sh` 等のカテゴリ別代表例)、**外部 URL hardcode**、**高エントロピー credential らしき文字列** を検出したら Phase E でユーザ判断 3 択へエスカレートする (semantic 危険 fix の素通り防止)。検出は **diff 追加行 (`^+`) 内のコメント / 文字列リテラル / Markdown 本文を除外した token 出現** に限定し、本 SKILL.md 自身の自己言及を誤検出しない
