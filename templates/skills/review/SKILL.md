@@ -23,16 +23,18 @@ argument-hint: "[target] [level]"
 `$ARGUMENTS` は単一文字列。**tokenize + classify の 2 段アルゴリズム** で解析する。
 
 1. **flag 抽出 (位置不問)**: `--` プレフィックスの token を先に抽出
-   - `--uncommitted`: 明示の未コミットモード
-   - `--repo`: リポジトリ全体モード (サブツリー指定が後続必要)
+   - `--uncommitted`: 値なし。明示の未コミットモード
+   - `--repo <subtree>`: **直後の token を subtree value として同時消費**。直後 token が無い / さらに `--` flag が来る / level token (`quick|standard|thorough`) の場合は「サブツリー必須」エラー + 終了。subtree 候補として消費した token は step 2 の評価対象から除外
+   - 同一 flag が複数回現れた場合は最後の指定を有効として警告
 2. **残り token を順序評価**: flag 抽出後の残り token を以下の優先順位で分類
-   1. 完全一致 `^pr$` または `^pr:[0-9]+$` → PR モード
+   1. 完全一致 `^pr$` または `^pr:[0-9]+$` → PR モード (複数指定された場合は最後を有効として警告)
    2. `..` を含む → コミット範囲モード
    3. `^[0-9a-f]{7,40}$` → 単一コミットモード (sha)
-   4. `^(quick|standard|thorough)$` → level 指定
+   4. `^(quick|standard|thorough)$` → level 指定 (複数指定は最後を有効)
    5. それ以外 → 曖昧入力として警告
    6. 全 token なし → 既定 (未コミット差分)
 3. **裸の数字 `42` は曖昧入力として警告**。`km:github-workflow` の `[issue-number]` 引数との混同を防ぐ。明示的に `pr:42` を要求する
+4. **`pr` 系と `--repo` が同時指定された場合** は「対象モードが重複」エラー + 終了する (両者排他)
 
 ### Phase 1b. 対象スコープ解決
 
@@ -159,9 +161,7 @@ need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場
 
 - Phase 2 + Phase 3 (3 専門家) + Phase 4 の指摘を重大度ごとに合算
 - いずれかに CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
-- 同一ファイル・近接行で同観点の指摘が Phase 2 と Phase 3 で重複した場合の de-dup:
-  - **Phase 2 ↔ Phase 3 architect** の重複は **Phase 2 側を優先カウント** (より具体的なため)
-  - **Phase 2 ↔ Phase 3 security/qa** の重複は **Phase 3 側を優先カウント** (攻撃シナリオ・再現条件の補強情報を持つため)
+- Phase 2 と Phase 3 で同観点が重複した場合の取り扱いは **`experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」** が唯一の規約。本 SKILL.md は重複ルールを重ねて書かない (SOT)
 - intent context があった場合、各 expert の「intent との整合性 1 行コメント」を統合サマリーに含める
 
 ### アクションリスト生成

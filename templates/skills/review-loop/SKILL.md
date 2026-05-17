@@ -18,13 +18,15 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 ## 例外条項
 
-以下に該当する指摘は自動修正せず「受け入れ済みリスク」として記録し、ユーザ判断を仰ぐ:
+以下に該当する指摘は自動修正せず「受け入れ済みリスク」として記録し、ユーザ判断を仰ぐ。判定揺れを抑えるため定量・観察可能な hint を併記する:
 
-- 合意済み判断 (intent context / 過去のレビューで決定済み)
-- 影響が大きい修正 (大規模な構造変更を伴う)
-- 設計判断のトレードオフ (どちらでも正解になりうる選択)
-- 修正方針が指摘内に明示されていない / 曖昧で Edit に落とせない
-- 修正で他観点 (他 Phase) を壊す可能性が高い
+- **合意済み判断**: intent context (km:plan issue 本文 / 会話文脈) に該当方針が明示されている。**intent context が空の場合は本条項を採用しない** (推測で合意済み扱いしない)
+- **影響が大きい修正**: 次のいずれかを満たす。(a) 1 件の修正が `≥3 ファイル` または `≥50 行` の変更を要する、(b) 公開 API 契約 (export / public method / route / DB schema) を変える、(c) 既存テストの期待値変更を要する
+- **設計判断のトレードオフ**: 指摘の `**修正**` フィールド内に "A or B" / "選択次第" 等の二択以上が明示、または既存 ADR / intent context と修正方針が衝突する
+- **修正方針不明確**: 指摘の `**修正**` フィールドが空 / 一般論のみ (例: "適切にハンドリングする") / 編集 tool で diff に落とせない (例: 「テスト戦略を見直す」)
+- **修正で他観点を壊す可能性が高い**: 同一ファイルの別 Phase 指摘と修正方針が衝突、または修正が別 Phase が拾ったコードを巻き戻す
+
+例外条項判定は **指摘ごとに上記 hint と照らして可否を記録** する (例: `理由: 影響が大きい修正 (a) ≥3 ファイル`)。
 
 ## Phase A: 引数解析
 
@@ -62,13 +64,19 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 ### BLOCKED の場合
 
 1. 停止 Phase の指摘リスト (CRITICAL/HIGH + MEDIUM + LOW) を抽出
-   - Phase B 直接 BLOCKED の場合: それ以前の Phase で出た MEDIUM/LOW は最終 PASS 後の Phase C ルートで処理される
+   - Phase B 直接 BLOCKED の場合: 停止 Phase より前の Phase で出た MEDIUM/LOW は最終 PASS 後の Phase C ルートで処理される (詳細は下記「累積 MEDIUM/LOW の管理」)
    - Recheck-BLOCKED の場合: 累積 MEDIUM/LOW は FinalFix で処理済のため対象なし
 2. Phase D (修正フェーズ) へ進む
 
 ## Phase D: 修正フェーズ
 
-直前 km:review (Phase B 直接 BLOCKED でも、Phase C PASS ルートの Recheck-BLOCKED でも) が止まった停止 Phase の指摘 (CRITICAL/HIGH + MEDIUM + LOW) について処理する。それ以前の Phase の MEDIUM/LOW は最終 PASS 後にまとめて自動修正される。
+直前 km:review (Phase B 直接 BLOCKED でも、Phase C PASS ルートの Recheck-BLOCKED でも) が止まった停止 Phase の指摘 (CRITICAL/HIGH + MEDIUM + LOW) について処理する。それ以前の Phase の MEDIUM/LOW は最終 PASS 後にまとめて自動修正される (累積管理は下記参照)。
+
+### 累積 MEDIUM/LOW の管理
+
+- イテレーションごとに **「最終 km:review iteration (= PASS を返した実行) の Phase 2 / Phase 4 等で出た MEDIUM/LOW」** を最終処理対象とする。それ以前のイテレーションで出た MEDIUM/LOW は **採用しない** (該当指摘は修正済みか、別観点に変質しているはずなので最終 iteration の出力に立ち戻る)
+- 同一 iteration 内で「停止 Phase より前の Phase」で出た MEDIUM/LOW は、PASS 確定後にまとめて処理対象とする
+- 重複は `(file_path, 影響行範囲, ISO 副特性 ID / Phase 2 観点ラベル)` の組で排除し、最新 wording を採用
 
 各指摘について:
 
@@ -85,7 +93,9 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 Phase D で自動修正が 1 件以上発生した後にここへ来る。次のいずれか:
 
 - **ループ上限 (`--max-loops`) 到達** → ユーザ判断 3 択を仰ぐ
-- **会話履歴で同一指摘が繰り返し出現** (収束しない兆候) → ユーザ判断 3 択を仰ぐ
+- **収束しない兆候 (oscillation)** → ユーザ判断 3 択を仰ぐ。判定基準は次のとおり:
+  - **同一指摘 = `(file_path, 影響行範囲, ISO 副特性 ID / Phase 2 観点ラベル, 重大度)` の組** が一致するもの
+  - 直前 2 イテレーション連続で同一指摘が再出現したら oscillation と判定
 - **それ以外** → loop カウンタ +1 して **Phase B に戻る** (km:review を再走)
 
 ## ユーザ判断 3 択
@@ -103,12 +113,24 @@ Phase D で自動修正が 1 件以上発生した後にここへ来る。次の
 3. **修正検証**: Edit 後に該当ファイルの構文 / 型チェック (該当する場合) を実行し、明らかな破綻を検出したら Phase E でユーザ判断を仰ぐ
 4. **修正できない場合**: 例外条項 (修正方針不明確 / Edit 不可) として「受け入れ済みリスク」へ
 
-ループ反復は会話履歴ベースで管理する (orchestrator が `/km:review-loop` 呼び出し回数を会話履歴から数える、永続ファイル不要)。Claude Code セッションをまたぐ反復が必要な場合は、ユーザが `--max-loops N` で都度指定する。
+## ループ状態の管理
+
+ループ反復回数と直前状態は次の二段で復元可能にする (context compaction / resume 後にも上限保証を守るため):
+
+1. **会話履歴に残る進行ログ**: orchestrator は **各 km:review iteration 完了直後に、応答テキスト本文へ次の 1 行ブロックを必ず inject する** (本文に書くため compaction 後の要約にも残りやすい)。
+   ```
+   loop_state: target=<target> level=<level> run=<n>/<max> last_blocker=<停止 Phase もしくは PASS>
+   ```
+2. **inject 済みヘッダの最大 run 値を採用**: orchestrator はループ回数を判定するとき、会話履歴中に存在する `loop_state` ヘッダの `run=<n>` の最大値と、自身が把握する内部カウンタの最大値を採用する。compaction で履歴前半が削除された場合は、最後に残った `loop_state` ヘッダの run 値を起点に継続する。
+
+セッションをまたぐ反復が必要な場合は、ユーザが `--max-loops N` で都度指定する。永続ファイルは必須ではないが、`.plan/` 配下に作業メモを残す運用とは整合する。
 
 ## 完了報告フォーマット
 
 ```md
 ## km:review-loop 完了
+
+loop_state: target=<target> level=<level> run=<N>/<max-loops> last_blocker=PASS
 
 **レビュー対象**: <target>
 **実行レベル**: <level>
@@ -135,6 +157,8 @@ Phase D で自動修正が 1 件以上発生した後にここへ来る。次の
 
 ```md
 ## km:review-loop ループ上限到達
+
+loop_state: target=<target> level=<level> run=<max-loops>/<max-loops> last_blocker=<停止 Phase>
 
 **ループ回数**: <max-loops> / <max-loops>
 **最終判定**: ⚠️ BLOCKED (未解消の指摘あり)
