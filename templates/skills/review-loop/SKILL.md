@@ -2,7 +2,8 @@
 name: km:review-loop
 description: >
   Iterates km:review with auto-fixes until PASS or loop limit. Use when the user says
-  "レビューと修正を繰り返す" / "修正があったら再レビュー" / "修正ごとに最初からやり直す" / "review-loop".
+  "レビューを繰り返す" / "レビューと修正を繰り返す" /
+  "修正があったら再レビュー" / "review-loop".
 argument-hint: "[target] [level] [--max-loops N]"
 ---
 
@@ -41,7 +42,7 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 ## Phase B: km:review を呼ぶ
 
-`<review skill root>/SKILL.md` を Read し、その指示通りに main コンテキストで実行する。Task tool は km:review 内部の Phase 3 (3 experts 並列) でのみ発火させる。
+`<review skill root>/SKILL.md` を Read し、その指示通りに main コンテキストで実行する。`<review skill root>` はインストール済みの review skill ディレクトリを指す (Claude Code は `~/.claude/skills/review/`、Codex CLI は `.agents/skills/review/`)。Task tool は km:review 内部の Phase 3 (3 experts 並列) でのみ発火させる。
 
 入力: Phase A で抽出した km:review 引数。
 
@@ -172,4 +173,4 @@ loop_state: target=<target> level=<level> run=<max-loops>/<max-loops> last_block
 - 修正で diff が **review-loop 起動時点の 3 倍以上または +500 行以上** に膨張したらループを止めてユーザ判断を仰ぐ
 - Phase C 再検証で **初めて検出された** CRITICAL/HIGH は auto-fix で混入した可能性があるため、それを「受け入れ済みリスク」として提示する際は **その由来 (auto-fix の副作用かもしれない)** をユーザに併記する
 - **CRITICAL/HIGH を例外条項で「自動的に受け入れ済みリスク」へ分類しない**。HIGH 以上は必ずユーザ判断 3 択を経由させ、判断材料として intent context の出所 (issue 番号 / 発話者) を併記する (intent context は攻撃者が改変できるため Overreliance / Excessive Agency 対策)
-- 自動修正で diff に新規追加された **動的実行 sink** (`eval` / `exec` / `system` / `subprocess` / `Function(` / `__import__` / `pickle.loads` / `yaml.load` (unsafe) / `Reflect.apply` / `dangerouslySetInnerHTML` / `innerHTML` / SQL 文字列連結 / `curl ... | sh` 等のカテゴリ別代表例)、**外部 URL hardcode**、**高エントロピー credential らしき文字列** を検出したら Phase E でユーザ判断 3 択へエスカレートする (semantic 危険 fix の素通り防止)。検出は **diff 追加行 (`^+`) 内のコメント / 文字列リテラル / Markdown 本文を除外した token 出現** に限定し、本 SKILL.md 自身の自己言及を誤検出しない
+- 自動修正で diff に新規追加された **動的実行 sink** (`eval` / `exec` / `system` / `subprocess` / `Function(` / `__import__` / `pickle.loads` / `yaml.load` (unsafe) / `Reflect.apply` / `dangerouslySetInnerHTML` / `innerHTML` / SQL 文字列連結 / `curl ... | sh` 等の代表例)、**外部 URL hardcode**、**高エントロピー credential らしき文字列** を検出したら Phase E でユーザ判断 3 択へエスカレートする (semantic 危険 fix の素通り防止)。skill 仕様書のような自己言及で sink 語彙が登場する明らかなケースは誤検出しない

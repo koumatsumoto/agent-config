@@ -98,7 +98,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 
 ## Phase 2 との重複時 (SOT ルール)
 
-Phase 2 と同観点 (`(file_path, 影響行範囲 ±5 行, 問題タイトルの正規化結果)` の組が一致) で Phase 3 expert が出力する場合の **単一情報源**。SKILL.md (orchestrator) と scope-alignment.md はここを参照する。「問題タイトルの正規化結果」は Phase 2 / Phase 3 共通の `## <重大度>: <問題タイトル>` 行から重大度ラベルを除き、空白・記号を正規化した文字列を指す。
+Phase 2 と同観点 (`(file_path, 影響行範囲 ±5 行, 観点 / ISO 副特性 / 根本原因)` の組が一致) で Phase 3 expert が出力する場合の **単一情報源**。SKILL.md (orchestrator) と scope-alignment.md はここを参照する。問題タイトル (例: Phase 2 「所有者検証なし」 vs security 「BOLA」) は wording が揺れるため照合の補助情報として扱う。
 
 | パターン | expert 側 | カウント / 表示 |
 |---|---|---|
