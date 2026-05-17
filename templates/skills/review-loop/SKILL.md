@@ -66,7 +66,9 @@ km:review が Phase 5 まで通過して PASS を返した。
 
 km:review がどこかの Phase で停止し BLOCKED を返した。
 
-1. 停止 Phase の指摘リスト (CRITICAL/HIGH + MEDIUM + LOW) を抽出 (それ以前の Phase で出た MEDIUM/LOW は最終 PASS 後の Phase C ルートで処理される)
+1. 停止 Phase の指摘リスト (CRITICAL/HIGH + MEDIUM + LOW) を抽出
+   - Phase B 直接 BLOCKED の場合: それ以前の Phase で出た MEDIUM/LOW は最終 PASS 後の Phase C ルートで処理される
+   - Recheck-BLOCKED の場合: 累積 MEDIUM/LOW は FinalFix で処理済のため対象なし
 2. Phase D (修正フェーズ) へ進む
 
 ### Phase D: 修正フェーズ

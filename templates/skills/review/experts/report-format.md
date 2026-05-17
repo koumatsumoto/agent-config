@@ -5,7 +5,7 @@ km:review Phase 3 の 3 専門家 (architect / qa / security) が返すレポー
 ## 出力構造
 
 ```
-### <専門家名> (architect / QA / security)
+### <システムアーキテクト | QA 専門家 | セキュリティ専門家>
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 0
 
 ## HIGH: [問題タイトル] [confirmed | likely | possible]

@@ -19,7 +19,7 @@
 | `review-routing-quick-code-only` | quick level on code-only triggers Phase 4 need-check mode |
 | `review-routing-repo-thorough` | --repo subtree with thorough runs all phases in mixed mode |
 | `review-loop-trigger-natural-language` | "レビューを繰り返す" triggers km:review-loop (not km:review) |
-| `review-loop-pass-on-first-try` | clean diff completes in loop=1 with cumulative MEDIUM/LOW auto-fix |
+| `review-loop-pass-on-first-try` | clean diff completes in loop=2 (first PASS + Recheck PASS) with cumulative MEDIUM/LOW auto-fix |
 | `review-loop-blocked-then-pass` | HIGH detected -> auto-fix -> re-run -> PASS in loop=2 |
 | `review-loop-max-loops-exceeded` | max-loops cap triggers user judgment prompt |
 | `review-loop-exception-clause` | design tradeoff is recorded as accepted risk, not auto-fixed |

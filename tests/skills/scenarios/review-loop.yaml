@@ -14,7 +14,7 @@ scenarios:
         - km:review
 
   - id: review-loop-pass-on-first-try
-    title: Clean diff should pass on first km:review call (loop=1)
+    title: Clean diff first PASS + Recheck PASS (loop=2)
     prompt: "レビューを繰り返す"
     args: ""
     context:
@@ -22,6 +22,7 @@ scenarios:
         - src/utils/helper.ts
       change_composition: code-only
       simulated_review_result: pass
+      accumulated_medium_low_after_pass: present  # FinalFix → Recheck が走る前提
     expected:
       primary_skill: km:review-loop
       loop_count: 2   # 初回 km:review (PASS) + Recheck (PASS)
@@ -30,7 +31,7 @@ scenarios:
         - cumulative MEDIUM/LOW (例外条項除く)
 
   - id: review-loop-blocked-then-pass
-    title: HIGH on first review -> auto-fix -> pass on second
+    title: HIGH on first review -> auto-fix -> pass on second (loop=2, no Recheck)
     prompt: "レビューを繰り返す"
     args: "pr:123 thorough"
     context:
@@ -41,11 +42,12 @@ scenarios:
           severity: HIGH
         - phase: 5
           severity: PASS
+      accumulated_medium_low_after_pass: none  # Recheck はスキップ
     expected:
       primary_skill: km:review-loop
       target_resolution: pr
       level: thorough
-      loop_count: 2
+      loop_count: 2   # 初回 BLOCKED + 再走 PASS、累積 MEDIUM/LOW なしで Recheck スキップ
       auto_fix_applied: true
       final_judgment: PASS
 
