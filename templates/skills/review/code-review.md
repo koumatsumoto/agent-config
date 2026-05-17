@@ -104,6 +104,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + �
 ```
 ### Phase 2: Code Review (generalist)
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
+**Doc impact hints**: API endpoint / CLI flag / config schema / none （Phase 4 need-check の起点）
 
 ## HIGH: [問題タイトル]
 **場所**: src/api/users.ts:42
@@ -116,6 +117,8 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 **問題**: ...
 **修正**: ...
 ```
+
+`Doc impact hints` 行は diff が以下のいずれかに該当する場合のみ出力する: パブリック API endpoint の追加 / 削除 / レスポンス変更、CLI flag の追加 / 削除 / 意味変更、config / 環境変数 / DB スキーマの変更。該当なしなら `none` または行ごと省略。Phase 4 (need-check) はこの hints から該当 doc を探索する。
 
 指摘ゼロ:
 

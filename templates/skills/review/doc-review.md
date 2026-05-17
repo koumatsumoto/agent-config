@@ -19,7 +19,7 @@ orchestrator が保持する diff + Phase 2 の結果 (Phase 3 が実行され�
 
 確認観点:
 
-- パブリック API、CLI、設定、インターフェースの変更があるか
+- パブリック API、CLI、設定、インターフェースの変更があるか (Phase 2 が出力する `Doc impact hints` を起点にする)
 - `README.md`、`CLAUDE.md`、`AGENTS.md`、`docs/` に関連記述があるか
 - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 

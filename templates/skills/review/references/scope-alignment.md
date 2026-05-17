@@ -42,6 +42,11 @@ Phase 2 は「今この diff は正しいか」、Phase 3 architect は「この
 - チーム全体のアーキ判断 (例: Repository pattern) からの逸脱 (横断整合)
 - 認証経路の責務が 3 モジュールに散らばり、後続のセキュリティ要件追加で修正点増加 (長期保守性、変更波及)
 
+### 境界事例 (Phase 2 か Phase 3 architect か紛らわしい)
+
+- 1 ファイル内で循環 import が完結しているが初期化順序の実害なし → **Phase 2** (current diff 内の構造判断)
+- 同じ循環 import パターンが repo 全体で 5 箇所に拡散している → **Phase 3 architect** (横断・長期保守性)
+
 ## 重複指摘が出た場合
 
 Phase 2 と Phase 3 architect で同観点の重複が発生した場合の表示・カウントルールは **`experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」** に集約してある。本ファイルでは住み分けの判定ルールのみを管轄し、重複処理は SOT 側に従う。

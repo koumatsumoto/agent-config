@@ -47,7 +47,7 @@ argument-hint: "[target] [level]"
 | `pr:<n>` | `gh pr diff <n>` | 同上 |
 | `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙、各ファイルを Read。HEAD vs HEAD~1 の diff ではなく現状コード全体が対象。サブツリー必須、未指定なら警告 | — |
 
-**Context budget 防御**: `--repo <subtree>` 時は `git diff --stat <subtree>` の総行数を計算し、**1 行 ≈ 25 tokens** で概算する。**約 1600 行 (≈ 40k tokens) を超える場合**はユーザに警告し、サブツリーをさらに絞るよう促す (3 並列 subagent の合算 context を考慮した保守的な閾値)。
+**Context budget 防御**: `--repo <subtree>` 時は `git ls-files <subtree>` の対象テキストファイル総行数を計算し、**1 行 ≈ 25 tokens** で概算する。**約 1600 行 (≈ 40k tokens) を超える場合**はサブツリーをさらに絞るよう促し、Phase 2 以降の起動を **強制停止** する (3 並列 subagent の合算 context を考慮した保守的な閾値)。binary / lockfile / generated ファイルは概算から除外。
 
 下位コンポーネント (Phase 2 / experts / Phase 4) は **「解決済みのファイル一覧 + diff 内容」** を共通コンテキストで受け取る。
 
