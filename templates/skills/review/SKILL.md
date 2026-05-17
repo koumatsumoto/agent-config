@@ -3,9 +3,7 @@ name: km:review
 description: >
   Reviews uncommitted changes, committed ranges, single commits, PRs, or repo subtrees with
   selectable depth (quick / standard / thorough). Use whenever the user says "レビューして" or
-  "PR をレビューして". Always prefer this single skill over invoking individual phases —
-  Phase 2 (code-review), Phase 3 (experts), Phase 4 (doc-review) are internal to this skill
-  and not separately dispatchable.
+  "PR をレビューして".
 argument-hint: "[target] [level] [--skip-gating]"
 ---
 
