@@ -156,7 +156,7 @@ need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場
 ## Phase 5: 統合 + コミット判定
 
 - Phase 2 / Phase 3 (3 専門家) / Phase 4 の指摘を重大度ごとに合算し、CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`
-- Phase 2 と Phase 3 で同観点が重複した場合の取り扱いは `experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」が唯一の規約
+- Phase 2 と Phase 3 で同観点が重複した場合の取り扱いは `<review skill root>/experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」が唯一の規約
 - intent context があった場合は各 expert の「intent との整合性 1 行コメント」を統合サマリーに含める
 
 統合レポート末尾に **優先順位付きアクションリスト** を生成する:

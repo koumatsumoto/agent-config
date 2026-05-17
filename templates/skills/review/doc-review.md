@@ -19,7 +19,7 @@ orchestrator が保持する diff + Phase 2 の結果 (Phase 3 が実行され�
 
 確認観点:
 
-- パブリック API、CLI、設定、インターフェースの変更があるか (Phase 2 が出力する `Doc impact hints` を起点にする)
+- パブリック API、CLI、設定、インターフェースの変更があるか。Phase 2 出力の `Doc impact hints` 行に該当タグ (`API endpoint` / `CLI flag` / `config schema`) があれば、対応するドキュメント (README / API doc / CLI doc / config doc) を優先探索の起点にする
 - `README.md` / `AGENTS.md` / `CLAUDE.md` / `docs/` に関連記述があるか (Codex CLI では `AGENTS.md` が主、`CLAUDE.md` は fallback)
 - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 

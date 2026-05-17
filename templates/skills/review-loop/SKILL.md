@@ -30,7 +30,7 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 `$ARGUMENTS` から以下を抽出:
 
-- `--max-loops N`: ループ上限 (省略時 5)。`--max-loops=N` のような `=` 区切り形式は受け付けない
+- `--max-loops N`: ループ上限 (省略時 5)。`--max-loops N` (空白区切り) のみ受け付ける
 - 残り token: km:review にそのまま渡す (`target` + `level`)
 
 例:
@@ -41,7 +41,7 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 ## Phase B: km:review を呼ぶ
 
-`~/.claude/skills/review/SKILL.md` を Read し、その指示通りに main コンテキストで実行する。Task tool は km:review 内部の Phase 3 (3 experts 並列) でのみ発火させる。
+`<review skill root>/SKILL.md` を Read し、その指示通りに main コンテキストで実行する。Task tool は km:review 内部の Phase 3 (3 experts 並列) でのみ発火させる。
 
 入力: Phase A で抽出した km:review 引数。
 
@@ -68,7 +68,7 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 ## Phase D: 修正フェーズ
 
-直前 km:review (Phase B 直接 BLOCKED でも Phase C PASS ルートの Recheck-BLOCKED でも) が止まった停止 Phase の指摘 (CRITICAL/HIGH + MEDIUM + LOW) を処理する。各指摘について:
+直前 km:review (Phase B 直接 BLOCKED でも、Phase C 再検証 (Recheck) で BLOCKED が出たケースでも) が止まった停止 Phase の指摘 (CRITICAL/HIGH + MEDIUM + LOW) を処理する。各指摘について:
 
 1. 「例外条項」に該当 → 「受け入れ済みリスク」として記録 (重大度 / 残す理由 / 後続対応条件)
 2. 該当しない → Edit tool で自動修正
@@ -77,16 +77,16 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 - 自動修正対象が 1 件以上 → Phase E (ループ判定) へ
 - 全 CRITICAL/HIGH が例外条項該当 (自動修正できる CRITICAL/HIGH がゼロ) → 即時ユーザ判断 3 択へ
 
-### 累積 MEDIUM/LOW の管理
+## 累積 MEDIUM/LOW の管理
 
-最終 PASS iteration の MEDIUM/LOW のみを Phase C ルートで処理対象とする。それ以前の iteration の MEDIUM/LOW は採用しない (該当指摘は修正済みか別観点に変質しているはずなので最終 iteration の出力に立ち戻る)。重複は `(file_path, 影響行範囲, 観点)` の組で排除し最新 wording を採用。
+Phase C PASS ルートで自動修正する累積 MEDIUM/LOW は、**最終 PASS iteration の出力** のみを処理対象とする。それ以前の iteration の MEDIUM/LOW は採用しない (該当指摘は修正済みか別観点に変質しているはずなので最終 iteration の出力に立ち戻る)。重複は `(file_path, 影響行範囲, 観点)` の組で排除し最新 wording を採用。
 
 ## Phase E: ループ判定
 
 Phase D で自動修正が 1 件以上発生した後にここへ来る:
 
 - **ループ上限 (`--max-loops`) 到達** → ユーザ判断 3 択を仰ぐ
-- **収束しない兆候 (oscillation)** → ユーザ判断 3 択を仰ぐ。判定基準は `(file_path, 影響行範囲, 観点, 重大度)` の組が直前 2 イテレーション連続で再出現したら oscillation
+- **収束しない兆候 (oscillation)** → ユーザ判断 3 択を仰ぐ。判定基準は `(file_path, 影響行範囲, 観点, 重大度)` の組が直前 2 イテレーション (N-1, N) の両方で検出された場合に oscillation
 - それ以外 → loop カウンタ +1 して Phase B に戻る (km:review 再走)
 
 ## ユーザ判断 3 択
