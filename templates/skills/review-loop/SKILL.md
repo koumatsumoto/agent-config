@@ -2,7 +2,7 @@
 name: km:review-loop
 description: >
   Iterates km:review with auto-fixes until PASS or loop limit. Use when the user says
-  "レビューを繰り返す" / "レビューと自動修正を反復" / "review-loop".
+  "レビューと修正を繰り返す" / "修正があったら再レビュー" / "修正ごとに最初からやり直す" / "review-loop".
 argument-hint: "[target] [level] [--max-loops N]"
 ---
 
