@@ -1,19 +1,15 @@
 version: 1
 scenarios:
   - id: trigger-review-default
-    title: Review request should prefer km:review as the default entry point
+    title: Review request should trigger km:review as the only review entry point
     prompt: "この変更レビューして"
     context:
       changed_files:
         - templates/skills/review/SKILL.md
-        - templates/skills/code-review/SKILL.md
+        - templates/skills/review/code-review.md
       conversation_context: true
     expected:
       primary_skill: km:review
-      should_not_start_with:
-        - km:code-review
-        - km:quality-review
-        - km:doc-review
 
   - id: trigger-github-workflow-natural-language
     title: Natural language PR request should still trigger km:github-workflow

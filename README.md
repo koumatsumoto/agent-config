@@ -218,15 +218,31 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | 未コミット変更を対象にレビュー強度を指定できる統合レビュー |
-| `km:intent-review` | 会話履歴に基づいて要件・意図の充足を確認するレビュー |
-| `km:code-review` | 設計妥当性・バグ検出・コード品質を確認するレビュー |
-| `km:quality-review` | ISO/IEC 25010 を軸に品質特性を確認するレビュー |
-| `km:doc-review` | ドキュメントの整合性と正確性を確認するレビュー |
+| `km:review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) とレベル (quick / standard / thorough) を指定できる統合レビュー。Phase 2 (generalist code-review) → Phase 3 (3 専門家: architect / qa / security 並列) → Phase 4 (doc-review) の sequential gating で実行 |
 | `km:third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
 | `km:github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
 | `km:plan` | 実装前の計画を作成し、`.plan/` への詳細出力、計画レビュー、GitHub issue 化までを行う |
+
+## km:review redesign migration guide
+
+`km:review` の刷新により、以下 4 スキルは `templates/skills/review/` 配下に統合され、独立スキルとしては廃止された。
+
+- `km:code-review`
+- `km:doc-review`
+- `km:intent-review`
+- `km:quality-review`
+
+既存環境に旧 sub-skill ディレクトリが残っている場合、PR マージ後に以下のコマンドで cleanup する。`install.sh` は overwrite のみで旧ファイルを削除しないため手動実行が必要。
+
+```bash
+bash scripts/migrate-old-review-skills.sh
+```
+
+cleanup script は確認プロンプトを出した上で以下を削除する:
+
+- `~/.claude/skills/{code-review,doc-review,intent-review,quality-review}/`
+- `~/.agents/skills/{code-review,doc-review,intent-review,quality-review}/`
 
 ## ライセンス
 
