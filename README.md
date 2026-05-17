@@ -218,7 +218,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) とレベル (quick / standard / thorough) を指定できる統合レビュー。Phase 2 (generalist code-review) → Phase 3 (3 専門家: architect / qa / security 並列) → Phase 4 (doc-review) の sequential gating で実行 |
+| `km:review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) とレベル (quick / standard / thorough) を指定できる 1 回完結の診断レビュー。Phase 2 (generalist code-review) → Phase 3 (3 専門家: architect / qa / security 並列) → Phase 4 (doc-review) の sequential gating で実行し、CRITICAL/HIGH 検出時はその Phase で停止して報告 |
+| `km:review-loop` | km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS まで持っていく orchestrator。完了時に累積 MEDIUM/LOW も例外条項を除いて自動修正 |
 | `km:third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km:commit` | Conventional Commits 形式で git commit |
 | `km:github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |

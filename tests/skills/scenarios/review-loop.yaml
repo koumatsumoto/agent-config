@@ -1,0 +1,72 @@
+version: 1
+scenarios:
+  - id: review-loop-trigger-natural-language
+    title: Natural language iteration request should trigger km:review-loop
+    prompt: "レビューを繰り返す"
+    context:
+      changed_files:
+        - src/api/users.ts
+      change_composition: code-only
+    expected:
+      primary_skill: km:review-loop
+      should_not_start_with:
+        - km:review
+
+  - id: review-loop-pass-on-first-try
+    title: Clean diff should pass on first km:review call (loop=1)
+    prompt: "レビューを繰り返す"
+    args: ""
+    context:
+      changed_files:
+        - src/utils/helper.ts
+      change_composition: code-only
+      simulated_review_result: pass
+    expected:
+      primary_skill: km:review-loop
+      loop_count: 1
+      final_judgment: PASS
+      final_fix_applied:
+        - cumulative MEDIUM/LOW (例外条項除く)
+
+  - id: review-loop-blocked-then-pass
+    title: HIGH on first review -> auto-fix -> pass on second
+    prompt: "レビューを繰り返す"
+    args: "pr:123 thorough"
+    context:
+      pr_number: 123
+      change_composition: code-only
+      simulated_review_results:
+        - phase: 2
+          severity: HIGH
+        - phase: 5
+          severity: PASS
+    expected:
+      primary_skill: km:review-loop
+      target_resolution: pr
+      level: thorough
+      loop_count: 2
+      auto_fix_applied: true
+      final_judgment: PASS
+
+  - id: review-loop-max-loops-exceeded
+    title: Max loops reached should defer to user judgment
+    prompt: "レビューを繰り返す"
+    args: "--max-loops 3"
+    context:
+      simulated_review_results: always_blocked
+    expected:
+      primary_skill: km:review-loop
+      loop_count: 3
+      max_loops: 3
+      user_judgment_requested: true
+
+  - id: review-loop-exception-clause
+    title: Design tradeoff finding should be recorded as accepted risk
+    prompt: "レビューを繰り返す"
+    args: "thorough"
+    context:
+      simulated_review_result: blocked_with_design_tradeoff
+    expected:
+      primary_skill: km:review-loop
+      accepted_risk_recorded: true
+      user_judgment_requested: true

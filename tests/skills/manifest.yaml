@@ -64,6 +64,26 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-repo-thorough
     tags: [routing, review, repo, thorough]
+  - id: review-loop-trigger-natural-language
+    file: scenarios/review-loop.yaml
+    scenario_id: review-loop-trigger-natural-language
+    tags: [trigger, review-loop]
+  - id: review-loop-pass-on-first-try
+    file: scenarios/review-loop.yaml
+    scenario_id: review-loop-pass-on-first-try
+    tags: [review-loop, pass]
+  - id: review-loop-blocked-then-pass
+    file: scenarios/review-loop.yaml
+    scenario_id: review-loop-blocked-then-pass
+    tags: [review-loop, autofix]
+  - id: review-loop-max-loops-exceeded
+    file: scenarios/review-loop.yaml
+    scenario_id: review-loop-max-loops-exceeded
+    tags: [review-loop, max-loops, negative]
+  - id: review-loop-exception-clause
+    file: scenarios/review-loop.yaml
+    scenario_id: review-loop-exception-clause
+    tags: [review-loop, exception]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr
