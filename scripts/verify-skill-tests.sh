@@ -152,7 +152,7 @@ def main() -> int:
     check(isinstance(cases, list) and len(cases) > 0, "manifest cases missing")
     if not isinstance(cases, list):
         return 1
-    check(15 <= len(cases) <= 18, f"manifest should stay in canonical range (15-18 cases), got {len(cases)}")
+    check(15 <= len(cases) <= 22, f"manifest should stay in canonical range (15-22 cases), got {len(cases)}")
 
     seen_case_ids: set[str] = set()
     case_ids: list[str] = []
@@ -265,15 +265,16 @@ def main() -> int:
                 )
 
     skills_root = repo_root / "templates" / "skills"
-    manual_only_codex = {"code-review", "doc-review", "intent-review", "quality-review", "third-party-oss-security-review"}
+    manual_only_codex = {"third-party-oss-security-review"}
     workflow_codex = {"commit", "github-workflow", "plan", "review"}
-    manual_only_claude = {"code-review", "doc-review", "intent-review", "quality-review", "third-party-oss-security-review"}
+    manual_only_claude = {"third-party-oss-security-review"}
 
     stable_contracts = {
         "review": {
             "success": [
-                "変更タイプに応じた review 候補を正しく選ぶ",
-                "`CRITICAL` / `HIGH`、または intent-review の `HIGH` を見逃さずにブロックする",
+                "変更タイプと対象スコープに応じた Phase / 専門家を正しく選ぶ",
+                "Phase 2 / Phase 3 (3 専門家) / Phase 4 のいずれかで CRITICAL または HIGH があれば BLOCKED とする",
+                "実行した Phase とスキップした Phase の両方が分かるレポートにする",
             ],
             "safety": None,
             "phrases": [],

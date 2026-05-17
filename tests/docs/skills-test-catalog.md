@@ -10,11 +10,14 @@
 | `trigger-implementation-should-not-trigger-github-workflow` | generic implementation does not steal PR workflow |
 | `trigger-third-party-oss-security-review-npm` | explicit OSS intake routes to the specialized skill |
 | `trigger-plan-natural-language` | explicit planning request routes to `km:plan` |
-| `review-routing-code-only` | code-only path keeps intent/code/quality |
-| `review-routing-docs-only` | docs-only path narrows to doc-review |
-| `review-routing-config-chore` | config/chore path keeps Quick depth without expert review |
-| `review-routing-no-conversation-context` | no context skips intent-review explicitly |
-| `review-routing-code-and-docs-thorough` | thorough code+docs path preserves the full review set |
+| `review-routing-code-only-standard` | code-only path executes Phase 2 + Phase 4 need-check |
+| `review-routing-docs-only` | docs-only path skips Phase 2/3 and runs Phase 4 full |
+| `review-routing-config-chore` | config/chore path executes Phase 2 only, no Phase 3/4 |
+| `review-routing-code-and-docs-thorough` | thorough code+docs path runs Phase 3 with 3 experts in parallel |
+| `review-routing-pr-thorough` | PR target with thorough level resolves and runs all phases |
+| `review-routing-skip-gating` | `--skip-gating` bypasses Phase progression gate |
+| `review-routing-ambiguous-numeric` | bare numeric argument is rejected as ambiguous |
+| `review-routing-quick-code-only` | quick level on code-only triggers Phase 4 need-check mode |
 | `workflow-existing-pr` | existing PR is reused |
 | `workflow-issue-ambiguous-candidates` | ambiguous issue candidates stop for clarification |
 | `workflow-body-file-only` | issue / PR body submission stays on the body-file path |

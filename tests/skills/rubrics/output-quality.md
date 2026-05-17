@@ -1,51 +1,52 @@
 # Output Quality Rubric
 
-レビュー skill の出力品質を評価する rubric。
+`km:review` の出力品質を評価する rubric。
 
 ## Pass 条件
 
+- 統合サマリーに実行レベル・対象スコープ・変更概要・総検出件数・コミット判定が含まれる
 - 重大度サマリーがある
-- blocking 判定が severity と整合する
-- false positive を抑える説明がある
-- 修正提案が具体的である
-- report-format と大きく矛盾しない
-- 品質評価サマリー（9 品質特性テーブル）が出力に含まれる、または `（スキップ）` と明示される（quality-review 実行時 / 非実行時）
-- 第三者専門家レビューのセクションが存在し、実行時は severity 形式（CRITICAL / HIGH / MEDIUM / LOW）で報告され、非実行時は `（スキップ）` と明示される
-- スキップされたレビューはセクション見出しと「スキップ」が明示されている（省略は不可）
+- BLOCKED / PASS 判定が severity と整合する (`CRITICAL` または `HIGH` で BLOCKED)
+- 偽陽性を抑える根拠説明がある (確信度ラベル `confirmed` / `likely` / `possible`)
+- 修正提案が具体的である (どこを / どう直すかが分かる)
+- `templates/skills/review/report-format.md` の形式と大きく矛盾しない
+- スキップされた Phase はセクション見出しと「スキップ」が明示されている (省略は不可)
+- Phase 4 が `need-check` モードで実行された場合はそのことが分かる表記がある
 
-## 注目点
+## Phase ごとの注目点
 
-- `code-review`
+- **Phase 2 (Code Review generalist)**
   - lint ではなく設計とバグを見ているか
   - 高シグナルの設計リスクを拾えているか
-- `quality-review`
-  - diff に根拠のある品質問題だけを報告しているか
-  - config/chore で safety と flexibility を落としていないか
-  - `standard` / `thorough` の code change path で 9 品質特性ごとの評価（PASS / WARN / FAIL / SKIP）が出力されているか
-  - `quick` や docs-only path では `（スキップ）` が妥当か
-  - surface 条件付き補助観点が Tier / Depth の優先順位を壊していないか
-  - UI 変更がないのに WCAG やブラウザ固有観点を暴発させていないか
-  - database / migration 変更で compatibility / reliability / safety を見落としていないか
-- `doc-review`
-  - 事実誤認だけでなく、構造的な混乱も拾えているか
-- `intent-review`
-  - 推測と合意事項を混同していないか
-- `第三者専門家レビュー`
+  - 関数 / モジュール / システム境界 の 3 層を網羅しているか
+- **Phase 3 (3 専門家並列)**
+  - `thorough` 指定時に architect / qa / security の 3 名すべてが起動しているか
+  - 3 名が **同一 turn 内に並列発行** されているか (sequential 発行になっていないか)
   - 専門家ごとに severity 件数サマリーがあるか
-  - 個別所見に重大度・場所・確信度が含まれるか
-  - 専門家の所見が統合サマリーの件数合算と blocking 判定に反映されているか
+  - 個別所見に重大度・場所・観点 (担当 ISO 副特性)・確信度が含まれるか
+  - **architect**: 長期・横断・非機能視点に集中しているか (Phase 2 の code-level 指摘を蒸し返していないか)
+  - **qa**: 異常系・境界・運用品質に集中しているか
+  - **security**: 脅威モデル・攻撃面に集中しているか
+- **Phase 4 (Doc Review)**
+  - 事実誤認だけでなく、構造的な混乱も拾えているか
+  - `need-check` モード時に MEDIUM 以下に降格されているか
+  - docs-only 変更で Phase 4 full モードのみ実行されているか
+- **Phase 5 (統合)**
+  - 全 Phase の指摘が重大度ごとに合算されているか
+  - 重複指摘の可能性が注記されているか
+  - blocking 判定が全 Phase 横断で行われているか
 
 ## Fail 条件
 
-- blocking すべきケースを PASS にする
-- 重大度が不自然に低い
-- report-format を無視する
+- BLOCKED すべきケースを PASS にする
+- 重大度が不自然に低い (例: 認証バイパスを MEDIUM にする)
 - 未変更行や一般論ばかりを指摘する
+- スキップされた Phase のセクションが省略されている (「スキップ」明示なし)
+- `thorough` 指定なのに Phase 3 を起動していない
+- Phase 3 の 3 専門家が sequential 発行になっている (並列発行されていない)
+- Phase 4 を Phase 3 と並走させている (Phase 3 完了後の sequential 実行が原則)
+- `--skip-gating` 指定時に Phase 進行ゲートが動いている (本来は escape されるべき)
+- Phase 2 と Phase 3 architect の指摘が大量に重複している (`scope-alignment.md` の住み分けが守られていない)
 - docs update recommendation を出すべきケースで沈黙する
-- 品質評価サマリー（9 特性テーブル）が欠落している（quality-review 実行時）
-- 第三者専門家レビューのセクションが欠落している、または severity 形式でない（expert review 実行時）
-- 専門家の HIGH / CRITICAL が統合サマリーの blocking 判定に反映されていない
-- スキップされたレビューのセクションが省略されている（「スキップ」明示なし）
-- Tier 2 の SKIP 条件を surface 条件で上書きしてしまう
-- `quick` path なのに surface を理由に quality-review を再実行してしまう
 - 接点変更がないのに WCAG 2.2 やブラウザ固有の指摘を出す
+- LLM/AI 機能の変更があるのに Security 専門家が prompt injection 観点を見ていない

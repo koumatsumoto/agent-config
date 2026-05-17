@@ -28,9 +28,9 @@ cases:
     file: scenarios/trigger-and-entrypoints.yaml
     scenario_id: trigger-plan-natural-language
     tags: [trigger, plan]
-  - id: review-routing-code-only
+  - id: review-routing-code-only-standard
     file: scenarios/review-routing.yaml
-    scenario_id: review-routing-code-only
+    scenario_id: review-routing-code-only-standard
     tags: [routing, review]
   - id: review-routing-docs-only
     file: scenarios/review-routing.yaml
@@ -40,14 +40,26 @@ cases:
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-config-chore
     tags: [routing, review, config]
-  - id: review-routing-no-conversation-context
-    file: scenarios/review-routing.yaml
-    scenario_id: review-routing-no-conversation-context
-    tags: [routing, review, intent]
   - id: review-routing-code-and-docs-thorough
     file: scenarios/review-routing.yaml
     scenario_id: review-routing-code-and-docs-thorough
     tags: [routing, review, docs, thorough]
+  - id: review-routing-pr-thorough
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-pr-thorough
+    tags: [routing, review, pr, thorough]
+  - id: review-routing-skip-gating
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-skip-gating
+    tags: [routing, review, gating]
+  - id: review-routing-ambiguous-numeric
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-ambiguous-numeric
+    tags: [routing, review, negative]
+  - id: review-routing-quick-code-only
+    file: scenarios/review-routing.yaml
+    scenario_id: review-routing-quick-code-only
+    tags: [routing, review, quick]
   - id: workflow-existing-pr
     file: scenarios/workflow-and-state.yaml
     scenario_id: workflow-existing-pr

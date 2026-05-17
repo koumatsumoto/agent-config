@@ -1,95 +1,139 @@
-version: 1
+version: 2
 scenarios:
-  - id: review-routing-code-only
-    title: Code-only change with conversation context
+  - id: review-routing-code-only-standard
+    title: Code-only change at standard level
     prompt: "レビューして"
     context:
       changed_files:
         - src/api/users.ts
         - src/lib/auth.ts
       change_type: feat
-      conversation_context: true
+      change_composition: code-only
     expected:
       primary_skill: km:review
-      child_skills:
-        - km:intent-review
-        - km:code-review
-        - km:quality-review
-      child_skills_skipped:
-        - km:doc-review
-      expert_review: skipped
+      target_resolution: uncommitted
+      level: standard
+      phases:
+        phase_2_code_review: executed
+        phase_3_experts: []
+        phase_4_doc_review: need-check
+        phase_5_integration: executed
 
   - id: review-routing-docs-only
-    title: Docs-only change should route only to doc-review
+    title: Docs-only change skips Phase 2 and Phase 3, runs Phase 4 full
     prompt: "README をレビューして"
     context:
       changed_files:
         - README.md
         - docs/setup.md
       change_type: docs
-      conversation_context: false
+      change_composition: docs-only
     expected:
       primary_skill: km:review
-      child_skills:
-        - km:doc-review
-      child_skills_skipped:
-        - km:intent-review
-        - km:code-review
-        - km:quality-review
-      expert_review: skipped
+      target_resolution: uncommitted
+      level: standard
+      phases:
+        phase_2_code_review: skipped
+        phase_3_experts: []
+        phase_4_doc_review: full
+        phase_5_integration: executed
 
   - id: review-routing-config-chore
-    title: Config or chore only change should keep Quick internal depth in standard level
-    prompt: "この設定変更を確認して"
+    title: Config or chore only change skips Phase 3 and Phase 4
+    prompt: "この設定変更をレビューして"
     context:
       changed_files:
         - templates/config.toml
         - install.sh
-      change_type: config
-      conversation_context: false
+      change_type: chore
+      change_composition: config
     expected:
       primary_skill: km:review
-      child_skills:
-        - km:code-review
-        - km:quality-review
-      child_skills_skipped:
-        - km:intent-review
-        - km:doc-review
-      review_depth: Quick
-      expert_review: skipped
-
-  - id: review-routing-no-conversation-context
-    title: Missing conversation context should skip intent-review
-    prompt: "この差分をレビューして"
-    context:
-      changed_files:
-        - src/service.ts
-      change_type: fix
-      conversation_context: false
-    expected:
-      primary_skill: km:review
-      child_skills:
-        - km:code-review
-        - km:quality-review
-      child_skills_skipped:
-        - km:intent-review
-        - km:doc-review
-      expert_review: skipped
+      target_resolution: uncommitted
+      level: standard
+      phases:
+        phase_2_code_review: executed
+        phase_3_experts: []
+        phase_4_doc_review: skipped
+        phase_5_integration: executed
 
   - id: review-routing-code-and-docs-thorough
-    title: Thorough review should preserve the full review path for code and docs changes
+    title: Thorough review on code+docs runs Phase 3 with 3 experts in parallel
     prompt: "深くレビューして"
     context:
       changed_files:
         - src/api/users.ts
         - docs/api.md
       change_type: feat
-      conversation_context: true
+      change_composition: code+docs
     expected:
       primary_skill: km:review
-      child_skills:
-        - km:intent-review
-        - km:code-review
-        - km:quality-review
-        - km:doc-review
-      expert_review: executed
+      target_resolution: uncommitted
+      level: thorough
+      phases:
+        phase_2_code_review: executed
+        phase_3_experts: [architect, qa, security]
+        phase_4_doc_review: full
+        phase_5_integration: executed
+      experts_emitted_in_same_turn: true
+
+  - id: review-routing-pr-thorough
+    title: PR target with thorough level
+    prompt: "PR をレビューして"
+    args: "pr:123 thorough"
+    context:
+      pr_number: 123
+      change_type: feat
+      change_composition: code+docs
+    expected:
+      primary_skill: km:review
+      target_resolution: pr
+      level: thorough
+      phases:
+        phase_2_code_review: executed
+        phase_3_experts: [architect, qa, security]
+        phase_4_doc_review: full
+        phase_5_integration: executed
+
+  - id: review-routing-skip-gating
+    title: --skip-gating bypasses Phase progression gate
+    prompt: "PR をレビューして"
+    args: "pr:124 --skip-gating thorough"
+    context:
+      pr_number: 124
+      change_type: feat
+      change_composition: code-only
+    expected:
+      primary_skill: km:review
+      target_resolution: pr
+      level: thorough
+      skip_gating: true
+      phase_progression_despite_high: true
+
+  - id: review-routing-ambiguous-numeric
+    title: Bare numeric argument is rejected as ambiguous
+    prompt: "/km:review 42"
+    args: "42"
+    expected:
+      primary_skill: km:review
+      target_resolution: error
+      warning: ambiguous_argument
+
+  - id: review-routing-quick-code-only
+    title: Quick level on code-only triggers Phase 4 need-check mode
+    prompt: "軽くレビューして"
+    args: "quick"
+    context:
+      changed_files:
+        - src/service.ts
+      change_type: fix
+      change_composition: code-only
+    expected:
+      primary_skill: km:review
+      target_resolution: uncommitted
+      level: quick
+      phases:
+        phase_2_code_review: executed
+        phase_3_experts: []
+        phase_4_doc_review: need-check
+        phase_5_integration: executed
