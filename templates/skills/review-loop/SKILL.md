@@ -2,7 +2,7 @@
 name: km:review-loop
 description: >
   Iterates km:review with auto-fixes until PASS or loop limit. Use when the user says
-  "レビューを繰り返す".
+  "レビューを繰り返す" / "レビューと自動修正を反復" / "review-loop".
 argument-hint: "[target] [level] [--max-loops N]"
 ---
 
@@ -32,7 +32,7 @@ km:review を反復起動し、CRITICAL/HIGH を自動修正しながら PASS �
 
 `$ARGUMENTS` から以下を抽出:
 
-- `--max-loops N`: ループ上限 (省略時 5)
+- `--max-loops N`: ループ上限 (省略時 5)。`--max-loops=N` のような `=` 区切り形式は受け付けない
 - 残り token: km:review にそのまま渡す (`target` + `level`)
 
 例:
@@ -100,17 +100,17 @@ Phase D で自動修正が 1 件以上発生した後にここへ来る。次の
 
 ## ユーザ判断 3 択
 
-例外条項全該当時、ループ上限到達時、収束しないとき orchestrator が以下を提示:
+例外条項全該当時、ループ上限到達時、収束しないとき orchestrator が以下を提示する。**「受け入れ」は BLOCKED 判定を PASS に格上げする重大選択** なので、orchestrator は安易に推奨せず、受け入れ済みリスクの内容を要約してユーザに判断を仰ぐ:
 
-- **受け入れ**: 残った CRITICAL/HIGH を「受け入れ済みリスク」として承認し、PASS 扱いで完了報告 → 次は km:commit へ
-- **再起動**: `--max-loops` を拡張して再度 `/km:review-loop` を実行 (ユーザが新コマンドを発話)
-- **中止**: 手動修正に切り替え、完了後にユーザが再度 `/km:review-loop` を実行
+- **受け入れ**: 残った CRITICAL/HIGH を「受け入れ済みリスク」として承認し、PASS 扱いで完了報告 → 次は km:commit / km:github-workflow へ (commit message / PR description で受け入れ済みリスクを明記する想定)
+- **再起動**: `--max-loops` を拡張して再度 `/km:review-loop` を実行 (推奨: 直前 2 イテレーションで同観点が再出現していない場合)
+- **中止**: 手動修正に切り替え、完了後にユーザが再度 `/km:review-loop` を実行 (推奨: oscillation 検出済、または修正方針が定性的で自動化に向かない場合)
 
 ## 自動修正の方針
 
-1. **修正方法の決定**: 指摘の `**修正**` フィールドに記載された修正方針を読み、Edit tool で diff に適用
+1. **修正方法の決定**: 指摘の `**修正**` フィールドに記載された修正方針を読み、Edit tool で diff に適用。新規ファイル作成や Bash 実行が必要な指摘は **Edit に落とせない** とみなし例外条項へ
 2. **複数指摘の処理**: 同一ファイルに複数指摘がある場合は、ファイルごとにまとめて Edit する
-3. **修正検証**: Edit 後に該当ファイルの構文 / 型チェック (該当する場合) を実行し、明らかな破綻を検出したら Phase E でユーザ判断を仰ぐ
+3. **修正検証**: project root に `tsconfig.json` / `pyproject.toml` / `Cargo.toml` 等の typecheck 起点があれば該当言語の構文 / 型チェックを実行する。起点がない / 言語が判別不能な場合は検証スキップ。明らかな破綻が出たら Phase E でユーザ判断を仰ぐ
 4. **修正できない場合**: 例外条項 (修正方針不明確 / Edit 不可) として「受け入れ済みリスク」へ
 
 ## ループ状態の管理
@@ -178,5 +178,5 @@ loop_state: target=<target> level=<level> run=<max-loops>/<max-loops> last_block
 - 自動修正は **diff snapshot の中だけ** で完結する。本 skill 単体では git commit / push は行わない (`km:commit` / `km:github-workflow` の責務)
 - ループ上限を必ず尊重する。`--max-loops` を超えて自動継続しない
 - 受け入れ済みリスクは必ずユーザに提示し、無断で隠さない
-- 修正で diff が大幅に膨張した場合 (例: 当初 100 行 → 500 行) はループを止めてユーザ判断を仰ぐ
+- 修正で diff が **当初の 3 倍以上または +500 行以上** に膨張したらループを止めてユーザ判断を仰ぐ
 - Phase C 再検証で **初めて検出された** CRITICAL/HIGH は auto-fix で混入した可能性があるため、それを「受け入れ済みリスク」として提示する際は **その由来 (auto-fix の副作用かもしれない)** をユーザに併記する

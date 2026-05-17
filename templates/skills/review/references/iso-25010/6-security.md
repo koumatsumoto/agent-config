@@ -77,5 +77,5 @@
 - OWASP LLM Top 10
 - CWE Top 25
 - SLSA, Sigstore
-- Anthropic AI safety / responsible scaling policy
+- NIST AI RMF / ISO/IEC 23894 / 主要 LLM ベンダの AI safety policy (Anthropic responsible scaling policy など)
 - NIST Cybersecurity Framework

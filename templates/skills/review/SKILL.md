@@ -8,7 +8,7 @@ argument-hint: "[target] [level]"
 
 # Review
 
-複数の review 観点を統合する 1 回完結の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。修正反復が必要な場合は `km:review-loop` を使う。
+複数の review 観点を統合する **単発診断** の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
 
 ## Success Criteria
 
@@ -55,11 +55,12 @@ argument-hint: "[target] [level]"
 
 変更タイプの判定入力は対象スコープに応じて変える:
 
-| 対象 | 変更タイプ判定の入力 |
-|---|---|
-| 未コミット / `<base>..<head>` / `<sha>` | ファイル拡張子・変更パターン + コミットメッセージ (`refactor:` 等の Conventional 接頭辞) |
-| `pr` / `pr:<n>` | `gh pr view` のタイトル/ラベル + diff |
-| `--repo <subtree>` | 変更タイプ判定を行わず常に `mixed` 扱い。全 Phase を有効化 |
+| 対象 | 変更タイプ判定の入力 | 入力欠落時のフォールバック |
+|---|---|---|
+| 未コミット | ファイル拡張子・変更パターン (コミットメッセージは存在しないため不使用) | — |
+| `<base>..<head>` / `<sha>` | ファイル拡張子・変更パターン + コミットメッセージ (`refactor:` 等の Conventional 接頭辞) | コミットメッセージ取得失敗時は拡張子のみで判定 |
+| `pr` / `pr:<n>` | `gh pr view` のタイトル/ラベル + diff | `gh pr view` 失敗 (auth / rate limit / ラベル未付与) 時は diff のみで判定し変更構成を `mixed` にフォールバック |
+| `--repo <subtree>` | 変更タイプ判定を行わず常に `mixed` 扱い。全 Phase を有効化 | — |
 
 変更構成 (正規ラベル): `docs-only` / `code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`。`--repo` は常に `mixed` 扱い。
 
@@ -89,7 +90,7 @@ argument-hint: "[target] [level]"
 
 ### 起動方法
 
-**同一メッセージ内で Task tool を 3 個並行発行** する。subagent は `~/.claude/skills/review/` を参照するため、Task tool prompt 内のパスは **絶対パス (`~/` 始まり)** で書く。各 Task tool に以下のプロンプトを渡す:
+**同一メッセージ内で Task tool を 3 個並行発行** する。subagent は `~/.claude/skills/review/` を参照するため、Task tool prompt 内のパスは **絶対パス (`~/` 始まり)** で書く。`<role>` / `<Phase 2 の出力>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 Task tool に以下のプロンプトを渡す:
 
 ```
 あなたは km:review Phase 3 の <role> 専門家です。
@@ -101,9 +102,9 @@ argument-hint: "[target] [level]"
 
 ## Read 順序
 1. ~/.claude/skills/review/experts/<role>.md (役割定義と workflow)
-2. レビュー対象の diff を pre-scan し、該当しそうな ISO 副特性に当たりをつける
-3. ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md (該当しそうな 1-2 ファイルのみ。役割定義に列挙されたファイルが起点)
-4. ~/.claude/skills/review/experts/report-format.md (出力直前に確認)
+2. ~/.claude/skills/review/experts/report-format.md (判定・確信度・重複時 SOT を先に把握)
+3. レビュー対象の diff を pre-scan し、該当しそうな ISO 副特性に当たりをつける
+4. ~/.claude/skills/review/references/iso-25010/<該当ファイル>.md (該当しそうな 1-2 ファイルのみ)
 
 ## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>
@@ -143,7 +144,7 @@ Phase 2 ↔ Phase 3 architect の住み分けは `references/scope-alignment.md`
 
 ## Phase 4: doc-review
 
-`doc-review.md` を Read してその指示に従って main コンテキストでレビューを実施する。**Phase 3 完了後** (sequential、並走させない)。
+`doc-review.md` を Read してその指示に従って main コンテキストでレビューを実施する。**Phase 3 完了後に sequential 起動** (Phase 3 がスキップされた level では Phase 2 完了後)。並走はさせない。
 
 ### 起動モード
 
@@ -180,7 +181,7 @@ need-check モードで内部的に HIGH/CRITICAL 相当の検出があった場
 
 **Phase N で `CRITICAL` または `HIGH` の検出件数が 0 でない限り、Phase N+1 を起動しない**。LOW/MEDIUM は次 Phase の起動を阻まない。
 
-- CRITICAL/HIGH 検出時: 当該 Phase で停止し、Phase 5 で `BLOCKED` を報告して終了 (修正反復は `km:review-loop` の責務)
+- CRITICAL/HIGH 検出時: 当該 Phase で停止し、Phase 5 で `BLOCKED` を報告して終了
 - 全 Phase 通過時: Phase 5 で重大度ごとに合算、`PASS` を報告して終了
 - Phase 3 内: 3 expert は同一メッセージ内で並列発行、全員完了後に統合して CRITICAL/HIGH 判定
 

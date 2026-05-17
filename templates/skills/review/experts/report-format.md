@@ -43,7 +43,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 - `MEDIUM`: 設計不整合、品質特性の低下、テスト不足、技術負債蓄積の兆候
 - `LOW`: 小さな改善、意図的に残してもよい指摘
 
-`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻み、Phase 5 で BLOCKED 報告して終了する (修正反復は `km:review-loop` の責務)。
+`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻み、Phase 5 で BLOCKED 報告して終了する。
 
 ## 確信度ラベル
 
