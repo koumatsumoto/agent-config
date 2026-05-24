@@ -20,7 +20,7 @@ RUNS_DIR = TEST_ROOT / "runs"
 
 
 def load_yaml(path: Path) -> object:
-    return yaml.safe_load(path.read_text())
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 def load_cases() -> list[dict]:
@@ -134,7 +134,7 @@ def scaffold_run(
             ]
         )
 
-    filename.write_text("\n".join(lines))
+    filename.write_text("\n".join(lines), encoding="utf-8")
     return filename
 
 
