@@ -3,6 +3,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_ROOT="$REPO_ROOT/tests/skills"
+TMP_RUNS_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_RUNS_DIR"' EXIT
 
 if [[ ! -d "$TEST_ROOT" ]]; then
   echo "missing: $TEST_ROOT" >&2
@@ -416,4 +418,4 @@ PY
 
 python3 "$REPO_ROOT/scripts/run-skill-tests.py" list >/dev/null
 python3 "$REPO_ROOT/scripts/run-skill-tests.py" dry-run --tag trigger >/dev/null
-python3 "$REPO_ROOT/scripts/run-skill-tests.py" scaffold --label verify --client Codex --model static >/dev/null
+python3 "$REPO_ROOT/scripts/run-skill-tests.py" scaffold --label verify --client Codex --model static --output-dir "$TMP_RUNS_DIR" >/dev/null

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 import unittest
@@ -52,6 +53,59 @@ class VerifyInstallTests(unittest.TestCase):
         with patch("sys.stdout", new=StringIO()):
             report = verify_install.verify(self.home)
         self.assertTrue(any("mode drift" in m for m in report.failures))
+
+    def test_settings_missing_template_key_detected(self) -> None:
+        settings = self.home / paths.SETTINGS_DEST_REL
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        removed_key = next(iter(data))
+        del data[removed_key]
+        settings.write_text(json.dumps(data), encoding="utf-8")
+
+        with patch("sys.stdout", new=StringIO()):
+            report = verify_install.verify(self.home)
+
+        self.assertTrue(
+            any(
+                "settings missing template key" in m and removed_key in m
+                for m in report.failures
+            ),
+            report.failures,
+        )
+
+    def test_settings_invalid_json_detected(self) -> None:
+        settings = self.home / paths.SETTINGS_DEST_REL
+        settings.write_text("{not valid", encoding="utf-8")
+
+        with patch("sys.stdout", new=StringIO()):
+            report = verify_install.verify(self.home)
+
+        self.assertTrue(any("invalid json" in m for m in report.failures))
+
+    def test_settings_non_object_detected(self) -> None:
+        settings = self.home / paths.SETTINGS_DEST_REL
+        settings.write_text(json.dumps(["not", "object"]), encoding="utf-8")
+
+        with patch("sys.stdout", new=StringIO()):
+            report = verify_install.verify(self.home)
+
+        self.assertTrue(
+            any("settings.json must be a JSON object" in m for m in report.failures)
+        )
+
+    def test_settings_existing_key_override_is_allowed(self) -> None:
+        settings = self.home / paths.SETTINGS_DEST_REL
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        override_key = next(iter(data))
+        data[override_key] = "user override"
+        settings.write_text(json.dumps(data), encoding="utf-8")
+
+        with patch("sys.stdout", new=StringIO()):
+            report = verify_install.verify(self.home)
+
+        self.assertFalse(
+            any(override_key in m for m in report.failures),
+            report.failures,
+        )
 
 
 if __name__ == "__main__":
