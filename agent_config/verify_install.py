@@ -7,6 +7,7 @@ bits.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -63,6 +64,45 @@ def _check_tree(report: VerifyReport, src_root: Path, dest_root: Path,
             _check_mode(report, dest, file_mode)
 
 
+def _read_json_object(
+    report: VerifyReport,
+    path: Path,
+    label: str,
+) -> dict[str, object] | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        report.record(False, f"missing: {path}")
+        return None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        report.record(False, f"invalid json: {path} ({exc})")
+        return None
+    is_object = isinstance(data, dict)
+    report.record(is_object, f"{label} must be a JSON object: {path}")
+    if not is_object:
+        return None
+    return data
+
+
+def _check_settings_contract(
+    report: VerifyReport,
+    template: Path,
+    dest: Path,
+) -> None:
+    template_data = _read_json_object(report, template, "settings template")
+    dest_data = _read_json_object(report, dest, "settings.json")
+    if template_data is None or dest_data is None:
+        return
+
+    for key in sorted(template_data):
+        report.record(
+            key in dest_data,
+            f"settings missing template key: {dest} ({key})",
+        )
+
+
 def verify(home: Path, repo_root: Path = paths.REPO_ROOT) -> VerifyReport:
     report = VerifyReport()
     print("Verify Claude + Codex configuration")
@@ -84,6 +124,11 @@ def verify(home: Path, repo_root: Path = paths.REPO_ROOT) -> VerifyReport:
     settings_dest = home / paths.SETTINGS_DEST_REL
     report.record(settings_dest.exists(), f"missing: {settings_dest}")
     _check_mode(report, settings_dest, fs.FILE_MODE)
+    _check_settings_contract(
+        report,
+        repo_root / paths.SETTINGS_TEMPLATE_REL,
+        settings_dest,
+    )
 
     return report
 

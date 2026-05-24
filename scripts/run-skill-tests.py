@@ -20,7 +20,7 @@ RUNS_DIR = TEST_ROOT / "runs"
 
 
 def load_yaml(path: Path) -> object:
-    return yaml.safe_load(path.read_text())
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 def load_cases() -> list[dict]:
@@ -94,10 +94,17 @@ def print_dry_run(cases: list[dict]) -> int:
     return 0
 
 
-def scaffold_run(cases: list[dict], label: str, client: str, model: str, branch: str) -> Path:
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
+def scaffold_run(
+    cases: list[dict],
+    label: str,
+    client: str,
+    model: str,
+    branch: str,
+    output_dir: Path = RUNS_DIR,
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d")
-    filename = RUNS_DIR / f"{stamp}-{label}.md"
+    filename = output_dir / f"{stamp}-{label}.md"
 
     lines: list[str] = [
         "# Skills Test Run",
@@ -127,7 +134,7 @@ def scaffold_run(cases: list[dict], label: str, client: str, model: str, branch:
             ]
         )
 
-    filename.write_text("\n".join(lines))
+    filename.write_text("\n".join(lines), encoding="utf-8")
     return filename
 
 
@@ -147,6 +154,12 @@ def build_parser() -> argparse.ArgumentParser:
     scaffold.add_argument("--client", default="", help="Client name")
     scaffold.add_argument("--model", default="", help="Model or profile")
     scaffold.add_argument("--branch", default="", help="Branch or commit")
+    scaffold.add_argument(
+        "--output-dir",
+        type=Path,
+        default=RUNS_DIR,
+        help="Directory for the generated run sheet",
+    )
     return parser
 
 
@@ -162,7 +175,14 @@ def main() -> int:
     if args.command == "dry-run":
         return print_dry_run(cases)
     if args.command == "scaffold":
-        run_file = scaffold_run(cases, args.label, args.client, args.model, args.branch)
+        run_file = scaffold_run(
+            cases,
+            args.label,
+            args.client,
+            args.model,
+            args.branch,
+            args.output_dir,
+        )
         print(run_file)
         return 0
     raise SystemExit(f"unsupported command: {args.command}")
