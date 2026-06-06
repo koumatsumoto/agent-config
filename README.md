@@ -29,7 +29,6 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 - `docs/` - 保守対象の参考ドキュメント
 - `scripts/` - 補助スクリプト・後方互換ラッパー
 - `tests/agent_config/` - `agent_config` の unittest
-- `tests/skills/` - skill 回帰テスト資産
 - `.github/workflows/` - GitHub Actions CI 設定
 - `.claude/` - このリポジトリ自身の Claude Code 設定
 
@@ -105,23 +104,6 @@ python3 -m agent_config.verify_install
 # Windows
 python -m agent_config.verify_install
 ```
-
-skill 回帰資産の静的検証 (POSIX 専用 — `bash` と `pyyaml` が必要):
-
-```bash
-python3 -c "import yaml"
-bash scripts/verify-skill-tests.sh
-```
-
-run sheet の生成・集計 (POSIX 専用):
-
-```bash
-python3 scripts/run-skill-tests.py list
-RUN_FILE=$(python3 scripts/run-skill-tests.py scaffold --label smoke --client Codex --model gpt-5.5)
-python3 scripts/run-skill-tests.py summary --run-file "$RUN_FILE"
-```
-
-`validate-run` は run sheet 記入後に使う。
 
 `agent_config` パッケージと `scripts/` 配下ユーティリティの unittest (POSIX / Windows どちらでも実行可能):
 
