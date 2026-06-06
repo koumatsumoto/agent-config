@@ -5,7 +5,7 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 ## 概要
 
 - 正本は `templates/` 配下
-- `agent_config` Python パッケージで `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (POSIX / Windows 両対応)
+- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (POSIX / Windows 両対応)
 - POSIX 環境では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - リポジトリ内の `README.md` と `docs/` は説明用。runtime contract は `templates/` 側を正とする
 
@@ -25,29 +25,29 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 ## ディレクトリ構造
 
 - `templates/` - 配布対象テンプレート
-- `agent_config/` - インストーラ / クリーナ / 検証の Python パッケージ
+- `scripts/` - Python CLI 本体と補助スクリプト
+- `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
+- `scripts/tests/` - `scripts/cli.py` の unittest
 - `docs/` - 保守対象の参考ドキュメント
-- `scripts/` - 補助スクリプト・後方互換ラッパー
-- `tests/agent_config/` - `agent_config` の unittest
 - `.github/workflows/` - GitHub Actions CI 設定
 - `.claude/` - このリポジトリ自身の Claude Code 設定
 
 ## セットアップ
 
-正規のエントリポイントは Python モジュール呼び出し。POSIX には bash ラッパーも同梱する。
+正規のエントリポイントは `scripts/cli.py` のサブコマンド呼び出し。POSIX には bash ラッパーも同梱する。
 
 POSIX (Ubuntu / macOS / WSL):
 
 ```bash
 bash install.sh
 # または同等
-python3 -m agent_config.install
+python3 scripts/cli.py install
 ```
 
 Windows (PowerShell / cmd):
 
 ```powershell
-python -m agent_config.install
+python scripts/cli.py install
 ```
 
 要件: Python 3.12+ (stdlib のみで動作。外部依存なし)。
@@ -70,7 +70,7 @@ python -m agent_config.install
 
 ### `settings.json` の取り扱い
 
-`templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`agent_config.merge_settings`)。
+`templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/cli.py` の merge ロジック。単体では `python3 scripts/cli.py merge <template> <dest>` で実行できる)。
 
 - 初回インストール時: テンプレート全体を `~/.claude/settings.json` として作成する
 - 2 回目以降: 既存ファイルに不足しているトップレベルキーだけテンプレートから補い、ユーザが既に設定している値は保持する
@@ -97,24 +97,24 @@ python -m agent_config.install
 ```bash
 # POSIX
 bash scripts/verify-install.sh
-python3 -m agent_config.verify_install
+python3 scripts/cli.py verify
 ```
 
 ```powershell
 # Windows
-python -m agent_config.verify_install
+python scripts/cli.py verify
 ```
 
-`agent_config` パッケージと `scripts/` 配下ユーティリティの unittest (POSIX / Windows どちらでも実行可能):
+`scripts/cli.py` の unittest (POSIX / Windows どちらでも実行可能):
 
 ```bash
 # POSIX
-python3 -m unittest discover -v
+python3 -m unittest discover -s scripts/tests -t scripts -v
 ```
 
 ```powershell
 # Windows
-python -m unittest discover -v
+python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
 GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスで unittest を実行する。
@@ -124,12 +124,12 @@ GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-
 ```bash
 # POSIX
 bash clean.sh
-python3 -m agent_config.clean
+python3 scripts/cli.py clean
 ```
 
 ```powershell
 # Windows
-python -m agent_config.clean
+python scripts/cli.py clean
 ```
 
 このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。
