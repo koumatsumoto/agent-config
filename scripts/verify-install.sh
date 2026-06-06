@@ -4,4 +4,4 @@
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY=$("$REPO_ROOT/scripts/_find-python.sh") || exit 1
-PYTHONPATH="$REPO_ROOT" exec "$PY" -m agent_config.verify_install "$@"
+exec "$PY" "$REPO_ROOT/scripts/cli.py" verify "$@"
