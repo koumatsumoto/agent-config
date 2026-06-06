@@ -225,9 +225,9 @@ class BackupTests(unittest.TestCase):
 # settings.json merge
 # --------------------------------------------------------------------------- #
 class MergeFunctionTests(unittest.TestCase):
-    def test_existing_wins_for_shared_keys(self) -> None:
+    def test_template_wins_for_shared_keys(self) -> None:
         merged = cli.merge({"a": 1, "b": "tpl"}, {"a": 99})
-        self.assertEqual(merged["a"], 99)
+        self.assertEqual(merged["a"], 1)
         self.assertEqual(merged["b"], "tpl")
 
     def test_template_keys_added(self) -> None:
@@ -262,12 +262,14 @@ class MergeIntoTests(unittest.TestCase):
         self.assertEqual(result, "ok")
         self.assertFalse(self.bak.exists())
 
-    def test_merged_preserves_user_values(self) -> None:
+    def test_merged_template_wins_user_only_kept(self) -> None:
         self.dest.write_text(json.dumps({"a": 99, "theme": "dark"}), encoding="utf-8")
         result = cli.merge_into(self.template, self.dest)
         self.assertEqual(result, "merged")
         merged = json.loads(self.dest.read_text(encoding="utf-8"))
-        self.assertEqual(merged["a"], 99)
+        # template declares "a" -> template value wins (propagates on re-run)
+        self.assertEqual(merged["a"], 1)
+        # template does not declare "theme" -> user value is preserved
         self.assertEqual(merged["theme"], "dark")
         self.assertEqual(merged["b"], "template")
         self.assertTrue(self.bak.exists())

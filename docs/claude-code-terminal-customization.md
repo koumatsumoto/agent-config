@@ -9,91 +9,60 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 |カテゴリ|設定ファイル|概要|
 |---|---|---|
-|ステータスライン|`~/.claude/statusline.sh` + `settings.json`|画面下部にモデル・コンテキスト・コスト等を常時表示|
-|キーバインド|`~/.claude/keybindings.json`|キーボードショートカットのカスタマイズ|
+|ステータスライン|`~/.claude/statusline.py` + `settings.json`|画面下部にモデル・コンテキスト・コスト等を常時表示|
 |Output Styles|`~/.claude/output-styles/*.md` or `/config`|応答スタイルの変更|
 |Hooks|`settings.json`|イベント駆動の自動処理（フォーマット等）|
 |Vim モード|`settings.json`|プロンプト入力欄での Vim キーバインド|
 
 ## 1. ステータスライン
 
-`settings.json` に以下を追加し、スクリプトを配置する。
+`settings.json` に以下を追加し、スクリプトを配置する。本リポジトリの status line は Python 実装 (`templates/statusline.py`) で、Linux / macOS / Windows で共通に動く。
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "/home/<user>/.claude/statusline.sh",
-    "padding": 2
+    "command": "~/.claude/statusline.py",
+    "refreshInterval": 30
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "~/.claude/subagent-statusline.py"
   }
 }
 ```
 
-テンプレートの `templates/statusline.sh` を `~/.claude/statusline.sh` にコピーして使用する（`install.sh` で自動反映）。
+テンプレートの `templates/statusline.py` / `templates/subagent-statusline.py` を `~/.claude/` にコピーして使用する（`install.sh` で自動反映、実行ビット付与込み）。`statusline.py` は最大 2 行を表示する（行 1: モデル/コンテキスト/キャッシュ率/コスト、行 2: git/PR/レート制限）。
 
 ### 依存関係
 
-- **jq（推奨）**: primary パーサーとして使用。ネストされた JSON を正確にパースする。未インストールの場合は bash のみで動作する（fallback）
-- **bash 4+**: fallback パーサー、プログレスバー表示、カラー出力で使用
+- **Python 3.12+**: 標準ライブラリのみで動作。`jq` 等の外部依存なし（JSON は Python でパース）
+- **git**: 行 2 のブランチ・変更行数表示に使用（無い/リポジトリ外なら自動で省略）
 
-### スクリプトに渡される JSON フィールド
+### スクリプトに渡される JSON フィールド（主なもの）
 
 |フィールド|説明|
 |---|---|
 |`model.display_name`|モデル名|
+|`effort.level`|reasoning effort (low/medium/high/xhigh/max)|
 |`context_window.used_percentage`|コンテキスト使用率|
-|`context_window.current_usage`|現在の使用トークン数（ネストオブジェクト）|
-|`context_window.context_window_size`|コンテキストウィンドウサイズ|
-|`cost.total_cost_usd`|セッションコスト（小数5桁以上の場合あり）|
-|`rate_limits.five_hour.used_percentage`|5時間レート制限の使用率|
-|`rate_limits.five_hour.resets_at`|5時間レート制限のリセット時刻（Unix epoch）|
-|`rate_limits.seven_day.used_percentage`|7日間レート制限の使用率|
-|`rate_limits.seven_day.resets_at`|7日間レート制限のリセット時刻（Unix epoch）|
-|`output_style.name`|出力スタイル名|
-|`agent.name`|エージェント名|
+|`context_window.total_input_tokens`|コンテキスト内の入力トークン数|
+|`context_window.context_window_size`|コンテキストウィンドウサイズ (200k / 1M)|
+|`context_window.current_usage`|cache 読み書き内訳（cache 率算出に使用）|
+|`cost.total_cost_usd` / `cost.total_duration_ms` / `cost.total_api_duration_ms`|コスト / 実時間 / API 時間|
+|`rate_limits.{five_hour,seven_day}.{used_percentage,resets_at}`|レート制限の使用率とリセット時刻|
+|`pr.number` / `pr.url`|現ブランチの open PR（クリック可能リンク化）|
 |`worktree.branch`|Git ブランチ名（worktree セッション時）|
+|`session_id`|git 結果のキャッシュキーに使用|
 
 ### セキュリティ上の注意
 
-- **フルパス（絶対パス）で指定する**: チルダ (`~`) はシェル展開に依存するため、`/home/<user>/.claude/statusline.sh` の形式で記述する
-- **PATH を固定する**: スクリプト冒頭で `export PATH="/usr/local/bin:/usr/bin:/bin"` を設定し、PATH 汚染を防止する
-- **外部入力をサニタイズする**: ブランチ名等はユーザ制御可能な値。制御文字・ANSI エスケープシーケンスを除去してからターミナルに出力する
-- **`echo -e` を避ける**: 未サニタイズの変数がエスケープ解釈される。`printf '%s'` + `'%b'`（カラーコード部分のみ）を使用する
-- **数値検証を行う**: 算術展開 `$(( ))` に渡す前に値が数値であることを検証する（bash の算術評価は変数名を再帰展開する）
+- **チルダ (`~`) パスで可搬性を確保**: `command` は `~/.claude/statusline.py` とし、shebang (`#!/usr/bin/env python3`) + 実行ビットで OS 非依存に起動する
+- **git 環境変数をクリアする**: `GIT_DIR` 等を unset し、悪意あるリポジトリからの config / repo 差し替えを防ぐ
+- **外部入力をサニタイズする**: モデル名・ブランチ名等の制御文字・ANSI エスケープを除去してから出力する
+- **高速・低負荷に保つ**: status line は高頻度（300ms デバウンス）で実行されるため、git 結果は `session_id` キーで数秒キャッシュする
 
-## 2. キーバインド
-
-`~/.claude/keybindings.json` を作成する。テンプレートは `templates/keybindings.json`。
-
-### 主要なアクション
-
-|アクション|Claude Code デフォルト|説明|
-|---|---|---|
-|`chat:submit`|Enter|メッセージ送信|
-|`chat:newline`|(未設定) ※本リポジトリでは Shift+Enter に設定|改行挿入（送信せず）|
-|`chat:externalEditor`|Ctrl+G|外部エディタで編集|
-|`chat:stash`|Ctrl+S|プロンプトを一時退避|
-|`chat:modelPicker`|Meta+P|モデル切替|
-|`chat:fastMode`|Meta+O|Fast モード切替|
-|`chat:thinkingToggle`|Meta+T|拡張思考の切替|
-|`chat:cycleMode`|Shift+Tab|パーミッションモード切替|
-|`app:toggleTodos`|Ctrl+T|タスクリスト表示切替|
-|`history:search`|Ctrl+R|履歴検索|
-
-### 推奨設定
-
-`Shift+Enter` で改行を設定すると、複数行入力が容易になる。送信キー（デフォルト `Enter`）はそのまま維持するのが一般的。
-
-`chat:externalEditor` (`Ctrl+G`) を VS Code で使いたい場合は、Claude Code を起動するシェルで `VISUAL` または `EDITOR` を設定する。
-
-```bash
-export VISUAL="code --wait"
-export EDITOR="code --wait"
-```
-
-`bash` なら `~/.bashrc`、`zsh` なら `~/.zshrc` に追記してからシェルを再起動する。
-
-## 3. Output Styles
+## 2. Output Styles
 
 `/config` → Output style で選択するか、カスタムスタイルを作成する。
 
@@ -117,7 +86,7 @@ keep-coding-instructions: true
 カスタム指示をここに記述。
 ```
 
-## 4. Hooks
+## 3. Hooks
 
 `settings.json` の `hooks` セクションでイベント駆動の自動処理を設定する。
 
@@ -134,18 +103,18 @@ keep-coding-instructions: true
 - **外部コマンドはフルパスで指定する**: 特に Windows 環境（Git Bash / WSL2）の `powershell.exe` は PATH 汚染で偽バイナリが実行される可能性がある
 - **matcher は必要なイベントに絞る**: 空文字列 (`""`) は全イベントにマッチし、高頻度でプロセスが起動される
 
-## 5. settings.json セキュリティハードニング
+## 4. settings.json セキュリティハードニング
 
 ### ファイルパーミッション
 
 ```bash
 chmod 700 ~/.claude/
 chmod 600 ~/.claude/settings.json
-chmod 600 ~/.claude/keybindings.json
-chmod 700 ~/.claude/statusline.sh
+chmod 700 ~/.claude/statusline.py
+chmod 700 ~/.claude/subagent-statusline.py
 ```
 
-`~/.claude/` 配下には hook コマンド、パーミッション設定、credentials 等が含まれるため、他ユーザからの読み取りを防止する。`install.sh` はディレクトリと statusline.sh、keybindings.json のパーミッションを自動設定する。`settings.json` は install.sh の管理対象外のため、手動で `chmod 600` を設定すること。
+`~/.claude/` 配下には hook コマンド、パーミッション設定、credentials 等が含まれるため、他ユーザからの読み取りを防止する。`install.sh` はディレクトリと statusline.py、subagent-statusline.py のパーミッションを自動設定する。`settings.json` は install.sh による shallow merge 対象だが、パーミッションも `chmod 600` で書き込まれる。
 
 ### 多層防御の考え方
 
@@ -266,22 +235,13 @@ Windows 上で Claude Code を使用する場合、環境に応じた考慮が�
 - パスの形式が POSIX 風（`/c/Users/...`）になるが、`powershell.exe` 等の Windows バイナリは `C:/WINDOWS/...` のネイティブパスでも動作する
 - `chmod` はファイルシステムが NTFS の場合に制限がある。`install.sh` は `chmod` 失敗時に警告を出力する
 - `~/.claude/` は `C:/Users/<user>/.claude/` に対応する
-- **jq のインストール**: Git Bash には jq が含まれないため、`statusline.sh` の jq パスを有効にするには別途インストールが必要。未インストールでも bash fallback で動作するが、ネストされた JSON のパースに制限がある
-  ```bash
-  # Scoop (推奨)
-  scoop install jq
-  # または Chocolatey
-  choco install jq
-  ```
+- **Python**: `statusline.py` は Python で動作する。Git Bash から実行する場合は shebang が解決できるよう `python`（または `py`）が PATH 上に必要。`statusLine.command` のパスはフォワードスラッシュで記述する
 
 **WSL2:**
 - `/mnt/c/` 経由で Windows ファイルシステムにアクセス可能。Bash コマンドで Windows 側のファイルを読み書きできる
 - フックで Windows プロセス（powershell.exe 等）を起動すると、Windows 側から `\\wsl$\` 経由で WSL2 ファイルシステムにアクセス可能
 - サンドボックスの `allowRead` / `allowWrite` で `/mnt/c/` へのアクセスを制限することを推奨
-- **jq のインストール**: 多くの WSL2 ディストリビューションではデフォルトで利用可能。未インストールの場合:
-  ```bash
-  sudo apt install jq
-  ```
+- **Python**: 多くの WSL2 ディストリビューションでは `python3` がデフォルトで利用可能。`statusline.py` は標準ライブラリのみで動作する
 
 **共通:**
-- `statusline.sh` は jq（推奨）+ bash fallback の二段構成。Git Bash / WSL2 のどちらでも動作する
+- `statusline.py` は Python 標準ライブラリのみで動作し、外部依存（jq 等）は不要。Git Bash / WSL2 のどちらでも動作する

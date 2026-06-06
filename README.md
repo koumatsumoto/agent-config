@@ -16,8 +16,8 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 - `templates/rules/` - Claude Code 向け markdown rules
 - `templates/skills/` - Claude / Codex 共用の skills
 - `templates/config.toml` - Codex CLI 用設定テンプレート
-- `templates/keybindings.json` - Claude Code 用キーバインド
-- `templates/statusline.sh` - Claude Code 用 status line
+- `templates/statusline.py` - Claude Code 用 status line (リッチ 2 行レイアウト)
+- `templates/subagent-statusline.py` - Claude Code サブエージェント行の status line
 - `templates/settings.json` - Claude Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
 
 `docs/` は参考資料として残す。履歴メモや検討計画は git で追跡し、作業中の計画メモが必要な場合は repo 直下の `.plan/` に置く。
@@ -59,8 +59,8 @@ python scripts/cli.py install
 - `~/.claude/CLAUDE.md`
 - `~/.claude/rules/`
 - `~/.claude/skills/`
-- `~/.claude/keybindings.json`
-- `~/.claude/statusline.sh`
+- `~/.claude/statusline.py`
+- `~/.claude/subagent-statusline.py`
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
 - `~/.codex/AGENTS.md`
 - `~/.codex/config.toml`
@@ -73,16 +73,21 @@ python scripts/cli.py install
 `templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/cli.py` の merge ロジック。単体では `python3 scripts/cli.py merge <template> <dest>` で実行できる)。
 
 - 初回インストール時: テンプレート全体を `~/.claude/settings.json` として作成する
-- 2 回目以降: 既存ファイルに不足しているトップレベルキーだけテンプレートから補い、ユーザが既に設定している値は保持する
+- 2 回目以降: テンプレートが宣言するトップレベルキーはテンプレート値で上書きし (repo を source of truth とする)、テンプレートが宣言しないキー (例: `theme` / `model` / `enabledPlugins` など UI・ランタイム管理値) はユーザ設定を保持する
 - マージ後の内容が既存と一致する場合は何もしない (`ok: ...` 出力)。差分が出た場合のみ既存ファイルを `*.bak` へ退避する
 
-つまり `theme` のような個人設定はユーザ側で書き加えれば次回 install で消えない。逆に推奨ベースライン側の値を上書きしたい場合は、`~/.claude/settings.json` でそのキーを明示的に再定義すれば優先される。
+つまり `theme` のような個人設定はユーザ側で書き加えれば次回 install で消えない。一方、テンプレートが宣言するキー (下表) はランタイムで一時変更しても次回 install で repo の値に戻る。恒久的に変えたい場合は `templates/settings.json` 側を編集する。
 
 `templates/settings.json` が現時点で配布する推奨キー:
 
 | キー | 値 | 目的 |
 | --- | --- | --- |
-| `statusLine` | `~/.claude/statusline.sh` を実行する command 設定 | リポジトリ同梱の statusline を有効化する |
+| `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`) | リポジトリ同梱のリッチ status line を有効化する |
+| `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command | サブエージェント行を自前描画する |
+| `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止と `Bash(npx *)` | 機密ファイルへのアクセスを既定で遮断する |
+| `permissions.defaultMode` | `"plan"` | セッションを既定で plan mode で開始する |
+| `language` | `"日本語"` | 応答言語を日本語に固定する |
+| `effortLevel` | `"xhigh"` | reasoning effort を xhigh で永続化する |
 | `attribution.commit` / `attribution.pr` | 空文字 | コミットおよび PR 説明から Claude の署名を抑止する |
 | `fileCheckpointingEnabled` | `true` | 編集前ファイルをスナップショットし `/rewind` で巻き戻せるようにする |
 | `tui` | `"fullscreen"` | ちらつきの無い alt-screen レンダラ + 仮想化スクロールバックを有効化する |
@@ -143,7 +148,7 @@ python scripts/cli.py clean
 - `docs/typescript-best-practices-202604.md`
   - TypeScript 6.0+ / ESLint flat config / typescript-eslint typed linting を前提にした 2026-04 リファレンス
 - `docs/claude-code-terminal-customization.md`
-  - Claude Code の status line、keybindings、Output Styles、Hooks の導入参考
+  - Claude Code の status line、Output Styles、Hooks の導入参考
 
 Hooks、Output Styles、permissions のセキュリティハードニングなどの詳細は `docs/claude-code-terminal-customization.md` を参照。
 
@@ -155,8 +160,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
-| `templates/keybindings.json` | `~/.claude/keybindings.json` |
-| `templates/statusline.sh` | `~/.claude/statusline.sh` |
+| `templates/statusline.py` | `~/.claude/statusline.py` |
+| `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (shallow merge) |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/skills/` | `~/.agents/skills/` |
@@ -172,7 +177,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
   - Sub-agents: `https://code.claude.com/docs/en/sub-agents`
   - Hooks: `https://code.claude.com/docs/en/hooks`
   - Settings: `https://code.claude.com/docs/en/settings`
-  - Keybindings: `https://code.claude.com/docs/en/keybindings`
+  - Status line: `https://code.claude.com/docs/en/statusline`
   - Output styles: `https://code.claude.com/docs/en/output-styles`
 - OpenAI Codex CLI
   - CLI Overview: `https://developers.openai.com/codex/cli`
