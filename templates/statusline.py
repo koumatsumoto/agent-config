@@ -4,7 +4,7 @@
 Reads the session JSON that Claude Code pipes on stdin and prints up to two
 lines:
 
-    Line 1: 🤖 model [agent] [·effort] │ bar pct% (used/window) [♻️cacheN%] │ $cost ⏱wall 🌐api
+    Line 1: 🤖 model [agent] [·effort] │ bar pct% (used/window) $cost [⟲ cacheN%] [⇌ api ◷ wall]
     Line 2: 🌳 branch N files +A/-R [🔗PR#num] │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 
 Maintainer notes (why it is shaped this way):
@@ -18,20 +18,26 @@ Maintainer notes (why it is shaped this way):
   repository or session payload.
 - Context tokens "used" follows Claude Code's own `used_percentage`: input
   tokens only (input + cache read + cache write), output excluded.
-- ♻️% = cache_read / (input + cache_creation + cache_read): the share of this
+- ⟲% = cache_read / (input + cache_creation + cache_read): the share of this
   turn's input served cheaply from the prompt cache.
-- ⏱ is wall-clock time; 🌐 is cumulative API (network) time.
+- ⇌ is cumulative API (network) time; ◷ is wall-clock time. The four metric
+  glyphs ($ ⟲ ⇌ ◷) are text-presentation symbols: they render in the terminal
+  foreground color (one uniform color) and occupy a single cell, sidestepping
+  the width/overlap quirks of emoji like ⏱ that lack a variation selector.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
+import stat
 import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -43,17 +49,32 @@ RED = "\033[31m"
 RED_BG = "\033[41;97m"  # red background + bright white
 
 GIT_CACHE_TTL_SEC = 5
+GIT_CACHE_MAX_BYTES = 4096
 STDIN_LIMIT_BYTES = 65536
 GIT_TIMEOUT_SEC = 2
 BAR_WIDTH = 6
+MODEL_NAME_MAX = 128
 SEP = " │ "
 
 _CSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_OSC_RE = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)")
 _SGR_REMNANT_RE = re.compile(r"\[[0-9;]*[mGHJKsu]")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+# Model display names append a context-window note (e.g. "Opus 4.8 (1M
+# context)") that the bar's used/window readout already shows; strip it.
+_MODEL_CTX_RE = re.compile(r"\s*\([^)]*context[^)]*\)\s*$", re.IGNORECASE)
 
 
 # --- payload access --------------------------------------------------------- #
+def _reject_constant(_: str) -> None:
+    """Map JSON NaN/Infinity/-Infinity to None so numeric coercion stays safe.
+
+    json.loads accepts these non-finite literals by default; left as floats they
+    would blow up downstream int()/round() calls.
+    """
+    return None
+
+
 def read_payload() -> dict[str, object]:
     """Read size-limited stdin and parse JSON; return {} on any failure."""
     try:
@@ -61,8 +82,9 @@ def read_payload() -> dict[str, object]:
     except (OSError, ValueError):
         return {}
     try:
-        data = json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
+        data = json.loads(raw, parse_constant=_reject_constant)
+    except (json.JSONDecodeError, ValueError, RecursionError):
+        # RecursionError: deeply nested JSON overflows the C scanner.
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -82,15 +104,16 @@ def as_str(value: object) -> str:
 
 
 def as_num(value: object) -> float:
+    """Coerce to a finite float; non-numeric, non-finite, or out-of-range inputs
+    yield 0.0 (an arbitrary-precision int can overflow float())."""
     if isinstance(value, bool):
         return 0.0
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
+    if isinstance(value, (int, float, str)):
         try:
-            return float(value)
-        except ValueError:
+            num = float(value)
+        except (OverflowError, ValueError):
             return 0.0
+        return num if math.isfinite(num) else 0.0
     return 0.0
 
 
@@ -99,6 +122,15 @@ def sanitize(text: str) -> str:
     text = _CSI_RE.sub("", text)
     text = _CONTROL_RE.sub("", text)
     return _SGR_REMNANT_RE.sub("", text)
+
+
+def safe_osc8_uri(url: str) -> str:
+    """Return `url` only if it is a plain http(s) link safe to embed in an
+    OSC 8 hyperlink, else ''. Control bytes (including the ESC/BEL that could
+    close the escape early and inject terminal commands) are stripped first,
+    then the scheme is allowlisted (CWE-150)."""
+    url = _CONTROL_RE.sub("", url)
+    return url if url.startswith(("https://", "http://")) else ""
 
 
 # --- formatting ------------------------------------------------------------- #
@@ -152,10 +184,16 @@ def fmt_reset(epoch: float, *, with_day: bool = False) -> str:
 
 
 def visible_len(text: str) -> int:
-    """Length of `text` ignoring ANSI/OSC escape sequences."""
-    stripped = _CSI_RE.sub("", text)
-    stripped = re.sub(r"\x1b\].*?(\x07|\x1b\\)", "", stripped)
-    return len(stripped)
+    """Display width of `text`, ignoring ANSI/OSC escapes. East-Asian wide and
+    fullwidth code points count as 2 cells and zero-width combining marks as 0,
+    so line-2 truncation matches what the terminal actually renders."""
+    stripped = _OSC_RE.sub("", _CSI_RE.sub("", text))
+    width = 0
+    for ch in stripped:
+        if unicodedata.combining(ch):
+            continue
+        width += 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+    return width
 
 
 # --- segments --------------------------------------------------------------- #
@@ -199,16 +237,25 @@ def context_segment(payload: dict[str, object]) -> str:
     return f"{bar} {pct}%{detail}"
 
 
-def cost_segment(payload: dict[str, object]) -> str:
-    cost = fmt_cost(as_num(dig(payload, "cost", "total_cost_usd")))
-    wall = as_num(dig(payload, "cost", "total_duration_ms"))
+def metrics_segment(payload: dict[str, object]) -> str:
+    """`$cost ⟲ cache ⇌ api ◷ wall` — order: cost, cache, API time, wall time.
+
+    Glyphs are text-presentation symbols (uniform terminal color). The thin
+    ASCII $ hugs its value; ⟲/⇌/◷ are padded with a space from theirs so the
+    cluster does not look cramped.
+    """
+    parts = [fmt_cost(as_num(dig(payload, "cost", "total_cost_usd")))]
+    cache = cache_segment(payload)
+    if cache:
+        parts.append(cache)
     api = as_num(dig(payload, "cost", "total_api_duration_ms"))
-    out = cost
-    if wall > 0:
-        out += f" ⏱{fmt_duration(wall)}"
-        if api > 0:
-            out += f" 🌐{fmt_duration(api)}"
-    return out
+    wall = as_num(dig(payload, "cost", "total_duration_ms"))
+    # Sub-second cumulative times render as a meaningless "0s"; show only >=1s.
+    if api >= 1000:
+        parts.append(f"⇌ {fmt_duration(api)}")
+    if wall >= 1000:
+        parts.append(f"◷ {fmt_duration(wall)}")
+    return " ".join(parts)
 
 
 def cache_segment(payload: dict[str, object]) -> str:
@@ -221,7 +268,7 @@ def cache_segment(payload: dict[str, object]) -> str:
     total = fresh + created + read
     if total <= 0:
         return ""
-    return f"♻️{int(round(100 * read / total))}%"
+    return f"⟲ {int(round(100 * read / total))}%"
 
 
 def rate_segment(payload: dict[str, object], window: str, label: str, *, with_day: bool) -> str:
@@ -238,14 +285,27 @@ def rate_segment(payload: dict[str, object], window: str, label: str, *, with_da
 
 # --- git -------------------------------------------------------------------- #
 def git_env() -> dict[str, str]:
-    """Environment with repo/config redirection vars cleared (hardening)."""
+    """Environment with repo/config redirection vars cleared (hardening).
+
+    A session payload cannot set our environment, but the surrounding shell
+    might; stripping these stops an injected GIT_* var from pointing our
+    read-only queries at attacker-controlled config, hooks, object stores, or a
+    proxy/ssh command. GIT_CONFIG_NOSYSTEM neutralizes /etc/gitconfig too.
+    """
     env = dict(os.environ)
     for var in (
         "GIT_DIR", "GIT_WORK_TREE", "GIT_CONFIG", "GIT_CONFIG_GLOBAL",
-        "GIT_EXEC_PATH", "GIT_EXTERNAL_DIFF",
+        "GIT_CONFIG_SYSTEM", "GIT_CONFIG_COUNT", "GIT_EXEC_PATH",
+        "GIT_EXTERNAL_DIFF", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_PROXY_COMMAND", "GIT_SSH_COMMAND", "GIT_PAGER",
     ):
         env.pop(var, None)
+    # GIT_TRACE* would append diagnostics to an inherited (possibly hostile)
+    # path; drop every variant rather than enumerate them.
+    for key in [k for k in env if k.startswith("GIT_TRACE")]:
+        env.pop(key, None)
     env["GIT_OPTIONAL_LOCKS"] = "0"
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
     return env
 
 
@@ -286,6 +346,53 @@ def compute_git(cwd: str) -> dict[str, object]:
     return {"branch": branch, "files": files, "added": added, "removed": removed}
 
 
+def _read_git_cache(cache: Path) -> dict[str, object] | None:
+    """Return fresh, well-formed cached git info, or None to recompute.
+
+    Refuses to follow a symlink at the cache path (O_NOFOLLOW) and caps the read
+    so a file planted in the shared temp dir cannot be slurped wholesale
+    (CWE-59 / CWE-377). A non-dict JSON body is treated as a cache miss.
+    """
+    try:
+        if time.time() - cache.stat().st_mtime >= GIT_CACHE_TTL_SEC:
+            return None
+        # O_NOFOLLOW rejects a symlink; O_NONBLOCK + S_ISREG reject a planted
+        # FIFO/device (a read-only open of a FIFO would otherwise block).
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        fd = os.open(cache, flags)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                return None
+            raw = os.read(fd, GIT_CACHE_MAX_BYTES)
+        finally:
+            os.close(fd)
+        data = json.loads(raw, parse_constant=_reject_constant)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _write_git_cache(cache: Path, info: dict[str, object]) -> None:
+    """Atomically replace the cache via a private temp file in the same dir.
+
+    mkstemp creates with O_EXCL|0600 so it never follows a pre-planted symlink;
+    os.replace then swaps it in, discarding any symlink sitting at the target.
+    """
+    try:
+        fd, tmp_name = tempfile.mkstemp(dir=str(cache.parent), prefix=cache.name + ".")
+    except OSError:
+        return
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(info))
+        os.replace(tmp_name, cache)
+    except OSError:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+
+
 def git_info(payload: dict[str, object]) -> dict[str, object]:
     """Cached git lookup keyed by session_id (cache TTL: GIT_CACHE_TTL_SEC)."""
     cwd = as_str(dig(payload, "workspace", "current_dir")) or as_str(payload.get("cwd"))
@@ -294,36 +401,33 @@ def git_info(payload: dict[str, object]) -> dict[str, object]:
         return compute_git(cwd)
 
     safe = re.sub(r"[^A-Za-z0-9_-]", "", session_id)[:64]
+    if not safe:
+        return compute_git(cwd)  # avoid a shared, predictable cache filename
     cache = Path(tempfile.gettempdir()) / f"statusline-git-{safe}"
-    try:
-        if time.time() - cache.stat().st_mtime < GIT_CACHE_TTL_SEC:
-            return json.loads(cache.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        pass
+    cached = _read_git_cache(cache)
+    if cached is not None:
+        return cached
 
     info = compute_git(cwd)
-    try:
-        tmp = cache.with_name(cache.name + f".{os.getpid()}")
-        tmp.write_text(json.dumps(info), encoding="utf-8")
-        os.replace(tmp, cache)
-    except OSError:
-        pass
+    _write_git_cache(cache, info)
     return info
 
 
 # --- assembly --------------------------------------------------------------- #
 def build_line1(payload: dict[str, object]) -> str:
-    model = sanitize(as_str(dig(payload, "model", "display_name"))) or "?"
+    # Cap length before the regex: bounds _MODEL_CTX_RE backtracking on a
+    # pathologically long display_name (ReDoS guard) — real names are short.
+    model = sanitize(as_str(dig(payload, "model", "display_name")))[:MODEL_NAME_MAX]
+    model = _MODEL_CTX_RE.sub("", model) or "?"
     head = f"🤖 {model}"
     agent = sanitize(as_str(dig(payload, "agent", "name")))
     if agent:
         head += f" {agent}"
     head += effort_segment(sanitize(as_str(dig(payload, "effort", "level"))))
-    ctx = context_segment(payload)
-    cache = cache_segment(payload)
-    if cache:
-        ctx = f"{ctx} {cache}"
-    return SEP.join([head, ctx, cost_segment(payload)])
+    # Metrics ($cost ⟲ cache ⇌ api ◷ wall) ride with the context bar separated
+    # by a space; only the model↔metrics divider keeps the │.
+    body = f"{context_segment(payload)} {metrics_segment(payload)}"
+    return SEP.join([head, body])
 
 
 def git_segment(payload: dict[str, object]) -> str:
@@ -345,9 +449,11 @@ def git_segment(payload: dict[str, object]) -> str:
         if added or removed:
             out += f" +{added}/-{removed}"
 
-    pr_num = dig(payload, "pr", "number")
-    if isinstance(pr_num, (int, float)) and not isinstance(pr_num, bool):
-        pr_url = as_str(dig(payload, "pr", "url"))
+    # as_num() yields a finite float (0.0 for non-finite / overflowing input),
+    # so int() below is always safe and an absurd PR number simply drops.
+    pr_num = as_num(dig(payload, "pr", "number"))
+    if pr_num >= 1:
+        pr_url = safe_osc8_uri(as_str(dig(payload, "pr", "url")))
         label = f"PR#{int(pr_num)}"
         link = f"\033]8;;{pr_url}\a🔗{label}\033]8;;\a" if pr_url else f"🔗{label}"
         out += f" {link}"
@@ -364,7 +470,12 @@ def build_line2(payload: dict[str, object]) -> str:
 
 
 def truncate_branch(line: str, columns: int) -> str:
-    """Shorten an over-wide line2 by trimming the branch name with an ellipsis."""
+    """Shorten an over-wide line2 by trimming the branch name with an ellipsis.
+
+    `over` is a display-cell budget, so drop trailing code points by their
+    rendered width (wide/CJK = 2 cells) rather than by count; otherwise a CJK
+    branch trims roughly twice as hard as the column budget requires.
+    """
     if columns <= 0 or visible_len(line) <= columns:
         return line
     over = visible_len(line) - columns + 1
@@ -372,23 +483,42 @@ def truncate_branch(line: str, columns: int) -> str:
     if not match:
         return line
     prefix, branch, rest = match.groups()
-    keep = max(1, len(branch) - over)
+    removed = 0
+    keep = len(branch)
+    while keep > 1 and removed < over:
+        keep -= 1
+        removed += 2 if unicodedata.east_asian_width(branch[keep]) in ("W", "F") else 1
     return f"{prefix}{branch[:keep]}…{rest}"
 
 
 def main() -> int:
-    payload = read_payload()
+    # Force UTF-8 so the glyphs render on a Windows pipe (whose default codec is
+    # the ANSI codepage, which cannot encode 🤖/🌳); errors="replace" then makes
+    # a write physically unable to raise. getattr keeps it safe if stdout is not
+    # a reconfigurable TextIOWrapper.
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
     try:
-        columns = int(os.environ.get("COLUMNS", "0"))
-    except ValueError:
-        columns = 0
+        payload = read_payload()
+        try:
+            columns = int(os.environ.get("COLUMNS", "0"))
+        except ValueError:
+            columns = 0
 
-    lines = [build_line1(payload)]
-    line2 = build_line2(payload)
-    if line2:
-        lines.append(truncate_branch(line2, columns))
+        lines = [build_line1(payload)]
+        line2 = build_line2(payload)
+        if line2:
+            lines.append(truncate_branch(line2, columns))
 
-    sys.stdout.write("\n".join(lines) + "\n")
+        sys.stdout.write("\n".join(lines) + "\n")
+    except Exception:
+        # A status line must never spew a traceback into the prompt; degrade to
+        # an ASCII-only marker (safe even if the reconfigure above failed).
+        sys.stdout.write("?\n")
     return 0
 
 

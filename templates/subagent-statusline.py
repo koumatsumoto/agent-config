@@ -16,11 +16,19 @@ Layout: `<status glyph> <name> · <token count> tok`.
 from __future__ import annotations
 
 import json
+import math
 import re
 import sys
 
-_CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+STDIN_LIMIT_BYTES = 1_048_576
+
+# Kept in sync with statusline.py's sanitize(): strip CSI sequences, then stray
+# control bytes, then any leftover SGR remnant whose ESC was already removed.
+# The two files duplicate this because they ship as standalone scripts with no
+# shared import.
 _CSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_SGR_REMNANT_RE = re.compile(r"\[[0-9;]*[mGHJKsu]")
+_CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 STATUS_GLYPH = {
     "completed": "✓",
@@ -37,15 +45,25 @@ STATUS_GLYPH = {
 
 
 def sanitize(text: str) -> str:
-    return _CONTROL_RE.sub("", _CSI_RE.sub("", text))
+    text = _CSI_RE.sub("", text)
+    text = _CONTROL_RE.sub("", text)
+    return _SGR_REMNANT_RE.sub("", text)
 
 
 def as_str(value: object) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _reject_constant(_: str) -> None:
+    """Map JSON NaN/Infinity/-Infinity to None so token coercion stays safe."""
+    return None
+
+
 def fmt_tokens(value: object) -> str:
-    n = int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+        n = int(value)
+    else:
+        n = 0
     if n >= 1_000_000:
         return f"{n / 1_000_000:.1f}".rstrip("0").rstrip(".") + "M"
     if n >= 1_000:
@@ -66,8 +84,10 @@ def row(task: dict[str, object]) -> str | None:
 
 def main() -> int:
     try:
-        payload = json.loads(sys.stdin.buffer.read(65536))
-    except (OSError, ValueError, json.JSONDecodeError):
+        raw = sys.stdin.buffer.read(STDIN_LIMIT_BYTES)
+        payload = json.loads(raw, parse_constant=_reject_constant)
+    except (OSError, ValueError, json.JSONDecodeError, RecursionError):
+        # RecursionError: deeply nested JSON overflows the C scanner.
         return 0
     if not isinstance(payload, dict):
         return 0
@@ -75,10 +95,15 @@ def main() -> int:
     if not isinstance(tasks, list):
         return 0
     for task in tasks:
-        if isinstance(task, dict):
+        if not isinstance(task, dict):
+            continue
+        try:
             line = row(task)
-            if line:
-                sys.stdout.write(line + "\n")
+        except Exception:
+            # One malformed task must not blank out the whole agent panel.
+            continue
+        if line:
+            sys.stdout.write(line + "\n")
     return 0
 
 
