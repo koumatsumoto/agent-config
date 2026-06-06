@@ -57,8 +57,8 @@ class TreeSpec:
 # Files that are full-template overwrites (with .bak backup).
 TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec("templates/CLAUDE.md", ".claude/CLAUDE.md", 0o600),
-    FileSpec("templates/keybindings.json", ".claude/keybindings.json", 0o600),
-    FileSpec("templates/statusline.sh", ".claude/statusline.sh", 0o700, is_executable=True),
+    FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700, is_executable=True),
+    FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
     FileSpec("templates/AGENTS.md", ".codex/AGENTS.md", 0o600),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
 )
@@ -286,8 +286,14 @@ def read_existing(path: Path) -> tuple[str | None, dict[str, object]]:
 
 
 def merge(template: dict[str, object], existing: dict[str, object]) -> dict[str, object]:
-    """Shallow merge: existing user values win for shared top-level keys."""
-    return {**template, **existing}
+    """Shallow merge: template values win for the keys the template declares.
+
+    The template is the source of truth for every top-level key it sets, so
+    edits to those keys propagate to existing installs on re-run. Keys the
+    template does not declare (e.g. runtime/UI-managed `theme`, `model`,
+    `enabledPlugins`) are preserved from the existing file.
+    """
+    return {**existing, **template}
 
 
 def render(merged: dict[str, object]) -> str:

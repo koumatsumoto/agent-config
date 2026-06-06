@@ -110,17 +110,15 @@
 - command hook では PATH 固定、入力サニタイズ、タイムアウト設定を徹底する
 - 非同期 hook は制御を返せないので、blocking validation と background observability を分ける
 
-## 6. Settings / keybindings / output styles
+## 6. Settings / output styles
 
 - `settings.json` と `~/.claude.json` の役割は異なる。global-only 設定を `settings.json` に書くと schema error になる
 - `editorMode`、`outputStyle`、`tui`、`useAutoModeDuringPlan` などは settings 側の責務
-- keybindings は `~/.claude/keybindings.json` で管理する
 - output styles は tone / role / output format の調整用であり、project convention の置き場ではない
 
 ### 実務上の指針
 
 - project rule は `CLAUDE.md`
-- keyboard UX は keybindings
 - 表現スタイルは output styles
 - Claude の挙動そのものを変える設定は settings
 
@@ -163,6 +161,5 @@
 - https://code.claude.com/docs/en/sub-agents
 - https://code.claude.com/docs/en/hooks
 - https://code.claude.com/docs/en/settings
-- https://code.claude.com/docs/en/keybindings
 - https://code.claude.com/docs/en/output-styles
 - https://www.anthropic.com/news/claude-opus-4-7

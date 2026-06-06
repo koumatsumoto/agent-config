@@ -1,8 +1,35 @@
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh"
+    "command": "~/.claude/statusline.py",
+    "refreshInterval": 30
   },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "~/.claude/subagent-statusline.py"
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)",
+      "Read(**/env.php*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials/**)",
+      "Read(**/.aws/**)",
+      "Read(**/.ssh/**)",
+      "Read(**/*.pubxml)",
+      "Read(**/*.cscfg)",
+      "Read(**/*.config)",
+      "Read(**/.npmrc)",
+      "Read(**/appsettings.json)",
+      "Read(**/local.settings.json)",
+      "Bash(npx *)"
+    ],
+    "defaultMode": "plan"
+  },
+  "language": "日本語",
+  "effortLevel": "xhigh",
   "attribution": {
     "commit": "",
     "pr": ""
