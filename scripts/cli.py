@@ -78,17 +78,6 @@ SETTINGS_DEST_REL = ".claude/settings.json"
 INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 
 
-def all_install_targets(home: Path) -> list[Path]:
-    """Every absolute dest path the installer would touch (files + tree roots)."""
-    out: list[Path] = []
-    for spec in TEMPLATE_FILES:
-        out.append(home / spec.dest_rel)
-    for spec in TEMPLATE_TREES:
-        out.append(home / spec.dest_rel)
-    out.append(home / SETTINGS_DEST_REL)
-    return out
-
-
 def clean_targets(home: Path) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
 

@@ -25,8 +25,8 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 ## ディレクトリ構造
 
 - `templates/` - 配布対象テンプレート
+- `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
-- `scripts/` - 上記 CLI と補助スクリプト
 - `scripts/tests/` - `scripts/cli.py` の unittest
 - `docs/` - 保守対象の参考ドキュメント
 - `.github/workflows/` - GitHub Actions CI 設定
@@ -34,7 +34,7 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 
 ## セットアップ
 
-正規のエントリポイントは Python モジュール呼び出し。POSIX には bash ラッパーも同梱する。
+正規のエントリポイントは `scripts/cli.py` のサブコマンド呼び出し。POSIX には bash ラッパーも同梱する。
 
 POSIX (Ubuntu / macOS / WSL):
 

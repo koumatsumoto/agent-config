@@ -292,6 +292,23 @@ class MergeIntoTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             cli.merge_into(self.template, self.dest)
 
+    def test_empty_dest_merges_template(self) -> None:
+        # Exercises the `text.strip()` empty branch of read_existing.
+        self.dest.write_text("", encoding="utf-8")
+        result = cli.merge_into(self.template, self.dest)
+        self.assertEqual(result, "merged")
+        self.assertEqual(
+            json.loads(self.dest.read_text(encoding="utf-8")),
+            {"a": 1, "b": "template"},
+        )
+
+    def test_applies_0600_on_posix(self) -> None:
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+        cli.merge_into(self.template, self.dest)
+        mode = self.dest.stat().st_mode & 0o777
+        self.assertEqual(mode, 0o600)
+
 
 class MergeCommandTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -326,6 +343,23 @@ class MergeCommandTests(unittest.TestCase):
             rc = cli.main(["cli.py", "merge", str(self.template), str(self.dest)])
         self.assertEqual(rc, 0)
         self.assertIn("created:", out.getvalue())
+
+    def test_merge_existing_emits_backup_and_merged(self) -> None:
+        self.dest.write_text(json.dumps({"a": 99}), encoding="utf-8")
+        with patch("sys.stdout", new=StringIO()) as out:
+            rc = cli.main(["cli.py", "merge", str(self.template), str(self.dest)])
+        self.assertEqual(rc, 0)
+        output = out.getvalue()
+        self.assertIn("backup:", output)
+        self.assertIn("merged:", output)
+
+    def test_merge_noop_emits_ok(self) -> None:
+        with patch("sys.stdout", new=StringIO()):
+            cli.main(["cli.py", "merge", str(self.template), str(self.dest)])
+        with patch("sys.stdout", new=StringIO()) as out:
+            rc = cli.main(["cli.py", "merge", str(self.template), str(self.dest)])
+        self.assertEqual(rc, 0)
+        self.assertIn("ok:", out.getvalue())
 
 
 # --------------------------------------------------------------------------- #
