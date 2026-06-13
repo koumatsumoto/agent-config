@@ -49,4 +49,4 @@ Phase 2 は「今この diff は正しいか」、Phase 3 architect は「この
 
 ## 重複指摘が出た場合
 
-Phase 2 と Phase 3 architect で同観点の重複が発生した場合の表示・カウントルールは **`<review skill root>/experts/report-format.md` の「Phase 2 との重複時 (SOT ルール)」** に集約してある。本ファイルでは住み分けの判定ルールのみを管轄し、重複処理は SOT 側に従う。
+Phase 2 と architect で同観点の重複が発生しても、各レビュアは自分のレーンの所見を出すだけでよい。重複の集約 (dedup) は **Phase 4 統合 (main コンテキスト)** が一括で行う。判定基準は **`<review skill root>/experts/report-format.md` の「中央 dedup ルール」**。本ファイルは住み分けの判定ルールのみを管轄する。

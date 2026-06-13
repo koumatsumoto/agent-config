@@ -1,21 +1,21 @@
-# 第三者専門家レビュー 共通出力フォーマット
+# 第三者レビュー 共通出力フォーマット
 
-km:review Phase 3 の 3 専門家 (architect / qa / security) が共通で従う出力規約。orchestrator は各専門家の出力を Phase 5 で合算する。
+km:review Phase 3 の 3 レビュア (architect / security / adversary) が共通で従う出力規約。orchestrator は各出力を Phase 4 で統合する。
 
-専門家固有の役割定義 / 担当 ISO 副特性 / 主観点は `architect.md` / `qa.md` / `security.md` を参照。本ファイルでは **出力構造・重大度判定・確信度・偽陽性フィルタ** を一本化する。
+役割定義 / 担当観点 / 主観点は `architect.md` / `security.md` / `adversary.md` を参照。本ファイルでは **出力構造・重大度判定・確信度・偽陽性フィルタ・中央 dedup ルール** を一本化する。
 
 ## 出力構造
 
 ```
-### <システムアーキテクト | QA 専門家 | セキュリティ専門家>
+### <システムアーキテクト | セキュリティ専門家 | 敵対レビュア>
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 0
 
 ## HIGH: [問題タイトル] [confirmed | likely | possible]
 **場所**: src/api/users.ts:42
-**観点**: <担当 ISO 副特性 (例: 7-保守性 / 修正性 (Modifiability))>
+**観点**: <担当観点 (例: 7-保守性 / 修正性 (Modifiability))>
 **問題**: 何が問題か (2-4 文で具体的に)
 **修正**: どう直すべきか (具体的な対応)
-**根拠**: diff / 担当 ISO reference のどの観点に該当するか
+**根拠**: diff / 担当 reference のどの観点に該当するか
 <役割固有フィールド (HIGH 以上必須、下記参照)>
 
 ## MEDIUM: [問題タイトル]
@@ -26,12 +26,12 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 0
 **根拠**: ...
 ```
 
-専門家名: `architect` → `### システムアーキテクト` / `qa` → `### QA 専門家` / `security` → `### セキュリティ専門家`。
+専門家名: `architect` → `### システムアーキテクト` / `security` → `### セキュリティ専門家` / `adversary` → `### 敵対レビュア`。
 
 指摘ゼロのとき:
 
 ```
-### <専門家名>
+### <レビュア名>
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 （指摘なし）
 ```
@@ -43,7 +43,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 - `MEDIUM`: 設計不整合、品質特性の低下、テスト不足、技術負債蓄積の兆候
 - `LOW`: 小さな改善、意図的に残してもよい指摘
 
-`CRITICAL` または `HIGH` があれば orchestrator は Phase 4 の起動を阻み、Phase 5 で BLOCKED 報告して終了する。
+`CRITICAL` または `HIGH` があれば Phase 4 統合で全体判定が `BLOCKED` となる。
 
 ## 確信度ラベル
 
@@ -58,24 +58,19 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 以下は除外する:
 
 - 今回の diff で導入されていない既存問題 (security は新規 attack surface に既存問題が露呈する場合のみ報告)
-- 担当外 ISO 副特性に該当する指摘 (他の専門家の担当)
-- Phase 2 で既に確定済みの MEDIUM/LOW と同じ観点で **補強情報も重大度再評価もない** もの (詳細は本ファイル末尾「Phase 2 との重複時 (SOT ルール)」)
+- 担当外の観点に該当する指摘 (他レビュアの担当)
 - 合意済みの設計判断 (intent context があれば確認)
 - 未変更行だけに対する指摘
 - diff から裏づけられない一般論だけの推測 (security では「攻撃シナリオが現実的でない」を含む)
 
+Phase 2 と重なる一般 bug の再掲は避ける (各レビュアは自分のレーンに専念)。重複の集約は Phase 4 統合が行う (下記「中央 dedup ルール」)。
+
 ## 役割固有フィールド (HIGH 以上必須)
 
-### architect: `**長期影響**`
+### architect: `**不可逆性 / 波及**`
 
 ```
-**長期影響**: 3 つの consumer (web, mobile, partner-api) に互換性問題が連鎖。SemVer の major bump が必要
-```
-
-### qa: `**再現条件**`
-
-```
-**再現条件**: 2 並列実行 + DB writes が 100ms 以内
+**不可逆性 / 波及**: 公開契約の破壊変更で 3 consumer (web, mobile, partner-api) に互換性連鎖。後戻りに major bump が必要
 ```
 
 ### security: `**攻撃シナリオ**` + CWE/OWASP 引用 (引用は `**根拠**` 内に記載)
@@ -83,6 +78,12 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 ```
 **攻撃シナリオ**: 悪意のユーザが special character を含む header を送信すると...
 **根拠**: diff L78 の handler に所有者検証なし。OWASP API Top 10 (2023) API1: BOLA
+```
+
+### adversary: `**再現条件**`
+
+```
+**再現条件**: 2 並列実行 + DB writes が 100ms 以内
 ```
 
 ## 判定保留 (context 不足)
@@ -96,22 +97,16 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 - **暫定見解**: 認証 middleware が他で適用済なら問題なし、なければ HIGH 相当
 ```
 
-## Phase 2 との重複時 (SOT ルール)
+## 中央 dedup ルール
 
-Phase 2 と同観点 (`(file_path, 影響行範囲 ±5 行, 観点 / ISO 副特性 / 根本原因)` の組が一致) で Phase 3 expert が出力する場合の **単一情報源**。SKILL.md (orchestrator) と scope-alignment.md はここを参照する。問題タイトル (例: Phase 2 「所有者検証なし」 vs security 「BOLA」) は wording が揺れるため照合の補助情報として扱う。
+重複の集約は **Phase 4 統合 (main コンテキスト)** が一括で行う。各レビュアは自分のレーンの所見を出すだけで、他レビュアとの重複回避を予測しなくてよい。SKILL.md (orchestrator) と scope-alignment.md はここを参照する。
 
-| パターン | expert 側 | カウント / 表示 |
-|---|---|---|
-| **A: 追加情報なし** | 出力しない | Phase 2 側のみ |
-| **B: 補強情報あり** (攻撃シナリオ / 再現条件 / 長期影響、重大度は据え置き) | 重複注記のみ末尾追記 | Phase 2 側カウント、注記は Phase 2 直下に併記 |
-| **C: 重大度の再評価** (例: Phase 2 MEDIUM → security HIGH) | 新規セクションで出力 | Phase 3 側採用、Phase 2 側の同観点は drop (Phase 2 セクション末尾に注記) |
+判定基準: `(file_path, 影響行範囲 ±5 行, 観点 / 根本原因)` が一致したら重複とみなす。**同一欠陥を別角度から記述したもの** (例: Phase 2「境界チェック欠落」/ architect「不変条件違反」/ security「OOB read」) も意味的に同一群とみなす。タイトルの wording 揺れ (例: Phase 2「所有者検証なし」vs security「BOLA」) は照合の補助情報に留める。
 
-補強可能条件: `qa` は「複数経路の連鎖」または「運用での再現条件」が加わる場合のみ。`architect` は新規 attack surface 露呈 / 長期影響のみ。`security` は重大度再評価可。
-
-### 補強注記フォーマット (パターン B)
+集約方針: 重複群からは最も証拠の濃い 1 件 (役割固有フィールドや、より高い確信度・重大度を持つもの) を残し、他は drop して残した所見の末尾に併合注記する。
 
 ```
-## 重複注記 (Phase 2 の指摘を補強)
-- Phase 2 指摘: `<Phase 2 の問題タイトル>`
-- Phase 3 視点の追加情報: 攻撃シナリオ / 長期影響 / 再現条件のうち該当するものだけ
+## 併合注記
+- 併合元: `<drop した指摘タイトル / 場所>`
+- 追加情報: 攻撃シナリオ / 不可逆性・波及 / 再現条件のうち該当するもの
 ```

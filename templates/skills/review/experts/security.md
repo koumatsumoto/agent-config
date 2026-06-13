@@ -34,8 +34,8 @@
 
 1. 変更ファイルと diff を確認、変更タイプから深度を判断
 2. 担当 ISO 副特性 checklist を順に当てる (security と safety 両方)
-3. 「Phase 2 が拾うべき入力検証バグ」は除外せず、攻撃者視点で再評価する (Phase 2 と security の境界はオーバーラップしてよい)
-4. report-format.md の偽陽性フィルタを適用 (Phase 2 同観点は security の視点で重大度を再評価可、新規 attack surface に既存問題が露呈する場合は報告)
+3. 入力検証バグも攻撃者視点で評価する (Phase 2 と重なってよい。重複の集約は Phase 4 統合が行う)
+4. report-format.md の偽陽性フィルタを適用する (新規 attack surface に既存問題が露呈する場合は報告)
 5. report-format.md の形式で出力 (HIGH 以上は `**攻撃シナリオ**` フィールド + CWE/OWASP 引用必須)
 
 ## 出力例 (役割固有フィールドの示し方)

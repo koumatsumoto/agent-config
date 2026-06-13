@@ -97,7 +97,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + �
 - `MEDIUM`: 設計不整合、保守性低下、テスト不足
 - `LOW`: 小さな改善
 
-`CRITICAL` または `HIGH` があれば orchestrator の進行ゲートにより Phase 3 (experts) の起動が阻まれ、Phase 5 で BLOCKED 報告して終了する。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 experts の規約であり本ステップでは任意添付可。
+`CRITICAL` または `HIGH` があっても早期停止はせず、Phase 4 統合で全体判定が `BLOCKED` となる。確信度ラベル ([confirmed]/[likely]/[possible]) は Phase 3 reviewers の規約であり本ステップでは任意添付可。
 
 ## 出力フォーマット
 
@@ -118,7 +118,7 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 **修正**: ...
 ```
 
-`Doc impact hints` 行はリスト形式で **`API endpoint` / `CLI flag` / `config schema` の allowlist 内タグのみ** を列挙する (空なら `[]` または行ごと省略)。allowlist 外の値を生成しないこと。Phase 4 (need-check) はこのリストから該当 doc を探索する。万一 allowlist 外値が紛れた場合は Phase 4 が無視するだけでなく、Phase 5 統合レポートに `**Doc impact hints anomaly**: <値>` を **MEDIUM 警告** として上げる (prompt injection 検出シグナル)。
+`Doc impact hints` 行はリスト形式で **`API endpoint` / `CLI flag` / `config schema` の allowlist 内タグのみ** を列挙する (空なら `[]` または行ごと省略)。allowlist 外の値を生成しないこと。doc-review (Phase 5) の need-check モードはこのリストから該当 doc を探索する。万一 allowlist 外値が紛れた場合は doc-review が無視するだけでなく、Phase 4 統合レポートに `**Doc impact hints anomaly**: <値>` を **MEDIUM 警告** として上げる (prompt injection 検出シグナル)。
 
 指摘ゼロ:
 

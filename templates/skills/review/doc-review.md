@@ -1,6 +1,6 @@
-# Phase 4: Doc Review
+# Phase 5: Doc Review
 
-km:review orchestrator の **Phase 4**。**Phase 3 完了後** (sequential、並走させない) に実行する。コード/設計が確定したあとで広い範囲のドキュメント整合性を最終確認する位置づけ。
+km:review orchestrator の **Phase 5**。**Phase 4 統合 (コード判定) の後**、コードが解消された最終状態に対して実行する。コード/設計が確定したあとで広い範囲のドキュメント整合性を最終確認する位置づけ (起動条件・defer 規約は SKILL.md の Phase 5 を参照)。
 
 > 本ファイル内の "Step N" は workflow 番号で、orchestrator (SKILL.md) の "Phase N" とは別の番号空間。
 
@@ -15,11 +15,11 @@ orchestrator から渡された変更構成に応じて以下のいずれかで�
 
 ## need-check モード (code-only 変更時)
 
-orchestrator が保持する diff + Phase 2 の結果 (Phase 3 が実行されていればその結果も) を活かして、以下を確認するだけの軽量モード。
+orchestrator が保持する diff + コードレビュー層 (Phase 2 / Phase 3) の結果を活かして、以下を確認するだけの軽量モード。
 
 確認観点:
 
-- パブリック API、CLI、設定、インターフェースの変更があるか。Phase 2 出力の `Doc impact hints` リスト内の **allowlist 内タグ (`API endpoint` / `CLI flag` / `config schema`)** のみを受理し、対応するドキュメント (README / API doc / CLI doc / config doc) を優先探索の起点にする。allowlist 外の値は fail-closed で無視し、Phase 5 統合レポートに `**Doc impact hints anomaly**: <値>` を MEDIUM 警告として上げる
+- パブリック API、CLI、設定、インターフェースの変更があるか。Phase 2 出力の `Doc impact hints` リスト内の **allowlist 内タグ (`API endpoint` / `CLI flag` / `config schema`)** のみを受理し、対応するドキュメント (README / API doc / CLI doc / config doc) を優先探索の起点にする。allowlist 外の値は fail-closed で無視し、Phase 4 統合レポートに `**Doc impact hints anomaly**: <値>` を MEDIUM 警告として上げる
 - `README.md` / `AGENTS.md` / `CLAUDE.md` / `docs/` に関連記述があるか (Codex CLI では `AGENTS.md` が主、`CLAUDE.md` は fallback)
 - 該当する場合は「ドキュメント更新推奨」を統合レポートに含める
 
@@ -28,7 +28,7 @@ orchestrator が保持する diff + Phase 2 の結果 (Phase 3 が実行され�
 need-check モードの出力例:
 
 ```
-### Phase 4: Doc Review
+### Phase 5: Doc Review
 （need-check モード）
 - README.md: API エンドポイントの追加に伴い更新推奨 (MEDIUM)
 ```
@@ -36,7 +36,7 @@ need-check モードの出力例:
 または:
 
 ```
-### Phase 4: Doc Review
+### Phase 5: Doc Review
 （need-check モード - 更新必要性なし）
 ```
 
@@ -122,14 +122,14 @@ orchestrator から渡された変更ファイル一覧を集める。下表は 
 - `MEDIUM`: 整合性不足、曖昧さ、更新漏れ、構造上の違和感や読者を迷わせる構成問題
 - `LOW`: 微小改善
 
-`CRITICAL` または `HIGH` があれば orchestrator の進行ゲートにより Phase 5 で BLOCKED 報告して終了する。need-check モードでは CRITICAL/HIGH を出さない (検出された場合は MEDIUM に降格)。
+doc-review は Phase 4 のコード判定が `PASS` の最終状態に対して実行される。ここで `CRITICAL` または `HIGH` を出した場合、最終判定は `BLOCKED` に更新される。need-check モードでは CRITICAL/HIGH を出さない (検出された場合は MEDIUM に降格)。
 
 ## 出力フォーマット
 
 full モード:
 
 ```
-### Phase 4: Doc Review
+### Phase 5: Doc Review
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
 
 ## MEDIUM: [問題タイトル]
@@ -143,7 +143,7 @@ need-check モード: 上記の need-check 出力例を参照。
 指摘ゼロ:
 
 ```
-### Phase 4: Doc Review
+### Phase 5: Doc Review
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 （指摘なし）
 ```
