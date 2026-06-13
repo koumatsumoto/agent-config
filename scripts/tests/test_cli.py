@@ -197,6 +197,90 @@ class InstallTreeTests(unittest.TestCase):
         self.assertFalse(unwritten.exists())
 
 
+class PruneTreeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.dir = Path(tempfile.mkdtemp(prefix="prune-test-"))
+        self.src_root = self.dir / "src"
+        self.dest_root = self.dir / "dest"
+        # source ships skillA with one file and one nested file
+        (self.src_root / "skillA" / "sub").mkdir(parents=True)
+        (self.src_root / "skillA" / "keep.txt").write_text("k", encoding="utf-8")
+        (self.src_root / "skillA" / "sub" / "deep.txt").write_text("d", encoding="utf-8")
+        # dest starts as an exact copy of src (a clean managed deployment)
+        (self.dest_root / "skillA" / "sub").mkdir(parents=True)
+        (self.dest_root / "skillA" / "keep.txt").write_text("k", encoding="utf-8")
+        (self.dest_root / "skillA" / "sub" / "deep.txt").write_text("d", encoding="utf-8")
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _prune(self) -> list[Path]:
+        return cli.prune_tree(self.src_root, self.dest_root, boundary=self.dir)
+
+    def test_no_orphans_returns_empty(self) -> None:
+        self.assertEqual(self._prune(), [])
+
+    def test_prunes_orphan_file_in_managed_dir(self) -> None:
+        orphan = self.dest_root / "skillA" / "qa.md"
+        orphan.write_text("stale", encoding="utf-8")
+        pruned = self._prune()
+        self.assertEqual(pruned, [orphan])
+        self.assertFalse(orphan.exists())
+        self.assertTrue(orphan.with_name("qa.md.bak").exists())
+        self.assertTrue((self.dest_root / "skillA" / "keep.txt").exists())
+
+    def test_prunes_orphan_subdir_in_managed_dir(self) -> None:
+        gone = self.dest_root / "skillA" / "gone"
+        gone.mkdir()
+        (gone / "x.txt").write_text("x", encoding="utf-8")
+        pruned = self._prune()
+        self.assertEqual(pruned, [gone])
+        self.assertFalse(gone.exists())
+        self.assertTrue(gone.with_name("gone.bak").is_dir())
+
+    def test_preserves_user_added_toplevel_dir(self) -> None:
+        user = self.dest_root / "my-custom"
+        user.mkdir()
+        (user / "SKILL.md").write_text("mine", encoding="utf-8")
+        self.assertEqual(self._prune(), [])
+        self.assertTrue((user / "SKILL.md").exists())
+
+    def test_preserves_user_added_toplevel_file(self) -> None:
+        loose = self.dest_root / "user-note.md"
+        loose.write_text("mine", encoding="utf-8")
+        self.assertEqual(self._prune(), [])
+        self.assertTrue(loose.exists())
+
+    def test_prunes_orphan_symlink_without_following(self) -> None:
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+        target = self.src_root / "skillA" / "keep.txt"  # in-boundary target
+        link = self.dest_root / "skillA" / "orphan-link.txt"  # no src counterpart
+        os.symlink(target, link)
+        pruned = self._prune()
+        self.assertEqual(pruned, [link])
+        self.assertFalse(link.exists() or link.is_symlink())
+        bak = link.with_name("orphan-link.txt.bak")
+        self.assertTrue(bak.is_symlink())  # the symlink itself was moved, not followed
+        self.assertTrue(target.exists())  # target untouched
+
+    def test_skips_bak_entries(self) -> None:
+        bak = self.dest_root / "skillA" / "keep.txt.bak"
+        bak.write_text("old", encoding="utf-8")
+        self.assertEqual(self._prune(), [])
+        self.assertTrue(bak.exists())
+
+    def test_missing_dest_root_returns_empty(self) -> None:
+        self.assertEqual(
+            cli.prune_tree(self.src_root, self.dir / "nope", boundary=self.dir), []
+        )
+
+    def test_boundary_enforced(self) -> None:
+        (self.dest_root / "skillA" / "orphan.txt").write_text("o", encoding="utf-8")
+        with self.assertRaises(PermissionError):
+            cli.prune_tree(self.src_root, self.dest_root, boundary=self.dir / "other")
+
+
 class BackupTests(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))
@@ -530,6 +614,25 @@ class InstallTests(unittest.TestCase):
             and not line.startswith("Install ")
         ]
         self.assertEqual(changed, [], f"unexpected change lines: {changed}")
+
+    def test_prunes_orphan_in_managed_skill_on_reinstall(self) -> None:
+        self._run_install()
+        orphan = self.home / ".claude/skills/review/experts/__orphan__.md"
+        orphan.write_text("stale", encoding="utf-8")
+        out = self._run_install()
+        self.assertFalse(orphan.exists(), "orphan in a managed skill must be pruned")
+        self.assertTrue(orphan.with_name("__orphan__.md.bak").exists())
+        self.assertIn("pruned:", out)
+
+    def test_install_preserves_user_added_skill(self) -> None:
+        self._run_install()
+        user_skill = self.home / ".claude/skills/__my_custom__/SKILL.md"
+        user_skill.parent.mkdir(parents=True, exist_ok=True)
+        user_skill.write_text("mine", encoding="utf-8")
+        self._run_install()
+        self.assertTrue(
+            user_skill.exists(), "a user-added top-level skill must never be pruned"
+        )
 
     def test_settings_user_value_preserved_on_rerun(self) -> None:
         self._run_install()
