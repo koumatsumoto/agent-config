@@ -58,6 +58,10 @@ class TreeSpec:
     dest_rel: str          # relative to home
     dir_mode: int = 0o700
     file_mode: int = 0o600
+    # When True, install prunes deployed files/dirs absent from the template, so
+    # managed directories mirror the source. Top-level entries directly under the
+    # tree root (no source counterpart) are preserved as possibly user-added.
+    prune: bool = True
 
 
 # Files that are full-template overwrites (with .bak backup), except where a
@@ -264,6 +268,50 @@ def install_tree(
             status = install_file(src, dest, mode=file_mode)
             results.append((status, dest))
     return results
+
+
+def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]:
+    """Remove deployed files/dirs absent from the template, with .bak backup.
+
+    Makes managed directories mirror the source: an entry is pruned when it lives
+    inside a repo-managed directory (one that exists under src_root) but is not
+    present under src_root. Entries directly under dest_root with no src
+    counterpart — a file or directory the user added — are preserved (never
+    removed; such directories are not descended into).
+
+    Returns the pruned dest paths (each backed up to <path>.bak); `.bak` entries
+    are left alone.
+    """
+    if not dest_root.is_dir():
+        return []
+    pruned: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(dest_root, topdown=True, followlinks=False):
+        dest_dir = Path(dirpath)
+        src_dir = src_root / dest_dir.relative_to(dest_root)
+        keep_dirs: list[str] = []
+        for name in sorted(dirnames):
+            if name.endswith(".bak"):
+                continue  # leave single-generation backups
+            if (src_dir / name).is_dir():
+                keep_dirs.append(name)  # managed → descend and keep in sync
+            elif dest_dir == dest_root:
+                continue  # top-level unit with no source → user-added; never touch
+            else:
+                dest_sub = dest_dir / name  # orphan subdir inside a managed dir
+                assert_within(dest_sub, boundary)
+                backup(dest_sub)
+                pruned.append(dest_sub)
+        dirnames[:] = keep_dirs  # descend only into managed subdirs
+        for name in sorted(filenames):
+            if name.endswith(".bak") or (src_dir / name).exists():
+                continue
+            if dest_dir == dest_root:
+                continue  # top-level file with no source → user-added; never touch
+            dest_file = dest_dir / name
+            assert_within(dest_file, boundary)
+            backup(dest_file)
+            pruned.append(dest_file)
+    return pruned
 
 
 def remove_with_backup(path: Path) -> str:
@@ -557,6 +605,9 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         )
         for status, dest in results:
             print(f"{status}: {dest}")
+        if tspec.prune:
+            for dest in prune_tree(src_root, dest_root, boundary=boundary):
+                print(f"pruned: {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.12, and on Windows it is exactly the python that must be

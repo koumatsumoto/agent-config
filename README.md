@@ -68,6 +68,8 @@ python scripts/cli.py install
 
 `settings.json` / `CLAUDE.md` / `AGENTS.md` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
 
+`rules` / `skills` ツリーは配備先をテンプレートに一致させる。**管理ディレクトリ内のテンプレートに無いファイル / サブディレクトリは prune する** (`pruned: ...` 出力、`*.bak` へ退避)。ただし **ツリー直下のトップレベルエントリ (テンプレートに無いファイル・ディレクトリ — ユーザが置いた独自 skill 等) は保護され、prune されない**。
+
 ### `settings.json` の取り扱い
 
 `templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/cli.py` の merge ロジック。単体では `python3 scripts/cli.py merge <template> <dest>` で実行できる)。
@@ -227,7 +229,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `km:intent-review`
 - `km:quality-review`
 
-既存環境に旧 sub-skill ディレクトリが残っている場合、PR マージ後に以下のコマンドで cleanup する。`install.sh` は overwrite のみで旧ファイルを削除しないため手動実行が必要。
+既存環境に旧 sub-skill ディレクトリが残っている場合は以下のコマンドで cleanup する。install の prune は管理ディレクトリ内のファイルを対象とし、`~/.claude/skills/` 直下のトップレベル skill ディレクトリはユーザ独自 skill 保護のため削除しないので、これらは手動で消す。
 
 ```bash
 bash scripts/migrate-old-review-skills.sh
