@@ -1,6 +1,6 @@
 ---
 name: km:html-document
-description: Builds a single self-contained, security-hardened HTML file from content you already have — owns the HTML structure (heading hierarchy), layout/components (1400px width), Mermaid diagrams (pinned CDN), and the security baseline (CSP/SRI/escaping). 文書の内容そのものを決めるのは責務外。Use when the user wants to output/save 設計書・アイデア・テスト結果・報告書 などの成果物 as a styled single HTML file、または "HTML にして" / "HTML 文書で出して" / "レポートにして" と言ったとき。実装計画→issue は km:plan、差分レビューは km:review。
+description: Renders already-prepared content as a single security-hardened HTML document (1400px layout, Mermaid diagrams); 内容そのものは決めない。Use when the user says "HTML にして" / "HTML のレポート" / "HTML 文書にして"。
 argument-hint: "[topic | output-path.html]"
 ---
 
