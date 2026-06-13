@@ -56,17 +56,17 @@ python scripts/cli.py install
 
 このコマンドは以下を反映する。
 
-- `~/.claude/CLAUDE.md`
+- `~/.claude/CLAUDE.md` (既存があれば上書きしない。初回のみ配置。詳細は後述)
 - `~/.claude/rules/`
 - `~/.claude/skills/`
 - `~/.claude/statusline.py`
 - `~/.claude/subagent-statusline.py`
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
-- `~/.codex/AGENTS.md`
+- `~/.codex/AGENTS.md` (既存があれば上書きしない。初回のみ配置。詳細は後述)
 - `~/.codex/config.toml`
 - `~/.agents/skills/`
 
-`settings.json` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
+`settings.json` / `CLAUDE.md` / `AGENTS.md` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
 
 ### `settings.json` の取り扱い
 
@@ -96,6 +96,10 @@ python scripts/cli.py install
 | `feedbackSurveyRate` | `0` | セッション品質アンケートを抑止する |
 
 > **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、`install.sh` がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIX では `~` パスのまま（shebang + 実行ビットで起動）。
+
+### `CLAUDE.md` / `AGENTS.md` の取り扱い
+
+`templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、**seed-only** で反映する。`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` が無い場合のみ初期配置し、既に存在する場合は上書きせずローカル編集を保護する（install は `skip:` を出力）。`settings.json` と同様にユーザ管理ファイル扱いとし、`clean` でも削除せず、`verify` でもテンプレートとの差分（drift）を検査しない。グローバル指針を更新したい場合は配置先を直接編集するか、`templates/` 側を編集したうえで既存ファイルを退避してから再 install する。
 
 ## 検証
 
@@ -158,8 +162,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | Repository Source | Destination |
 | --- | --- |
-| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
+| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` (seed-only: 既存は上書きしない) |
+| `templates/AGENTS.md` | `~/.codex/AGENTS.md` (seed-only: 既存は上書きしない) |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |

@@ -45,6 +45,11 @@ class FileSpec:
     dest_rel: str          # relative to home
     mode: int
     is_executable: bool = False
+    # When True the file is only deployed if the destination is absent: it
+    # bootstraps a fresh machine but never overwrites the user's copy, and is
+    # excluded from clean() / verify() (like settings.json, it becomes
+    # user-managed once it exists).
+    skip_if_exists: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,12 +60,14 @@ class TreeSpec:
     file_mode: int = 0o600
 
 
-# Files that are full-template overwrites (with .bak backup).
+# Files that are full-template overwrites (with .bak backup), except where a
+# spec opts into skip_if_exists. CLAUDE.md / AGENTS.md are the user's global
+# agent guidelines: seeded on a fresh machine but, once present, theirs to edit.
 TEMPLATE_FILES: tuple[FileSpec, ...] = (
-    FileSpec("templates/CLAUDE.md", ".claude/CLAUDE.md", 0o600),
+    FileSpec("templates/CLAUDE.md", ".claude/CLAUDE.md", 0o600, skip_if_exists=True),
     FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700, is_executable=True),
     FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
-    FileSpec("templates/AGENTS.md", ".codex/AGENTS.md", 0o600),
+    FileSpec("templates/AGENTS.md", ".codex/AGENTS.md", 0o600, skip_if_exists=True),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
 )
 
@@ -90,11 +97,13 @@ INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 def clean_targets(home: Path) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
 
-    settings.json is intentionally excluded because it carries user-managed
-    values merged in, not a pure template copy.
+    settings.json and skip_if_exists files (e.g. CLAUDE.md) are intentionally
+    excluded because they carry user-managed content, not a pure template copy.
     """
     out: list[Path] = []
     for spec in TEMPLATE_FILES:
+        if spec.skip_if_exists:
+            continue
         out.append(home / spec.dest_rel)
     for spec in TEMPLATE_TREES:
         out.append(home / spec.dest_rel)
@@ -469,6 +478,10 @@ def verify(home: Path, repo_root: Path = REPO_ROOT) -> VerifyReport:
     print("Verify Claude + Codex configuration")
 
     for spec in TEMPLATE_FILES:
+        # skip_if_exists files are user-managed once present, so drift from the
+        # template is expected and not a verify failure.
+        if spec.skip_if_exists:
+            continue
         src = repo_root / spec.src_rel
         dest = home / spec.dest_rel
         _check_file(report, src, dest)
@@ -520,6 +533,11 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         # Guard: destination must live inside one of the install dirs.
         if not any(is_within(dest, b) for b in boundary_dirs):
             raise PermissionError(f"refusing to write outside install dirs: {dest}")
+        # Seed-only files bootstrap a fresh machine but never clobber the user's
+        # edits on re-run.
+        if spec.skip_if_exists and (dest.exists() or dest.is_symlink()):
+            print(f"skip: {dest} (exists; user-managed)")
+            continue
         status = install_file(src, dest, mode=spec.mode)
         print(f"{status}: {dest}")
 
