@@ -281,6 +281,44 @@ class PruneTreeTests(unittest.TestCase):
             cli.prune_tree(self.src_root, self.dest_root, boundary=self.dir / "other")
 
 
+class DecommissionedSkillsTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="decom-test-"))
+        self.skills = self.home / ".claude" / "skills"
+        self.skills.mkdir(parents=True)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_removes_decommissioned_skill_dir_with_backup(self) -> None:
+        name = cli.DECOMMISSIONED_SKILLS[0]
+        old = self.skills / name
+        old.mkdir()
+        (old / "SKILL.md").write_text("old", encoding="utf-8")
+        removed = cli.remove_decommissioned_skills(self.home)
+        self.assertIn(old, removed)
+        self.assertFalse(old.exists())
+        self.assertTrue(old.with_name(name + ".bak").is_dir())
+
+    def test_preserves_user_added_and_current_skills(self) -> None:
+        keep = self.skills / "my-skill"
+        keep.mkdir()
+        (keep / "SKILL.md").write_text("mine", encoding="utf-8")
+        self.assertEqual(cli.remove_decommissioned_skills(self.home), [])
+        self.assertTrue((keep / "SKILL.md").exists())
+
+    def test_removes_from_every_skills_root(self) -> None:
+        name = cli.DECOMMISSIONED_SKILLS[0]
+        agents = self.home / ".agents" / "skills"
+        agents.mkdir(parents=True)
+        (self.skills / name).mkdir()
+        (agents / name).mkdir()
+        removed = cli.remove_decommissioned_skills(self.home)
+        self.assertEqual(
+            sorted(removed), sorted([self.skills / name, agents / name])
+        )
+
+
 class BackupTests(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))
