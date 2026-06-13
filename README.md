@@ -82,8 +82,8 @@ python scripts/cli.py install
 
 | キー | 値 | 目的 |
 | --- | --- | --- |
-| `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`) | リポジトリ同梱のリッチ status line を有効化する |
-| `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command | サブエージェント行を自前描画する |
+| `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`)。OS 別に書き換え (下記) | リポジトリ同梱のリッチ status line を有効化する |
+| `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | サブエージェント行を自前描画する |
 | `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止と `Bash(npx *)` | 機密ファイルへのアクセスを既定で遮断する |
 | `permissions.defaultMode` | `"plan"` | セッションを既定で plan mode で開始する |
 | `language` | `"日本語"` | 応答言語を日本語に固定する |
@@ -94,6 +94,8 @@ python scripts/cli.py install
 | `showTurnDuration` | `true` | アシスタントターンごとの所要時間を表示する |
 | `showMessageTimestamps` | `true` | 各メッセージにタイムスタンプを付与する |
 | `feedbackSurveyRate` | `0` | セッション品質アンケートを抑止する |
+
+> **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、`install.sh` がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIX では `~` パスのまま（shebang + 実行ビットで起動）。
 
 ## 検証
 

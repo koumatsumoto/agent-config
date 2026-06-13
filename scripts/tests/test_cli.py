@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from io import StringIO
@@ -222,6 +223,86 @@ class BackupTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------- #
+# settings.json: per-platform status-line command
+# --------------------------------------------------------------------------- #
+class StatuslineCommandTests(unittest.TestCase):
+    def test_posix_uses_tilde_path(self) -> None:
+        cmd = cli.statusline_command(
+            Path("/home/kou"), ".claude/statusline.py", posix=True, python="/usr/bin/python3"
+        )
+        self.assertEqual(cmd, "~/.claude/statusline.py")
+
+    def test_windows_invokes_interpreter_with_absolute_path(self) -> None:
+        cmd = cli.statusline_command(
+            Path("C:/Users/kou"),
+            ".claude/statusline.py",
+            posix=False,
+            python="C:/Python313/python.exe",
+        )
+        self.assertEqual(
+            cmd, '"C:/Python313/python.exe" "C:/Users/kou/.claude/statusline.py"'
+        )
+
+    def test_windows_quotes_tolerate_spaces(self) -> None:
+        cmd = cli.statusline_command(
+            Path("C:/Users/First Last"),
+            ".claude/statusline.py",
+            posix=False,
+            python="C:/Program Files/Python/python.exe",
+        )
+        self.assertEqual(
+            cmd,
+            '"C:/Program Files/Python/python.exe" '
+            '"C:/Users/First Last/.claude/statusline.py"',
+        )
+
+    def test_apply_rewrites_known_sections_only(self) -> None:
+        template: dict[str, object] = {
+            "statusLine": {"type": "command", "command": "~/.claude/statusline.py"},
+            "subagentStatusLine": {"command": "~/.claude/subagent-statusline.py"},
+            "language": "日本語",
+        }
+        out = cli.apply_statusline_commands(
+            template, Path("C:/Users/kou"), posix=False, python="C:/py.exe"
+        )
+        self.assertEqual(
+            out["statusLine"],
+            {"type": "command", "command": '"C:/py.exe" "C:/Users/kou/.claude/statusline.py"'},
+        )
+        self.assertEqual(
+            out["subagentStatusLine"],
+            {"command": '"C:/py.exe" "C:/Users/kou/.claude/subagent-statusline.py"'},
+        )
+        # Unrelated keys are untouched.
+        self.assertEqual(out["language"], "日本語")
+
+    def test_apply_does_not_mutate_input(self) -> None:
+        template: dict[str, object] = {
+            "statusLine": {"command": "~/.claude/statusline.py"},
+        }
+        cli.apply_statusline_commands(
+            template, Path("C:/Users/kou"), posix=False, python="C:/py.exe"
+        )
+        self.assertEqual(template["statusLine"], {"command": "~/.claude/statusline.py"})
+
+    def test_apply_is_noop_on_posix(self) -> None:
+        template: dict[str, object] = {
+            "statusLine": {"command": "~/.claude/statusline.py"},
+        }
+        out = cli.apply_statusline_commands(
+            template, Path("/home/kou"), posix=True, python="/usr/bin/python3"
+        )
+        self.assertEqual(out["statusLine"], {"command": "~/.claude/statusline.py"})
+
+    def test_apply_skips_section_without_command(self) -> None:
+        template: dict[str, object] = {"statusLine": {"type": "command"}}
+        out = cli.apply_statusline_commands(
+            template, Path("C:/Users/kou"), posix=False, python="C:/py.exe"
+        )
+        self.assertEqual(out["statusLine"], {"type": "command"})
+
+
+# --------------------------------------------------------------------------- #
 # settings.json merge
 # --------------------------------------------------------------------------- #
 class MergeFunctionTests(unittest.TestCase):
@@ -311,6 +392,14 @@ class MergeIntoTests(unittest.TestCase):
         mode = self.dest.stat().st_mode & 0o777
         self.assertEqual(mode, 0o600)
 
+    def test_transform_rewrites_template_before_merge(self) -> None:
+        result = cli.merge_into(
+            self.template, self.dest, transform=lambda t: {**t, "b": "transformed"}
+        )
+        self.assertEqual(result, "created")
+        merged = json.loads(self.dest.read_text(encoding="utf-8"))
+        self.assertEqual(merged["b"], "transformed")
+
 
 class MergeCommandTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -398,6 +487,21 @@ class InstallTests(unittest.TestCase):
         data = json.loads(settings.read_text(encoding="utf-8"))
         # statusLine is a known recommended key in the template
         self.assertIn("statusLine", data)
+
+    def test_settings_statusline_command_runnable_on_platform(self) -> None:
+        self._run_install()
+        settings = self.home / cli.SETTINGS_DEST_REL
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        command = data["statusLine"]["command"]
+        if cli.is_posix():
+            # POSIX keeps the tilde path so the shebang re-resolves the interpreter.
+            self.assertEqual(command, "~/.claude/statusline.py")
+        else:
+            # Windows cannot run a bare .py: the interpreter must be named, and
+            # the absolute script path must resolve into this home.
+            script = (self.home / ".claude/statusline.py").as_posix()
+            self.assertIn(script, command)
+            self.assertIn(Path(sys.executable).as_posix(), command)
 
     def test_idempotent(self) -> None:
         self._run_install()

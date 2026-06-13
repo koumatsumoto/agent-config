@@ -1,0 +1,9 @@
+# Force LF on checkout for all text files. A Windows clone with
+# core.autocrlf=true would otherwise rewrite LF->CRLF, corrupting the shebang of
+# the deployed status-line scripts (`#!/usr/bin/env python3\r` -> exit 127, since
+# install.sh copies bytes verbatim) and the install/clean shell wrappers.
+* text=auto eol=lf
+
+# Belt-and-suspenders for the executable scripts that rely on a clean shebang.
+*.py text eol=lf
+*.sh text eol=lf
