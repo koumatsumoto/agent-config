@@ -51,7 +51,7 @@ CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
 CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
 ```
 
-スキップ / defer の表記例: `### Phase 3: 第三者レビュー\n（スキップ - standard レベルのため）`。doc-review は `### Phase 5: Doc Review\n（need-check モード）` / `（defer - コード解消後に実施）` / `（スキップ - test/config/chore のため）` 等。
+スキップ / defer の表記例: `### Phase 3: 第三者レビュー\n（スキップ - standard レベルのため）`。doc-review は `### Phase 5: Doc Review\n（defer - コード解消後に実施）` / `（スキップ - test/config/chore のため）` 等。
 
 ## 共通ルール
 

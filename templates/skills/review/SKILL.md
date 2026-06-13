@@ -105,7 +105,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 ## 役割の前提
 - 同じ diff を architect / security / adversary の 3 名が並列で別視点でレビューしています
 - あなたは <role> の視点に集中してください
-- 他レビュアの所見・全体の暫定判定は渡されません (独立レビュー)。Phase 2 と重なる一般 bug の再掲は避け、自分のレーンの所見だけを出す。重複の集約は Phase 4 統合が行う
+- 他レビュアの所見・全体の暫定判定は渡されません (独立レビュー)。レーンの扱い・偽陽性・dedup の規約は report-format.md に従う
 
 ## Read 順序
 まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・役割固有フィールドを把握)、その後 diff を pre-scan する。<role>.md が担当 ISO reference を指す場合、`<review skill root>/references/iso-25010/<該当ファイル>.md` は判断に必要なものだけ Read する。
@@ -127,7 +127,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 - diff から判定するために repo 内の近隣ファイル (middleware / interceptor / 類似 endpoint) が必要なら最大 5 個まで Read してよい
 
 ## 出力形式
-`<review skill root>/experts/report-format.md` に従う。判定基準・確信度・役割固有フィールド (HIGH 以上必須) はすべてそこに集約されている。
+`<review skill root>/experts/report-format.md` に従う。判定基準・確信度・役割固有の補足はすべてそこに集約されている。
 ```
 
 `<role>` は `architect`, `security`, `adversary` のいずれか。3 つを同一メッセージ内で発行する (sequential ではなく parallel)。
@@ -156,23 +156,25 @@ Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテ
 
 統合レポート末尾に **優先順位付きアクションリスト** を生成する:
 
-1. **マージ前必須** (CRITICAL/HIGH): 該当ファイル + 修正方針サマリで「PASS への最短経路」を示す
-2. **マージ後推奨** (MEDIUM): follow-up issue 候補
-3. **受け入れ可能** (LOW): 残しても害なし
+1. **マージ前必須** (CRITICAL/HIGH): 該当ファイル + 修正方針で「PASS への最短経路」を示す
+2. **同一 PR で修正** (MEDIUM/LOW): この PR で直す対象
+3. **PR 目的の外** (out-of-scope): follow-up issue 候補として分離
 4. **指摘の相互関係**: 同一根本原因でグルーピング可能なら明示
+
+分類基準は「指摘対応の方針」を参照。
 
 詳細フォーマットは `report-format.md`。
 
 ## Phase 5: doc-review (最終状態に対して)
 
-doc-review はコードレビューとは性質が異なり、**コードが解消された最終版の状態**に対してドキュメント整合を確認する。`doc-review.md` を Read して main コンテキストで実施する。
+doc-review はコードレビューとは性質が異なり、**コードが解消された最終版の状態**に対してドキュメント整合を確認する。`doc-review.md` を Read して main コンテキストで実施する。doc-review は 2 つの関心を変更構成に応じて扱う (詳細は `doc-review.md`): **A. コード変更のドキュメント影響** をリポジトリ全体のスコープで確認・修正する / **B. 変更ドキュメントの全体整合性** (内部整合・他ドキュメントとの整合・一次情報) を確認する。
 
 **起動条件** (Phase 4 のコード判定を踏まえる):
 
-- **`docs-only`**: コード層は無いので doc-review が主レビュー。直接 **full モード**で実行
-- **`code+docs` / `mixed`**: Phase 4 が `PASS` (最終状態が確定) のとき **full モード**。`BLOCKED` のときは **defer** (コード修正で内容が変わるため。修正後の再レビューで実行)
-- **`code-only`**: Phase 4 が `PASS` のとき **need-check モード** (ドキュメント更新の必要性チェック、CRITICAL/HIGH は出さない)。`BLOCKED` なら defer
-- **`test-or-config-or-chore-only`**: skip
+- **`docs-only`**: コード層は無いので doc-review が主レビュー。関心 B を実行
+- **`code+docs` / `mixed`**: Phase 4 が `PASS` (最終状態が確定) のとき関心 A + B を実行。`BLOCKED` のときは **defer** (コード修正で内容が変わるため、修正後に実行)
+- **`code-only`**: Phase 4 が `PASS` のとき関心 A を実行。`BLOCKED` なら defer
+- **`test-or-config-or-chore-only`**: skip (config が高リスクなら関心 A を実行)
 
 doc-review が CRITICAL/HIGH を出した場合は最終判定を `BLOCKED` に更新する。defer した場合はレポートに `### Phase 5: Doc Review\n（defer - コード解消後に実施）` と明記する。
 
@@ -200,4 +202,6 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 
 ## 指摘対応の方針
 
-検出された指摘は `LOW` を含め原則すべて対応する。大規模修正 / 仕様変更 / 設計トレードオフのいずれかに該当する場合のみユーザ判断に委ね、残す場合は「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。出力形式は `report-format.md` を参照。
+レビューは好み・様式の好き嫌いを出さず、「本質的に改善すべきもの」だけを指摘する。**出した指摘は `LOW` を含め原則すべて修正する**。変更に起因する / 変更の目的達成に必要な指摘は **同一 PR 内で直す** (follow-up に逃がさない)。follow-up issue にするのは、この PR の目的の外にある既存問題や大規模リファクタに限る (`Change Surgically` は proactive に触る範囲を最小化する原則で、レビューで露見した自分の変更の欠陥は in-scope)。
+
+大規模修正 / 仕様変更 / 設計トレードオフでユーザ判断が要るものだけ、残す場合に「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。出力形式は `report-format.md` を参照。

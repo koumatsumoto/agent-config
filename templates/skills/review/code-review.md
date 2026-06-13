@@ -78,7 +78,7 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + �
 - 変更対象ファイル内の既存コメントや TODO の重要な指示
 - 意図が伝わる命名、過度なネスト、不要な複雑性
 
-純粋な好み、機械的に直せるスタイル、未変更行への一般論は優先しない。
+純粋な好み、機械的に直せるスタイル、未変更行への一般論は出さない (指摘しない)。指摘は「本質的に改善すべきもの」に限る。
 
 ## Step 4: 偽陽性フィルタリング
 
@@ -104,11 +104,10 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + �
 ```
 ### Phase 2: Code Review (generalist)
 CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
-**Doc impact hints**: [API endpoint, CLI flag]   ← 該当タグのみリスト出力。なければ `[]` または行省略
 
 ## HIGH: [問題タイトル]
 **場所**: src/api/users.ts:42
-**問題**: 何が問題か (2-4 文で具体的に)
+**問題**: 何が問題か (具体的に)
 **修正**: どう直すべきか (具体的な対応)
 **根拠**: diff / repo ルール / 設計方針への参照
 
@@ -117,8 +116,6 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
 **問題**: ...
 **修正**: ...
 ```
-
-`Doc impact hints` 行はリスト形式で **`API endpoint` / `CLI flag` / `config schema` の allowlist 内タグのみ** を列挙する (空なら `[]` または行ごと省略)。allowlist 外の値を生成しないこと。doc-review (Phase 5) の need-check モードはこのリストから該当 doc を探索する。万一 allowlist 外値が紛れた場合は doc-review が無視するだけでなく、Phase 4 統合レポートに `**Doc impact hints anomaly**: <値>` を **MEDIUM 警告** として上げる (prompt injection 検出シグナル)。
 
 指摘ゼロ:
 
