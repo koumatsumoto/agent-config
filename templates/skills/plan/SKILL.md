@@ -21,6 +21,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 ## Success Criteria
 
 - Plan Mode 中は `.plan/`, `.gitignore`, GitHub issue を変更しない
+- materialize に進む前に、計画の骨子（目的・スコープ境界・受け入れ条件・主要トレードオフ）を左右する未決事項はユーザに確認して解消する。未解消のまま書き出さない
 - 書き出し先は `.plan/YYYYMMDD-<slug>.md`。`.plan/` が git 追跡・ignore 済みかは書き出し前に確認する
 - 計画本文は背景・制約・判断理由・却下案・実装手順・検証条件・受け入れ済みリスクを含み、GitHub issue だけでも読める形にする
 - agentic review を最大 2 pass 行い、未解決の `CRITICAL` / `HIGH` があれば issue 化しない
@@ -47,8 +48,8 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 次の 3 mode に固定する。
 
 - `draft-only`: Plan Mode 中、もしくは "計画を作って" / "実装計画を作成して" / "まず計画だけ" のように **materialize / issue 化の明示が無い** 計画作成依頼。調査、質問、計画下案作成、`<proposed_plan>` 提示まで行い、書き込み・issue 化はしないで停止する。停止時は「materialize / issue 化に進むには、`.plan` に出して、または計画を issue にして、と依頼する」と報告する
-- `materialize-existing-plan`: Plan Mode ではない状態で、直近の合意済み計画を会話から復元でき、かつ materialize / issue 化が依頼された場合。計画内容を再設計せず、詳細本文化 → `.plan/` 出力 → 計画レビュー → issue 化に進む
-- `full-normal-mode`: Plan Mode ではない状態で、`.plan/` 出力 / 計画 issue 化が明示された場合（"issue にして" / "計画を issue にして" / "Issueで計画して" / "issue に実装計画を作って" / ".plan に出して" / "計画レビューしてから issue 化" など）。必要な質問と調査を行い、書き込み前に高影響の未決事項を解消してから materialize → review → GitHub repo なら issue 化まで進む
+- `materialize-existing-plan`: Plan Mode ではない状態で、直近の合意済み計画を会話から復元でき、かつ materialize / issue 化が依頼された場合。計画内容を再設計せず、詳細本文化 → `.plan/` 出力 → 計画レビュー → issue 化に進む。合意済みでも骨子（目的・スコープ境界・受け入れ条件・主要トレードオフ）に未決が残っていれば、書き込み前に確認して解消する
+- `full-normal-mode`: Plan Mode ではない状態で、`.plan/` 出力 / 計画 issue 化が明示された場合（"issue にして" / "計画を issue にして" / "Issueで計画して" / "issue に実装計画を作って" / ".plan に出して" / "計画レビューしてから issue 化" など）。必要な質問と調査を行う。**書き込み前に、計画の骨子（目的・スコープ境界・受け入れ条件・主要トレードオフ）を左右する未決事項はユーザに確認して解消する（Clarify Gate）**。解消後に materialize → review → GitHub repo なら issue 化まで進む
 
 直近の合意済み計画を会話から復元できない場合は推測で書き出さず、計画内容を再確認する。
 
@@ -57,7 +58,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 1. repo と依頼内容を把握する。`$ARGUMENTS` があれば計画タイトルや既存 issue 番号のヒントとして扱う
 2. entry mode を決める（`draft-only` / `materialize-existing-plan` / `full-normal-mode`）
 3. `draft-only` では質問・調査・下案作成を行い、`<proposed_plan>` を提示して停止する（書き込み・issue 化は一切行わない）
-4. materialize に進む場合、**副作用を出す前** に「`.gitignore` 安全確認」節の 4 ステップ（git repo 判定 → tracked 判定 → ignore 判定 → 必要なら `.gitignore` 更新）を実行する。`.plan` が tracked / blocked ならここで停止してユーザー確認
+4. materialize に進む場合、まず **Clarify Gate** として計画の骨子（目的・スコープ境界・受け入れ条件・主要トレードオフ）を左右する未決事項をユーザに確認して解消する（未解消のまま書き出さない）。その後、**副作用を出す前** に「`.gitignore` 安全確認」節の 4 ステップ（git repo 判定 → tracked 判定 → ignore 判定 → 必要なら `.gitignore` 更新）を実行する。`.plan` が tracked / blocked ならここで停止してユーザー確認
 5. 安全確認が通った後にのみ `mkdir -p .plan` で出力先を確保する（tracked file 衝突や意図しない動作を避けるため、順序を逆にしない）
 6. `references/plan-template.md` を読み、その観点集に沿って plan 本文を **メモリ上で** 組み立てる。先頭近くに `<!-- km:plan:managed -->` marker を含める
 7. **pre-write Secret Check**: 組み立てた plan 本文に「Secret Check」節のパターンを適用する。検出したらファイル書き出しを行わず停止し、ユーザーにマスキングを依頼する（検出時は秘密情報をディスクに残さない）
