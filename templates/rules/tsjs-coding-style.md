@@ -35,7 +35,7 @@ paths:
 - fire-and-forget の Promise には `void` 演算子を使う（`void navigate(...)`, `void queryClient.invalidateQueries(...)`）
 - コールバック内で最新の値を参照する必要がある場合は ref パターンを使う（`ref.current = latestValue` を毎レンダーで更新）
 
-## ES2025 モダン機能
+## ES2025 / 最新ランタイム機能
 
 以下が使える場面ではレガシーな書き方より優先する:
 
@@ -44,6 +44,8 @@ paths:
 - Set メソッド (`union`, `intersection`, `difference`) をネイティブで使う
 - `Promise.try()` で同期/非同期エラーを統一的に扱う
 - `Error.isError()` で cross-realm のエラー判定をする
+- 動的に組み立てる正規表現は `RegExp.escape()` でメタ文字をエスケープする（注入・誤マッチ防止）
+- 日付・時刻は `Date` でなく `Temporal`（`esnext.temporal` lib）を使う。タイムゾーン・期間・不変性を型で扱える
 
 ## エラーハンドリング
 

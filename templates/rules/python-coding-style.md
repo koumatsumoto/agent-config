@@ -5,7 +5,7 @@ paths:
 
 # コーディングスタイル
 
-前提: Python 3.12+ / Pyright strict / Ruff。
+前提: Python 3.14+ / Pyright strict / Ruff。
 
 ## 基本方針
 
@@ -35,7 +35,7 @@ paths:
 
 ## 設計ルール
 
-- データモデルは `@dataclass(frozen=True, slots=True)` をデフォルトにする
+- データモデルは `@dataclass(frozen=True, slots=True)` をデフォルトにし、フィールドが増える場合は `kw_only=True` で位置引数の取り違えを防ぎ API を明確化する
 - 外部入力のバリデーションには Pydantic を使う。内部データには dataclass を使う
 - インターフェースは Protocol（構造的部分型）で定義する。ABC 継承より優先する
 - 引数の不変性は `Sequence` / `Mapping` で表現する（`list` / `dict` ではなく）
@@ -44,20 +44,23 @@ paths:
 - ミュータブルデフォルト引数は使わない。`None` + 関数内生成で代替する
 - 目安: 1 ファイル 300 行以内（最大 800 行）
 
-## Python 3.12+ モダン機能
+## Python 3.13/3.14 モダン機能
 
 以下が使える場面ではレガシーな書き方より優先する:
 
 - f-string を使う。`%` / `.format()` は使わない
+- **注入リスクのある文字列組み立て**（SQL / シェル / HTML）は、まずパラメータ化クエリや専用 API を使う。`Template` を受け取るライブラリには f-string でなく t-string（PEP 750）を渡し、エスケープを処理側に委ねる
 - `itertools.batched()` でチャンク分割する
 - パターンマッチング (`match`/`case`) で複雑な条件分岐を表現する
 - `ExceptionGroup` / `except*` で複数の例外を構造的に処理する
 - `asyncio.TaskGroup` で構造化並行処理する（`asyncio.gather` より優先）
+- 3.14 で annotation 評価は遅延される（PEP 649）。annotation を**実行時に読む**コードは `__annotations__` 直読みでなく `annotationlib` を使う
 
 ## エラーハンドリング
 
 - 素の `except:` / `except Exception:` は使わない。具体的な例外型を指定する
 - 例外は握り潰さず、`raise ... from e` で原因チェーンを保持する
+- 失敗の表現を混ぜない。例外で扱う失敗と `None` / Result 型で扱う失敗を関数ごとに一貫させる
 - ユーザー入力は Pydantic 等のスキーマバリデーションで検証する
 
 ## テスト
