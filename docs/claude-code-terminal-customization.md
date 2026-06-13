@@ -16,7 +16,7 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 ## 1. ステータスライン
 
-`settings.json` に以下を追加し、スクリプトを配置する。本リポジトリの status line は Python 実装 (`templates/statusline.py`) で、Linux / macOS / Windows で共通に動く。
+`settings.json` に以下を追加し、スクリプトを配置する。本リポジトリの status line は Python 実装 (`templates/statusline.py`) で、Linux / macOS / Windows で動く。
 
 ```json
 {
@@ -31,6 +31,8 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
   }
 }
 ```
+
+上記はテンプレート (`templates/settings.json`) の値で、POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。`install.sh` は OS に応じて `command` を書き換える: POSIX では `~` パス + shebang のまま起動し、ネイティブ Windows（`cmd.exe`）では `~` 展開も `.py` 直接実行もできないため、インストール時の Python を明示する形式 `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` に置換する。
 
 テンプレートの `templates/statusline.py` / `templates/subagent-statusline.py` を `~/.claude/` にコピーして使用する（`install.sh` で自動反映、実行ビット付与込み）。`statusline.py` は最大 2 行を表示する（行 1: モデル/コンテキスト/キャッシュ率/コスト、行 2: git/PR/レート制限）。
 
@@ -57,7 +59,7 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 ### セキュリティ上の注意
 
-- **チルダ (`~`) パスで可搬性を確保**: `command` は `~/.claude/statusline.py` とし、shebang (`#!/usr/bin/env python3`) + 実行ビットで OS 非依存に起動する
+- **POSIX はチルダ (`~`) パスで可搬性を確保**: `command` を `~/.claude/statusline.py` とし、shebang (`#!/usr/bin/env python3`) + 実行ビットで起動する。shebang の改行が CRLF になると `env` が `python3\r` を探して `exit 127` で失敗するため、`.gitattributes` で全テキストを LF 固定し、Windows clone（`core.autocrlf=true`）での LF→CRLF 変換を防ぐ。ネイティブ Windows は shebang を解釈できないため `install.sh` が Python を明示した `command` に置換する（前節参照）
 - **git 環境変数をクリアする**: `GIT_DIR` 等を unset し、悪意あるリポジトリからの config / repo 差し替えを防ぐ
 - **外部入力をサニタイズする**: モデル名・ブランチ名等の制御文字・ANSI エスケープを除去してから出力する
 - **高速・低負荷に保つ**: status line は高頻度（300ms デバウンス）で実行されるため、git 結果は `session_id` キーで数秒キャッシュする

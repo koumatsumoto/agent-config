@@ -23,6 +23,7 @@ import os
 import shutil
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -73,6 +74,14 @@ TEMPLATE_TREES: tuple[TreeSpec, ...] = (
 # settings.json — special handling: shallow merge instead of overwrite.
 SETTINGS_TEMPLATE_REL = "templates/settings.json"
 SETTINGS_DEST_REL = ".claude/settings.json"
+
+# settings.json keys whose `command` launches a deployed status-line script,
+# mapped to that script's path relative to home. The installer rewrites these
+# per-platform so the command is actually runnable on the target OS.
+STATUSLINE_COMMANDS: tuple[tuple[str, str], ...] = (
+    ("statusLine", ".claude/statusline.py"),
+    ("subagentStatusLine", ".claude/subagent-statusline.py"),
+)
 
 # Top-level home subdirectories that the installer may write into.
 INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
@@ -266,6 +275,48 @@ def remove_with_backup(path: Path) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# settings.json: per-platform status-line command.
+# --------------------------------------------------------------------------- #
+def statusline_command(home: Path, script_rel: str, *, posix: bool, python: str) -> str:
+    """Build a runnable status-line `command` string for the target platform.
+
+    POSIX: a `~`-relative path. The shebang + executable bit launch the script
+    OS-independently and re-resolve the interpreter via PATH on every run, which
+    survives the interpreter moving as long as it stays on PATH.
+
+    Windows: `cmd.exe` neither expands `~` nor executes a bare `.py`, so the
+    interpreter must be invoked explicitly with the absolute script path. Both
+    tokens are quoted to tolerate spaces (e.g. `C:/Program Files/...`).
+    """
+    if posix:
+        return f"~/{script_rel}"
+    script = (home / script_rel).as_posix()
+    return f'"{python}" "{script}"'
+
+
+def apply_statusline_commands(
+    template: dict[str, object], home: Path, *, posix: bool, python: str
+) -> dict[str, object]:
+    """Return a copy of `template` with status-line commands rewritten for the OS.
+
+    Only sections that already declare a `command` are touched, so the template
+    stays the single source of truth for which status lines exist. On POSIX the
+    rewritten value equals the template's `~/...` literal, making this a no-op
+    there (and keeping re-runs idempotent).
+    """
+    out = dict(template)
+    for key, script_rel in STATUSLINE_COMMANDS:
+        section = out.get(key)
+        if isinstance(section, dict) and "command" in section:
+            updated = dict(section)
+            updated["command"] = statusline_command(
+                home, script_rel, posix=posix, python=python
+            )
+            out[key] = updated
+    return out
+
+
+# --------------------------------------------------------------------------- #
 # settings.json shallow merge.
 # --------------------------------------------------------------------------- #
 def read_existing(path: Path) -> tuple[str | None, dict[str, object]]:
@@ -300,14 +351,25 @@ def render(merged: dict[str, object]) -> str:
     return json.dumps(merged, indent=2, ensure_ascii=False) + "\n"
 
 
-def merge_into(template_path: Path, dest: Path) -> str:
+def merge_into(
+    template_path: Path,
+    dest: Path,
+    *,
+    transform: Callable[[dict[str, object]], dict[str, object]] | None = None,
+) -> str:
     """Apply a shallow merge from template_path into dest.
+
+    `transform`, when given, is applied to the parsed template object before the
+    merge. The installer uses it to rewrite status-line commands per-platform;
+    the standalone `merge` subcommand passes none (generic merge).
 
     Returns one of: ok | created | merged.
     """
     template_data = json.loads(template_path.read_text(encoding="utf-8"))
     if not isinstance(template_data, dict):
         raise ValueError(f"template must be a JSON object: {template_path}")
+    if transform is not None:
+        template_data = transform(template_data)
 
     existing_text, existing = read_existing(dest)
     new_text = render(merge(template_data, existing))
@@ -478,9 +540,16 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         for status, dest in results:
             print(f"{status}: {dest}")
 
+    # `sys.executable` is the interpreter running this installer: guaranteed to
+    # exist and be >= 3.12, and on Windows it is exactly the python that must be
+    # named explicitly in the status-line command.
+    python = Path(sys.executable).as_posix()
     settings_status = merge_into(
         repo_root / SETTINGS_TEMPLATE_REL,
         home / SETTINGS_DEST_REL,
+        transform=lambda tpl: apply_statusline_commands(
+            tpl, home, posix=POSIX, python=python
+        ),
     )
     if settings_status == "ok":
         print(f"ok: {home / SETTINGS_DEST_REL}")
