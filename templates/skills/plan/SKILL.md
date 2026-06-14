@@ -60,7 +60,7 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 1. repo と依頼内容を把握する。`$ARGUMENTS` は計画タイトル / 既存 issue 番号のヒントとして扱う
 2. Routing の entry mode を 1 つ決める（Plan Mode かどうか判別できない場合は安全側に倒して `draft-only` とする）
 3. `draft-only` なら質問・調査・下案作成を行い、計画下案を `<proposed_plan>`（チャット上の提示）として示して **停止する**。`.plan/` 書き込み・issue 化は一切行わない。停止時に「materialize / issue 化に進むには『.plan に出して』『計画を issue にして』と依頼する」と案内する
-4. materialize に進む mode では **Clarify Gate**: 計画の骨子（目的・スコープ境界・受け入れ条件・主要トレードオフ）を左右する未決事項をユーザに確認して解消する。未解消のまま Phase 2 に進まない
+4. materialize に進む mode では **Clarify Gate**: 計画の骨子（**本質的に満たすべき要件・ビジネス価値**、スコープ境界、受け入れ条件、主要トレードオフ）を左右する未決事項をユーザに確認する。要件を取り違えていないか・浅い理解で進めていないかを確かめ、**本質を固めて引き出してから**解消する。未解消のまま Phase 2 に進まない
 
 ## Phase 2: Materialize to `.plan/`
 
@@ -87,10 +87,10 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 `.plan/` に書き出したファイルを対象に、第三者目線で計画の精度を上げる。
 
 1. `references/plan-review-checklist.md` を読む（レビュー観点・重大度定義・出力形式）
-2. レビューを実行する:
-   - **subagent が使える環境**（Claude Code の Task tool、Codex CLI の subagent）では、**別エージェントに `.plan/` ファイルをレビューさせる**（メイン agent の視点バイアスを避ける）。下のプロンプトで起動する
-   - 使えない環境では、メイン agent が「第三者レビュー」と明示し、自己評価バイアスを自覚して通常の Q&A より critical に読み直す
-   - 高リスク計画（認証 / 認可、秘密情報、データ移行、破壊的操作、公開 API 契約など）では `plan-review-checklist.md` の専門家ロール観点を追加する。観点が多い場合はロールごとに独立した subagent へ fan-out し、アンカリングを避けてよい
+2. レビューを実行する。レビューは **generalist（見落とし）と adversary（敵対的分析）の 2 レンズ**で行い、最重要は「計画が**本質的に満たすべき要件を取り違えていないか**」を問うこと（観点は `plan-review-checklist.md`）:
+   - **subagent が使える環境**（Claude Code の Task tool、Codex CLI の subagent）では、**計画の著者であるメイン agent ではなく別 subagent にレビューさせる**（著者バイアスを避ける）。下のプロンプトで起動する
+   - 使えない環境では、メイン agent が「第三者レビュー」と明示し、著者バイアスを自覚して 2 レンズで critical に読み直す
+   - 計画が高リスク領域（認証 / 認可、秘密情報、データ移行、破壊的操作、不可逆な公開 API 契約、LLM の tool / 入力境界）に触れる場合だけ、専門家レンズ（security / architect 等）を必要な分だけ足す。観点が重い場合は専門家を独立 subagent に分けてよい（既定は 2 レンズの単一レビュー。多角的に作り込まない）
 3. 返ってきた指摘を重大度別に整理し、**plan 本文へ直接反映する**。指摘内容・修正経緯は plan 本文にも issue 本文にも書き戻さない。共有用に履歴を残したい場合は issue 作成後に issue comments を使う（comments の内容を本文へ再同期しない）
 4. `CRITICAL` / `HIGH` が解消するまで反復する。`MEDIUM` / `LOW` は原則反映し、意図的に残すものだけ plan 本文の「受け入れ済みリスク」として記録する（記録項目は plan-template.md に従う）
 5. 反復しても `CRITICAL` / `HIGH` が収束しない場合は issue 化を止め、ユーザに判断を委ねる
@@ -99,10 +99,15 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 subagent 起動プロンプト。`<plan skill root>` と計画ファイルは、メイン agent が **`~` を展開した絶対パス**に置換してから渡す（subagent はメイン agent の working directory を共有しないため、相対パス・未展開の `~` は解決できない）。install root は Claude Code が `~/.claude/skills/plan/`、Codex CLI が `~/.agents/skills/plan/`:
 
 ```
-あなたは km:plan の第三者計画レビュアです。`.plan/` に書き出された実装計画を、メイン agent の視点バイアスを排して critical にレビューしてください。
+あなたは km:plan の第三者計画レビュアです。計画の著者ではない独立した視点で、`.plan/` の実装計画を critical にレビューしてください。
+
+## 視点（2 レンズ）
+- 最重要: この計画が **本質的に満たすべきもの（ユーザが本当に達成したいビジネス価値・要件）を取り違えていないか**
+- generalist: 見落とし（要件・成功条件・手順・前提の曖昧 / 抜け）を潰す
+- adversary: 計画を崩しにいく（本質要件を達成しないことを示せるか / 前提の真偽を repo で検証 / 実コードで最初に破綻する箇所 / より強い代替案）
 
 ## Read 順序
-まず `<plan skill root>/references/plan-review-checklist.md` を読み、レビュー観点・重大度定義・出力形式を把握する。その後レビュー対象の計画ファイルを読む。
+まず `<plan skill root>/references/plan-review-checklist.md` を読み、2 レンズの観点・重大度定義・出力形式を把握する。その後レビュー対象の計画ファイルを読む。
 
 ## レビュー対象
 - 計画ファイル: <.plan/YYYYMMDD-<slug>.md の絶対パス>
