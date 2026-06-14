@@ -24,7 +24,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 - materialize に進む前に、計画の骨子（目的・スコープ境界・受け入れ条件・主要トレードオフ）を左右する未決事項はユーザに確認して解消する。未解消のまま書き出さない
 - 書き出し先は `.plan/YYYYMMDD-<slug>.md`。`.plan/` が git 追跡・ignore 済みかは書き出し前に確認する
 - 計画本文は背景・制約・判断理由・却下案・実装手順・検証条件・受け入れ済みリスクを含み、GitHub issue だけでも読める形にする
-- agentic review を最大 2 pass 行い、未解決の `CRITICAL` / `HIGH` があれば issue 化しない
+- agentic review を行い、未解決の `CRITICAL` / `HIGH` が無くなるまで反復する。収束しなければ issue 化しない
 - レビュー履歴（指摘・反映の経緯）は plan 本文・issue body に残さない。指摘は plan 本文へ直接反映する。共有用に履歴を残す必要があれば issue 作成後に issue comments を使ってよい（comments の内容を本文へ再同期しない）
 - GitHub 管理 repo では新規 issue を作り、`.plan/` ファイルを `--body-file` に直接渡して全文ミラーする
 - 新規 issue 作成後は URL を `.plan/` に追記し、再度 `gh issue edit --body-file` で同期する
@@ -63,7 +63,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
 6. `references/plan-template.md` を読み、その観点集に沿って plan 本文を **メモリ上で** 組み立てる。先頭近くに `<!-- km:plan:managed -->` marker を含める
 7. **pre-write Secret Check**: 組み立てた plan 本文に「Secret Check」節のパターンを適用する。検出したらファイル書き出しを行わず停止し、ユーザーにマスキングを依頼する（検出時は秘密情報をディスクに残さない）
 8. Secret Check を通過したら `.plan/YYYYMMDD-<slug>.md` に書き出す
-9. `references/plan-review-checklist.md` を読み、その観点集で `.plan/` ファイルを対象に agentic 計画レビューを最大 2 pass 行う。未解消の `CRITICAL` / `HIGH` があれば issue 化を止めて報告する
+9. `references/plan-review-checklist.md` を読み、その観点集で `.plan/` ファイルを対象に agentic 計画レビューを行う（未解消の `CRITICAL` / `HIGH` が無くなるまで反復）。収束しなければ issue 化を止めて報告する
 10. **pre-issue Secret Check (再チェック)**: レビューの過程で plan 本文に追加された情報が secret を含まないか、issue 化直前にもう一度 Secret Check をかける。検出時はファイルを削除せず、ユーザーに対処依頼して停止
 11. GitHub 管理 repo なら新規 issue を作る（既存 issue 再利用はユーザーが明示した場合のみ。後述）
 12. 新規 issue 作成後、返された URL を `.plan/` 本文に追記し、`gh issue edit <number> --body-file <plan-file>` で再同期する（2-step sync）
@@ -96,7 +96,7 @@ GitHub / `gh` の状態は draft-only 用途では不要なので Context では
   - 使えない環境では、メイン agent が「第三者レビュー」と明示して同じ観点で critical に読み直す。自分の計画を評価するバイアスを自覚し、通常の Q&A より厳しめに判定する
 - レビュー指摘は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` と対象箇所・問題・修正案を **その場の作業メモ** として整理する。plan 本文・issue body には書き戻さない（共有用に履歴を残す必要があれば issue 作成後に issue comments を使う。下の "Incorporating External Review Feedback" を参照）
 - **指摘は plan 本文へ直接反映するだけにとどめる**。指摘内容・修正経緯を plan 本文や issue body に書き戻さない。最終計画と意図的に残す「受け入れ済みリスク」だけが plan 本文に残る
-- review loop は最大 2 pass。1 pass 目で `CRITICAL` / `HIGH` が出たら修正し、2 pass 目で再確認する。2 pass 目でも未解消なら issue 化を止め、ユーザーに判断を委ねる
+- review loop は `CRITICAL` / `HIGH` が解消するまで反復する。指摘が出たら plan 本文を修正して再確認し、収束しなければ issue 化を止め、ユーザーに判断を委ねる
 - 残す `MEDIUM` / `LOW` は plan 本文の「受け入れ済みリスク」相当の記述に重大度・残す理由・後続対応条件を記録してから issue 化する
 
 ## Secret Check
@@ -166,6 +166,6 @@ plan 本文は GitHub issue に全文ミラーされるため、秘密情報の�
 - 明示のない限り既存 issue を探索・再利用しない。類似 issue の自動 search は行わない
 - 既存 issue を更新する場合でも、marker がなければ全文置換前にユーザーへ確認する
 - `gh issue create/edit` が失敗した場合、成功扱いせず `URL 未同期` として報告する
-- 2 pass レビューでも `CRITICAL` / `HIGH` が残る場合、issue 化を止めてユーザーに判断を委ねる
+- 反復しても `CRITICAL` / `HIGH` が残り収束しない場合、issue 化を止めてユーザーに判断を委ねる
 - PR 作成・ブランチ作成・push は `km:github-workflow` の責務。このスキルでは行わない
 - 計画作成の意図が曖昧な場合は、書き込み前にユーザーへ確認する

@@ -97,6 +97,19 @@ STATUSLINE_COMMANDS: tuple[tuple[str, str], ...] = (
 # Top-level home subdirectories that the installer may write into.
 INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 
+# Skill directories shipped previously but no longer maintained. prune_tree keeps
+# top-level skill dirs with no source counterpart (they may be user-added), so a
+# decommissioned skill would otherwise linger after install. The installer removes
+# each by explicit name (with .bak backup) from every skills tree during the
+# migration window.
+DECOMMISSIONED_SKILLS: tuple[str, ...] = (
+    "code-review",
+    "doc-review",
+    "intent-review",
+    "quality-review",
+    "review-loop",
+)
+
 
 def clean_targets(home: Path) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
@@ -312,6 +325,25 @@ def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]
             backup(dest_file)
             pruned.append(dest_file)
     return pruned
+
+
+def remove_decommissioned_skills(home: Path) -> list[Path]:
+    """Remove deployed skill dirs that are no longer shipped (with .bak backup).
+
+    prune_tree preserves top-level entries with no source counterpart (possibly
+    user-added), so decommissioned skills are removed by explicit name here.
+    """
+    removed: list[Path] = []
+    skill_roots = [
+        home / t.dest_rel for t in TEMPLATE_TREES if t.src_rel == "templates/skills"
+    ]
+    for root in skill_roots:
+        for name in DECOMMISSIONED_SKILLS:
+            target = root / name
+            if target.is_dir() or target.is_symlink():
+                remove_with_backup(target)
+                removed.append(target)
+    return removed
 
 
 def remove_with_backup(path: Path) -> str:
@@ -608,6 +640,9 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         if tspec.prune:
             for dest in prune_tree(src_root, dest_root, boundary=boundary):
                 print(f"pruned: {dest}")
+
+    for dest in remove_decommissioned_skills(home):
+        print(f"removed (decommissioned): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.12, and on Windows it is exactly the python that must be

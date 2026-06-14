@@ -48,7 +48,7 @@ argument-hint: "[target] [level]"
 
 base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / Phase 3 reviewers / doc-review) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る。
 
-**Context budget 防御 (`--repo` のみ)**: 対象テキストファイル総行数を `1 行 ≈ 25 tokens` で概算し、**約 1600 行 (≈ 40k tokens) を超える場合は Phase 2 以降を強制停止** してサブツリーを絞るよう促す (3 並列 subagent の合算 context を考慮した閾値)。binary / lockfile / generated は除外。
+**Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除外) が Phase 3 の並列レビュア群の context に無理なく収まる規模かを見積もる。収まらない規模ならレビュー品質が落ちるため、Phase 2 以降に進まずサブツリーを絞るよう促す。
 
 ### Phase 1c. 変更タイプ判定とレベル選択
 
@@ -168,7 +168,7 @@ doc-review はコードレビューとは性質が異なり、**コードが解�
 **起動条件** (Phase 4 のコード判定を踏まえる):
 
 - **`docs-only`**: コード層は無いので doc-review が主レビュー。直接 **full モード**で実行
-- **`code+docs` / `mixed`**: Phase 4 が `PASS` (最終状態が確定) のとき **full モード**。`BLOCKED` のときは **defer** (コード修正で内容が変わるため。修正後の再レビュー / review-loop の最終周回で実行)
+- **`code+docs` / `mixed`**: Phase 4 が `PASS` (最終状態が確定) のとき **full モード**。`BLOCKED` のときは **defer** (コード修正で内容が変わるため。修正後の再レビューで実行)
 - **`code-only`**: Phase 4 が `PASS` のとき **need-check モード** (ドキュメント更新の必要性チェック、CRITICAL/HIGH は出さない)。`BLOCKED` なら defer
 - **`test-or-config-or-chore-only`**: skip
 

@@ -40,9 +40,9 @@
 
 ## Review Loop
 
-- 最大 **2 pass** とする
-- 1 pass 目で `CRITICAL` / `HIGH` が出たら plan 本文を修正し、2 pass 目で再確認する
-- 2 pass 目でも `CRITICAL` / `HIGH` が残る場合、**GitHub issue 化を止め**、ユーザーに判断を委ねる
+- `CRITICAL` / `HIGH` が解消するまで反復する
+- 指摘が出たら plan 本文を修正して再確認する
+- 反復しても `CRITICAL` / `HIGH` が収束しない場合、**GitHub issue 化を止め**、ユーザーに判断を委ねる
 - `MEDIUM` / `LOW` は原則反映する。意図的に残す場合は plan 本文の「受け入れ済みリスク」相当の節に重大度・残す理由・後続対応条件を記録してから issue 化する
 - 指摘の反映は plan 本文への直接修正だけにとどめる。レビュー作業メモを plan 本文・issue body に書き戻さない。共有用の履歴を残す必要があれば issue 作成後に issue comments に残してよい（最終計画と意図的な「受け入れ済みリスク」のみが本文に残る）
 
