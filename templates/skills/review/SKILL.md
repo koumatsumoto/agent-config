@@ -85,7 +85,9 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 ## Phase 3: 第三者レビュー (3 名並列)
 
-`thorough` レベルでのみ起動。`docs-only` / `test-or-config-or-chore-only` では起動しない。
+`thorough` レベルで起動する。`docs-only` / `test-or-config-or-chore-only` では起動しない。
+
+**内容ベースの昇格**: `quick` / `standard` でも、diff が高リスク領域に触れる場合は該当専門家 (少なくとも security / adversary) を起動してよい。高リスク領域とは、覆すのが高コストな決定 (公開 API・契約・スキーマ・データモデル等の one-way door)、認証 / 認可、データの移動・削除・マイグレーション、秘密情報の扱い、LLM/AI の tool 実行境界・入力境界。昇格した場合は統合レポートに昇格理由を 1 行記録する。
 
 レビュアは **architect / security / adversary の 3 名**。各々が同じ diff を別視点で**独立に**レビューする ―― 暫定判定も他レビュアの所見も渡さない (アンカリングを避け視点の多様性を最大化する。重複の集約は Phase 4 統合が行う)。
 
@@ -188,10 +190,11 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 | `standard` | ✓ | スキップ | ✓ | 変更構成依存 / PASS 時 |
 | `thorough` | ✓ | ✓ (3 名並列) | ✓ | 変更構成依存 / PASS 時 |
 
-変更構成による override:
+変更構成・内容による override:
 
 - `docs-only` → Phase 2/3 skip、Phase 5 doc-review (full) のみ
 - `test-or-config-or-chore-only` → Phase 3 / Phase 5 skip (Phase 2 + Phase 4 のみ)
+- **内容ベースの昇格は降格に優先する**: `quick` / `standard` でも diff が高リスク領域 (Phase 3 の「内容ベースの昇格」参照) に触れるなら、該当専門家を起動する。`test-or-config-or-chore-only` でも、その変更が高リスク (CI 権限・デプロイ・秘密情報など) なら同様に昇格してよい
 
 `quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。
 
