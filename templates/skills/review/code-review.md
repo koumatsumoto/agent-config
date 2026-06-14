@@ -8,18 +8,19 @@ km:review orchestrator の **Phase 2**。**コードレベル (関数・モジ�
 
 orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + 実行 level」を受け取る。`docs-only` なら本ファイルは起動されない。
 
-変更構成 + コミットメッセージのプレフィックスからレビュー深度を決める:
+変更構成と diff から読み取れる signal でレビュー深度を決める。下表は実行 level が既定 (`standard`) のときの基準値:
 
-| 変更内容 | 設計・実装の深度 | 規約・可読性の深度 |
+| 変更の性質 | 設計・実装の深度 | 規約・可読性の深度 |
 |---|---|---|
-| `feat` (新機能 / 新規ファイル中心) | Full | Full |
-| `code+docs` / `mixed` (振る舞い変更を含む) | Full | Full |
-| `fix` / `refactor` (`code-only` の既存実装修正) | Focused | Focused |
+| 新規ファイル中心、または公開挙動を変える変更を含む (`code+docs` / `mixed` / 振る舞いを変える `code-only`) | Full | Full |
+| 既存実装の局所修正 (振る舞い変更が限定的な `code-only`) | Focused | Focused |
 | `test-or-config-or-chore-only` | Skip | Quick |
 
-`quick` レベルでは「規約・可読性」を Quick に降格、`thorough` レベルでは上記どおり、`standard` は中間。読み込み範囲は `quick` = 変更ファイル中心、`standard` = 必要な近傍 context まで、`thorough` = 関連モジュールまで広げる。
+実行 level で基準値を調整する: `thorough` は基準どおりで読み込み範囲を関連モジュールまで広げる、`standard` は基準どおりで近傍 context まで、`quick` は「規約・可読性」を Quick に下げ読み込みを変更ファイル中心に絞る。
 
-新規ファイル中心の `feat` 変更では「既存パターンとの整合性」も確認する: 類似 endpoint / module の既存実装を必要なら 1-3 ファイル Read して、設計判断 (パターン選択、責務分割) が repo の他箇所と揃っているか確認する。
+コミット / PR 対象では Conventional 接頭辞も判断の補助に使える (任意): `refactor:` は振る舞い不変の検証、`fix:` は再発防止テストの有無、`perf:` は性能特性を重点化する。未コミット差分には接頭辞が無いため、深度判定はこれに依存せず上記 signal で決める。
+
+新規ファイル中心の変更では「既存パターンとの整合性」も確認する: 類似 endpoint / module の既存実装を必要なら 1-3 ファイル Read して、設計判断 (パターン選択、責務分割) が repo の他箇所と揃っているか確認する。
 
 ## Step 2: 設計・実装 (3 層)
 
@@ -92,8 +93,10 @@ orchestrator から「変更ファイル一覧 + diff 内容 + 変更構成 + �
 
 ## 判定
 
-- `CRITICAL`: 即時悪用可能な欠陥
-- `HIGH`: 明確なバグ、仕様回帰、危険な入力検証不足
+重大度は「今すぐ直す重さ」で付ける (`experts/report-format.md` と同じ尺度。Phase 2 は code-level の正しさに範囲を絞り、長期設計は architect、脅威モデルは security が同じ尺度で別途評価する):
+
+- `CRITICAL`: 即時悪用可能 / 重大インシデント直結 / 即時データ損失
+- `HIGH`: 明確なバグ、仕様回帰、危険な未検証入力
 - `MEDIUM`: 設計不整合、保守性低下、テスト不足
 - `LOW`: 小さな改善
 
