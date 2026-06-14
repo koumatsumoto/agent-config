@@ -105,7 +105,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 ## 役割の前提
 - 同じ diff を architect / security / adversary の 3 名が並列で別視点でレビューしています
 - あなたは <role> の視点に集中してください
-- 他レビュアの所見・全体の暫定判定は渡されません (独立レビュー)。レーンの扱い・偽陽性・dedup の規約は report-format.md に従う
+- 他レビュアの所見・全体の暫定判定は渡されません (独立レビュー)。レーンの扱い・偽陽性フィルタは report-format.md に従う。重複の集約は Phase 4 が行うので重複回避を予測しなくてよい
 
 ## Read 順序
 まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・役割固有フィールドを把握)、その後 diff を pre-scan する。<role>.md が担当 ISO reference を指す場合、`<review skill root>/references/iso-25010/<該当ファイル>.md` は判断に必要なものだけ Read する。
@@ -148,7 +148,7 @@ Phase 2 ↔ architect の住み分けは `references/scope-alignment.md` に集�
 
 Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテキストで統合する。
 
-1. **中央 dedup**: 全所見を `(file, ±5 行, 根本原因)` でグルーピングし、同一欠陥を別角度から記述したものも束ね、最も証拠の濃い所見を残して併合注記する。判定基準は `<review skill root>/experts/report-format.md` の「中央 dedup ルール」。
+1. **中央 dedup**: 全所見を `(file, ±5 行, 根本原因)` でグルーピングし、同一欠陥を別角度から記述したものも束ね、最も証拠の濃い所見を残して併合注記する。判定基準は `<review skill root>/integration-report.md` の「中央 dedup ルール」。
 2. **偽陽性確認**: 各 CRITICAL/HIGH が diff から具体的に裏づくかを確認し、裏づかない指摘は降格する (substantiation チェック)。
 3. **completeness チェック**: 全所見を俯瞰し、未検査の観点が無いかを 1 パスで確認する。
 4. **判定**: 重大度を合算し、CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`。
@@ -163,7 +163,7 @@ Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテ
 
 分類基準は「指摘対応の方針」を参照。
 
-詳細フォーマットは `report-format.md`。
+出力フォーマット (統合サマリー・各 Phase 表示・中央 dedup・アクションリスト・受け入れ済みリスク) は `integration-report.md` に集約。
 
 ## Phase 5: doc-review (最終状態に対して)
 
@@ -204,4 +204,4 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 
 レビューは好み・様式の好き嫌いを出さず、「本質的に改善すべきもの」だけを指摘する。**出した指摘は `LOW` を含め原則すべて修正する**。変更に起因する / 変更の目的達成に必要な指摘は **同一 PR 内で直す** (follow-up に逃がさない)。follow-up issue にするのは、この PR の目的の外にある既存問題や大規模リファクタに限る (`Change Surgically` は proactive に触る範囲を最小化する原則で、レビューで露見した自分の変更の欠陥は in-scope)。
 
-大規模修正 / 仕様変更 / 設計トレードオフでユーザ判断が要るものだけ、残す場合に「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。出力形式は `report-format.md` を参照。
+大規模修正 / 仕様変更 / 設計トレードオフでユーザ判断が要るものだけ、残す場合に「受け入れ済みリスク」形式 (重大度・残す理由・後続対応条件) で明示記録する。出力形式は `integration-report.md` を参照。

@@ -49,4 +49,4 @@ Phase 2 は「今この diff は正しいか」、Phase 3 architect は「この
 
 ## 重複指摘が出た場合
 
-Phase 2 と architect で同観点の重複が出ても問題ない。重複の集約 (dedup) は **Phase 4 統合** が一括で行う (判定基準は `<review skill root>/experts/report-format.md` の「中央 dedup ルール」)。**本ファイルの住み分けは dedup の判断材料であり、レビュアが報告を抑制する根拠にはしない** (詳細は report-format.md の偽陽性フィルタ)。
+Phase 2 と architect で同観点の重複が出ても問題ない。重複の集約 (dedup) は **Phase 4 統合** が一括で行う。**本ファイルの住み分けは dedup の判断材料であり、レビュアが報告を抑制する根拠にはしない** (詳細は report-format.md の偽陽性フィルタ)。
