@@ -22,7 +22,7 @@
 
 - 通常の確信度ラベル ([confirmed]/[likely]/[possible]) と重大度で報告する。再現を静的に作れない疑い ([likely]/[possible]) も握りつぶさず、適切な重大度 (多くは MEDIUM、再現を作れれば HIGH) で出す
 - 静的 diff から再現できない種類のバグ (race / TZ / eventual consistency 等) を repro 不能を理由に落とさない
-- HIGH 以上は `**再現条件**` フィールド必須 (作れる範囲で具体的な入力・経路・手順)
+- HIGH 以上は `**再現条件**` を添える (作れる範囲で具体的な入力・経路・手順)
 
 ## Workflow
 
