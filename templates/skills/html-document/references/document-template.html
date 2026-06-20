@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <!--
     Content Security Policy（meta で有効なディレクティブのみ）。
-    - 図の操作（ホイール拡縮 / PNG・WebP 化）に inline script を使うため script-src に 'unsafe-inline' を許可。
+    - 図の操作（ホイール拡縮 / WebP 画像化）に inline script を使うため script-src に 'unsafe-inline' を許可。
       固定 CDN の mermaid と inline script だけを許可し、外部ホストの script は読み込まない。
     - img-src blob: は SVG を canvas で画像化する時のローカル blob 用（外部画像は読み込まない）。スクショを埋める時は data: を足す。
     - connect-src 'none' / default-src 'none' が外部 fetch/XHR/beacon を全面遮断し、データ送信を止める（egress の歯止め）。

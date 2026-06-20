@@ -6,7 +6,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
 
 // 図の操作（完全クライアント側・外部送信なし）。各 figure.diagram に付与する:
 // - マウスホイールで拡大 / 縮小、ドラッグで移動、ダブルクリックでリセット
-// - PNG / WebP ボタンで SVG を canvas 経由のラスタ画像にして別タブで開く（ポップアップ抑止時はダウンロード）
+// - WebP ボタンで SVG を canvas 経由のラスタ画像にして別タブで開く（ポップアップ抑止時はダウンロード）
 // mermaid は load 時に非同期描画するため、ハンドラは figure に張り SVG はイベント時に都度取得する（描画タイミングに依存しない）。
 (() => {
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -93,7 +93,6 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
       tools.appendChild(button);
     };
     const withSvg = (fn) => () => { const svg = fig.querySelector('svg'); if (svg) fn(svg); };
-    addButton('PNG', withSvg((svg) => openAsImage(svg, 'image/png', 'png')));
     addButton('WebP', withSvg((svg) => openAsImage(svg, 'image/webp', 'webp')));
     addButton('リセット', reset);
     fig.appendChild(tools);

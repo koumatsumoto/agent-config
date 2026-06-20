@@ -182,6 +182,7 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
         self.assertIn("diagram-tools", self.html, "diagram toolbar (diagram-tools) is missing")
         self.assertIn("'wheel'", self.html, "wheel-zoom handler is missing")
         self.assertIn("toBlob", self.html, "canvas raster export (toBlob) is missing")
+        self.assertIn("image/webp", self.html, "WebP export target is missing")
         self.assertIn("htmlLabels: false", self.html, "htmlLabels:false (export-safe SVG) is missing")
 
 
