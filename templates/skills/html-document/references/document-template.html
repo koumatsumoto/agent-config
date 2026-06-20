@@ -6,11 +6,13 @@
   <meta name="referrer" content="no-referrer">
   <!--
     Content Security Policy（meta で有効なディレクティブのみ）。
-    - script-src: 固定 CDN の mermaid パスと、下部 init <script> の sha256 だけを許可（'unsafe-inline' は付けない）。
-    - init <script> を編集したら sha256 を再計算してこの値も差し替える。
-    - 画像が必要な場合のみ img-src を `img-src data:` に変える（inline base64。他は据え置き）。
+    - script-src: 固定 CDN の mermaid パスだけを許可。inline script は不可（hash も 'unsafe-inline' も付けない）。
+      本文にエスケープ漏れで <script> が混入しても CSP がブロックする backstop になる。
+    - connect-src 'none' / default-src 'none' が外部 fetch/XHR/beacon を全面遮断し、データ送信を止める。
+    - 画像が必要な場合のみ img-src を `img-src data:` に変える（inline base64。他のディレクティブは据え置き）。
+    - mermaid を更新する時は <script src> と script-src のバージョンパス、SRI(integrity) を同時に差し替える。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/ 'sha256-YkkhgzxEOaZrcHmf3yQIu/qB7vf4XZ9n96RSyDSvamI='; style-src 'self' 'unsafe-inline'; img-src 'none'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/; style-src 'self' 'unsafe-inline'; img-src 'none'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>ドキュメントタイトル</title>
   <style>
     /* ===== テーマ変数（配色やサイズの調整はここを起点に） ===== */
@@ -181,9 +183,7 @@ flowchart TD
 
   </div>
 
-  <!-- Mermaid（UMD all-in-one を バージョン固定 + SRI で読み込む。完全クライアント側で外部送信なし） -->
+  <!-- Mermaid（UMD all-in-one を バージョン固定 + SRI で読み込む。読込だけで自動描画する: 既定 startOnLoad=true / securityLevel='strict' / htmlLabels=false。完全クライアント側で外部送信なし） -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js" integrity="sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF" crossorigin="anonymous"></script>
-  <!-- 初期化。この 1 行は CSP の sha256 とバイト一致が必須。編集したら sha256 を再計算して CSP を直す -->
-  <script>mermaid.initialize({startOnLoad:true,securityLevel:'strict',htmlLabels:false});</script>
 </body>
 </html>

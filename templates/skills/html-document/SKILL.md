@@ -20,16 +20,16 @@ argument-hint: "[topic | output-path.html]"
 
 ## Success Criteria
 
-- 単一 HTML（CSS・図の初期化を inline）で出力する
+- 単一 HTML（CSS を inline）で出力する
 - コンテンツ幅 1400px の中央寄せで表示される
-- Mermaid 図はカタログの型のみ。外部への発信は固定 CDN の script 取得だけ
-- 埋め込みデータは文脈別にエスケープし、スクリプトとして実行されない
-- ブラウザで開いて CSP 違反・SRI mismatch・実行時エラーが出ない
+- Mermaid 図はカタログの型のみ。外部への発信は固定 CDN の mermaid 取得だけ
+- 外部へのデータ送信が起きない（`connect-src 'none'` 等）。inline script は実行されない（XSS backstop）
+- ブラウザで開いて CSP 違反・SRI mismatch・実行時エラーが出ず、図が自動描画される
 
 ## Workflow
 
 1. 出力先を決める（既定 `./<slug>.html`、`$ARGUMENTS` にパスがあれば優先）。既存ファイルは上書き前に確認する
-2. `references/document-template.html` を読み、レイアウト・CSS・CSP・図の初期化・プレースホルダを把握する
+2. `references/document-template.html` を読み、レイアウト・CSS・CSP・図の読み込み・プレースホルダを把握する
 3. 内容を文脈別エスケープ（下表）に従って流し込む。コードは escape 後に `<pre><code>` へ入れる
 4. 説明に図が要る箇所へ Mermaid を作図し `<figure>` + `<figcaption>` で置く
 5. 単一 `.html` として書き出す
@@ -54,10 +54,11 @@ argument-hint: "[topic | output-path.html]"
 - 図は `<figure class="diagram"><pre class="mermaid">...</pre><figcaption>図N: ...</figcaption></figure>` で置く。`<pre>` にすると読込失敗・JS 無効時もソースが読める
 - ノードのラベルは要約した短文にする（長いログ・エラー文字列をそのまま貼らない）
 - `mindmap` / `timeline` は字下げに敏感。`<pre class="mermaid">` 内は相対インデントを揃え、末尾に空白だけの行を残さない
+- mermaid を更新する時は、テンプレート末尾の `<script src>` と CSP `script-src` のバージョンパス、`integrity`(SRI) を同時に差し替える（floating 版は SRI と両立しないため使わない）
 
 ## エスケープ
 
-埋め込むデータは文脈ごとにエスケープする。エスケープは唯一の防御ではなく、CSP がバックストップになる。
+埋め込むデータは文脈ごとにエスケープする。主目的は壊れた HTML を防ぐ描画衛生で、セキュリティは CSP がバックストップになる（`script-src` が inline 実行を止める）。
 
 | 文脈 | 規律 |
 | --- | --- |
@@ -69,19 +70,16 @@ argument-hint: "[topic | output-path.html]"
 
 ## Security Rules
 
-- CSP `<meta>`（`default-src 'none'` ベース）を消さない・緩めない
-- Mermaid は UMD を バージョン固定 + SRI(`integrity`) + `crossorigin="anonymous"` で読む。ESM core・SRI 無しは不可
-- 初期化は `securityLevel: 'strict'`（内蔵 DOMPurify が出力をサニタイズする主防御）。`loose` 化しない
-- init `<script>` は CSP の `sha256` とバイト一致が必須。**この 1 行は編集しない**。変える場合は `sha256` を再計算して CSP も合わせる
-- カタログ外の型・外部 icon/フォント取得・固定 CDN 以外の外部リソース（フォント/画像/解析/トラッキング）を足さない
-- inline イベントハンドラ・`javascript:` URL を使わない
+- CSP `<meta>` の外部送信の歯止め（`default-src 'none'` / `connect-src 'none'` 系）を消さない・緩めない
+- script は固定 CDN の mermaid だけ。`script-src` に他ホスト・`'unsafe-inline'`・hash を足さない（inline script 不可が XSS backstop）。Mermaid は SRI(`integrity`) + `crossorigin="anonymous"` 付き UMD で読み、読込だけで既定 `securityLevel:'strict'`（内蔵 DOMPurify）で自動描画する。`loose` 化する init を足さない
+- カタログ外の図種・外部 icon/フォント・固定 CDN 以外の外部リソース（画像/解析/トラッキング）を足さない。`javascript:` URL・inline イベントハンドラを使わない
 - 秘密情報（資格情報・トークン・PII）を含めない
 
 ## Style / Layout
 
 - コンテンツ幅 1400px の中央寄せ。CSS は inline `<style>` に持ち、コメント付きで調整しやすくする
-- 配色・タイポグラフィ等の調整は CSS のみで行う（init `<script>` には触れない）
-- 画像は既定で無効（`img-src 'none'`）。スクリーンショットが要る場合だけ CSP を `img-src data:` にし、inline base64 で埋める（他ディレクティブは据え置き）
+- 配色・タイポグラフィ等の調整は CSS のみで行う
+- 画像は既定で無効（`img-src 'none'`）。スクリーンショットが要る場合だけ CSP を `img-src data:` にし、inline base64 で埋める（connect/form/default 等の `'none'` は触らない）
 - 印刷/PDF を想定し、テンプレートの print CSS（色保持・改ページ回避）を保つ
 
 ## Safety Rules
