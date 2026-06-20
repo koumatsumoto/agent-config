@@ -6,112 +6,16 @@
   <meta name="referrer" content="no-referrer">
   <!--
     Content Security Policy（meta で有効なディレクティブのみ）。
-    - script-src: 固定 CDN の mermaid パスだけを許可。inline script は不可（hash も 'unsafe-inline' も付けない）。
-      本文にエスケープ漏れで <script> が混入しても CSP がブロックする backstop になる。
-    - connect-src 'none' / default-src 'none' が外部 fetch/XHR/beacon を全面遮断し、データ送信を止める。
-    - 画像が必要な場合のみ img-src を `img-src data:` に変える（inline base64。他のディレクティブは据え置き）。
+    - 図の操作（ホイール拡縮 / WebP 画像化）に inline script を使うため script-src に 'unsafe-inline' を許可。
+      固定 CDN の mermaid と inline script だけを許可し、外部ホストの script は読み込まない。
+    - img-src blob: は SVG を canvas で画像化する時のローカル blob 用（外部画像は読み込まない）。スクショを埋める時は data: を足す。
+    - connect-src 'none' / default-src 'none' が外部 fetch/XHR/beacon を全面遮断し、データ送信を止める（egress の歯止め）。
     - mermaid を更新する時は <script src> と script-src のバージョンパス、SRI(integrity) を同時に差し替える。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/; style-src 'self' 'unsafe-inline'; img-src 'none'; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/ 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src blob:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>ドキュメントタイトル</title>
-  <style>
-    /* ===== テーマ変数（配色やサイズの調整はここを起点に） ===== */
-    :root {
-      --content-width: 1400px;
-      --fg: #1f2328;
-      --fg-muted: #57606a;
-      --bg: #ffffff;
-      --bg-subtle: #f6f8fa;
-      --border: #d0d7de;
-      --accent: #0969da;
-      --note: #0969da;
-      --warning: #9a6700;
-      --important: #8250df;
-      --code-bg: #f6f8fa;
-      --radius: 6px;
-      --space: 16px;
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
-              "Noto Sans JP", Meiryo, sans-serif;
-      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-    }
-
-    /* ===== ベース ===== */
-    * { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; }
-    body {
-      margin: 0;
-      color: var(--fg);
-      background: var(--bg);
-      font-family: var(--font);
-      font-size: 16px;
-      line-height: 1.75;
-    }
-
-    /* ===== レイアウト（コンテンツ幅 1400px・中央寄せ） ===== */
-    .container {
-      width: var(--content-width);
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 40px 32px 80px;
-    }
-
-    /* ===== ヘッダ / フッタ ===== */
-    .doc-header { border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 32px; }
-    .doc-header h1 { margin: 0 0 8px; }
-    .doc-header .subtitle { margin: 0; color: var(--fg-muted); font-size: 1.05rem; }
-    .doc-header .meta { margin: 8px 0 0; color: var(--fg-muted); font-size: 0.875rem; }
-    .doc-footer { border-top: 1px solid var(--border); margin-top: 48px; padding-top: 16px; color: var(--fg-muted); font-size: 0.875rem; }
-
-    /* ===== 見出し階層（H1 は 1 つ、H2=セクション、H3=サブ） ===== */
-    h1 { font-size: 2rem; line-height: 1.3; }
-    h2 { font-size: 1.5rem; margin-top: 2em; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-    h3 { font-size: 1.2rem; margin-top: 1.6em; }
-    h2, h3 { scroll-margin-top: 16px; }
-
-    /* ===== 本文要素 ===== */
-    p, ul, ol { margin: 0 0 var(--space); }
-    li { margin: 4px 0; }
-    a { color: var(--accent); }
-    hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
-
-    /* ===== 目次（長文向け） ===== */
-    .toc { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 24px; margin-bottom: 32px; }
-    .toc strong { display: block; margin-bottom: 8px; }
-    .toc ul { margin: 0; padding-left: 20px; }
-
-    /* ===== テーブル ===== */
-    table { border-collapse: collapse; width: 100%; margin: 0 0 var(--space); }
-    th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
-    th { background: var(--bg-subtle); }
-    tbody tr:nth-child(even) { background: var(--bg-subtle); }
-
-    /* ===== コードブロック ===== */
-    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; overflow-x: auto; }
-    code { font-family: var(--mono); font-size: 0.9em; }
-    p code, li code, td code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
-    pre code { background: none; padding: 0; }
-
-    /* ===== Callout（note / warning / important） ===== */
-    .callout { border: 1px solid var(--border); border-left-width: 4px; border-radius: var(--radius); padding: 12px 16px; margin: 0 0 var(--space); background: var(--bg-subtle); }
-    .callout .callout-title { font-weight: 600; margin: 0 0 4px; }
-    .callout-note { border-left-color: var(--note); }
-    .callout-warning { border-left-color: var(--warning); }
-    .callout-important { border-left-color: var(--important); }
-
-    /* ===== 図（Mermaid） ===== */
-    figure.diagram { margin: 0 0 24px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); text-align: center; background: var(--bg); }
-    figure.diagram .mermaid { display: flex; justify-content: center; }
-    figure.diagram figcaption { margin-top: 10px; color: var(--fg-muted); font-size: 0.875rem; }
-
-    /* ===== 印刷 / PDF ===== */
-    @media print {
-      .toc { display: none; }
-      .container { width: auto; max-width: none; padding: 0; }
-      .callout { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      figure.diagram, pre, table, .callout { break-inside: avoid; page-break-inside: avoid; }
-      svg { max-width: 100%; height: auto; }
-    }
-  </style>
+  <!-- ビルドで document-template.css を <style> へ挿入する。内容作成時は本文だけ編集し、このマーカーは残す -->
+  <style>/* BUILD:INLINE document-template.css */</style>
 </head>
 <body>
   <div class="container">
@@ -183,7 +87,9 @@ flowchart TD
 
   </div>
 
-  <!-- Mermaid（UMD all-in-one を バージョン固定 + SRI で読み込む。読込だけで自動描画する: 既定 startOnLoad=true / securityLevel='strict' / htmlLabels=false。完全クライアント側で外部送信なし） -->
+  <!-- Mermaid（UMD all-in-one を バージョン固定 + SRI で読み込む。直後に挿入される document-template.js が初期化と図操作を行う。完全クライアント側で外部送信なし） -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js" integrity="sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF" crossorigin="anonymous"></script>
+  <!-- ビルドで document-template.js を <script> へ挿入する。このマーカーは残す -->
+  <script>/* BUILD:INLINE document-template.js */</script>
 </body>
 </html>
