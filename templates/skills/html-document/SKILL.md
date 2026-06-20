@@ -10,7 +10,7 @@ argument-hint: "[topic | output-path.html]"
 
 ## 責務 / 非責務
 
-- 担う: レイアウトと各要素の見た目（1400px・見出し・表・callout・コード・図のスタイル）、Mermaid 図の描き方、安全な HTML（CSP/SRI/エスケープ）、単一ファイル出力
+- 担う: レイアウトと各要素の見た目（1400px・見出し・表・callout・コード・図のスタイル）、Mermaid 図の描き方と操作（拡縮・画像化）、安全な HTML（CSP/SRI/エスケープ）、骨組み HTML に CSS/JS をビルド挿入した単一ファイル出力
 - 担わない: 文書の内容・章立て・見出し構成の意思決定（見出しレベルや TOC の要否を含む）、ジャンル別の書き方、本文生成。内容は呼び出し側が決める
 
 ## Context
@@ -20,20 +20,22 @@ argument-hint: "[topic | output-path.html]"
 
 ## Success Criteria
 
-- 単一 HTML（CSS を inline）で出力する
+- 骨組み HTML に CSS/図操作 script をビルド挿入した単一 HTML を出力する
 - コンテンツ幅 1400px の中央寄せで表示される
 - Mermaid 図はカタログの型のみ。外部への発信は固定 CDN の mermaid 取得だけ
-- 外部へのデータ送信が起きない（`connect-src 'none'` 等）。inline script は実行されない（XSS backstop）
+- 外部へのデータ送信が起きない（`connect-src 'none'`、script/img に外部ホストを持たない）
+- 図はホイールで拡縮・ドラッグ移動でき、PNG/WebP で別タブに開ける
 - ブラウザで開いて CSP 違反・SRI mismatch・実行時エラーが出ず、図が自動描画される
 
 ## Workflow
 
 1. 出力先を決める（既定 `./<slug>.html`、`$ARGUMENTS` にパスがあれば優先）。既存ファイルは上書き前に確認する
-2. `references/document-template.html` を読み、レイアウト・CSS・CSP・図の読み込み・プレースホルダを把握する
-3. 内容を文脈別エスケープ（下表）に従って流し込む。コードは escape 後に `<pre><code>` へ入れる
+2. `references/document-template.html`（骨組み: CSP・レイアウト・`BUILD:INLINE` マーカー）を読む。CSS/JS 本体は `document-template.css` / `document-template.js` にあり、本文作成では**読まなくてよい**（マーカーを残せばビルドで挿入される＝context を節約できる）
+3. 内容を文脈別エスケープ（下表）に従って本文へ流し込む。コードは escape 後に `<pre><code>` へ入れる。`BUILD:INLINE` マーカーは消さず残す
 4. 説明に図が要る箇所へ Mermaid を作図し `<figure>` + `<figcaption>` で置く
-5. 単一 `.html` として書き出す
-6. ブラウザで開いて検証し、出力パスを報告する
+5. マーカー入りの HTML を出力パスへ書き出す
+6. `python references/build.py <出力パス>` を実行し、CSS/JS を挿入して単一 HTML にビルドする
+7. ブラウザで開いて検証し、出力パスを報告する
 
 ## Diagram Guidance
 
@@ -54,11 +56,12 @@ argument-hint: "[topic | output-path.html]"
 - 図は `<figure class="diagram"><pre class="mermaid">...</pre><figcaption>図N: ...</figcaption></figure>` で置く。`<pre>` にすると読込失敗・JS 無効時もソースが読める
 - ノードのラベルは要約した短文にする（長いログ・エラー文字列をそのまま貼らない）
 - `mindmap` / `timeline` は字下げに敏感。`<pre class="mermaid">` 内は相対インデントを揃え、末尾に空白だけの行を残さない
+- `document-template.js` が各 `figure.diagram` にホイール拡縮・ドラッグ移動・PNG/WebP 別タブ表示を付ける。`figure class="diagram"` 構造を保てば自動で有効になる（個別のボタン markup は不要）。図ラベルは init の `htmlLabels:false` で SVG `<text>` 化し、canvas 汚染なしに PNG/WebP 化できるようにしている
 - mermaid を更新する時は、テンプレート末尾の `<script src>` と CSP `script-src` のバージョンパス、`integrity`(SRI) を同時に差し替える（floating 版は SRI と両立しないため使わない）
 
 ## エスケープ
 
-埋め込むデータは文脈ごとにエスケープする。主目的は壊れた HTML を防ぐ描画衛生で、セキュリティは CSP がバックストップになる（`script-src` が inline 実行を止める）。
+埋め込むデータは文脈ごとにエスケープする。`script-src` は図操作のため `'unsafe-inline'` を許可しており inline 実行を止めないので、エスケープ漏れはそのまま実行され得る。未信頼データを script・属性に流し込まない規律が重要。CSP は外部送信（`connect-src 'none'`）を止める egress バックストップを担う。
 
 | 文脈 | 規律 |
 | --- | --- |
@@ -70,16 +73,16 @@ argument-hint: "[topic | output-path.html]"
 
 ## Security Rules
 
-- CSP `<meta>` の外部送信の歯止め（`default-src 'none'` / `connect-src 'none'` 系）を消さない・緩めない
-- script は固定 CDN の mermaid だけ。`script-src` に他ホスト・`'unsafe-inline'`・hash を足さない（inline script 不可が XSS backstop）。Mermaid は SRI(`integrity`) + `crossorigin="anonymous"` 付き UMD で読み、読込だけで既定 `securityLevel:'strict'`（内蔵 DOMPurify）で自動描画する。`loose` 化する init を足さない
-- カタログ外の図種・外部 icon/フォント・固定 CDN 以外の外部リソース（画像/解析/トラッキング）を足さない。`javascript:` URL・inline イベントハンドラを使わない
+- CSP `<meta>` の外部送信の歯止め（`default-src 'none'` / `connect-src 'none'`、`img-src` は `blob:`(/`data:`) のみ、script/img に外部ホストを足さない）を消さない・緩めない。これが egress backstop の本体
+- script は固定 CDN の mermaid と図操作の inline script だけ。`script-src` に外部ホストを足さない。Mermaid は SRI(`integrity`) + `crossorigin="anonymous"` 付き UMD で読み、既定 `securityLevel:'strict'`（内蔵 DOMPurify）で自動描画する。`loose` 化しない
+- `'unsafe-inline'` を許可しているため inline script は XSS backstop にならない。未信頼データはエスケープして埋め、`javascript:` URL・inline イベントハンドラ・外部 icon/フォントは使わない
 - 秘密情報（資格情報・トークン・PII）を含めない
 
 ## Style / Layout
 
-- コンテンツ幅 1400px の中央寄せ。CSS は inline `<style>` に持ち、コメント付きで調整しやすくする
-- 配色・タイポグラフィ等の調整は CSS のみで行う
-- 画像は既定で無効（`img-src 'none'`）。スクリーンショットが要る場合だけ CSP を `img-src data:` にし、inline base64 で埋める（connect/form/default 等の `'none'` は触らない）
+- コンテンツ幅 1400px の中央寄せ。CSS は `document-template.css` にあり、ビルドで `<style>` に挿入される
+- 配色・タイポグラフィ等の調整は `document-template.css` で行う
+- 外部画像は無効（`img-src blob:` は図の画像化用のローカル blob のみ）。スクリーンショットを埋める場合は `img-src blob: data:` にし、inline base64 で埋める（connect/form/default 等の `'none'` は触らない）
 - 印刷/PDF を想定し、テンプレートの print CSS（色保持・改ページ回避）を保つ
 
 ## Safety Rules
