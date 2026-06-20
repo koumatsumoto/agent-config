@@ -1,19 +1,19 @@
 """Guards the security invariants of the km:html-document HTML template.
 
 The template ships as a skeleton (document-template.html) plus separate asset
-files (document-template.css, document-template.js) that build.py inlines into a
+files (document-template.css, document-template.js) that build.js inlines into a
 single self-contained report. The diagram tools (wheel zoom, drag, PNG/WebP
 export) run as an inline script, so script-src allows 'unsafe-inline' — the
 security floor here is no external egress, not inline-script blocking.
 
-These tests assemble the real output (via build.py) and fail fast when an egress
-control is dropped or widened to a remote host (a report must not phone home):
-default-src and connect-src must stay 'none', img-src must stay local
-(blob:/data:), and the only remote host script-src/img-src may name is the pinned
-Mermaid CDN. They also fail when the build markers go missing or a Mermaid version
-bump leaves the CSP script-src path out of sync with the <script src> URL.
-Verifying that the SRI sha384 matches the CDN bytes needs the network and is out
-of scope here, so a version bump still requires a manual SRI recompute.
+These tests assemble the real output and fail fast when an egress control is
+dropped or widened to a remote host (a report must not phone home): default-src
+and connect-src must stay 'none', img-src must stay local (blob:/data:), and the
+only remote host script-src/img-src may name is the pinned Mermaid CDN. They also
+fail when the build markers go missing or a Mermaid version bump leaves the CSP
+script-src path out of sync with the <script src> URL. Verifying that the SRI
+sha384 matches the CDN bytes needs the network and is out of scope here, so a
+version bump still requires a manual SRI recompute.
 
 Run with the scripts/ dir as the top-level import root:
     python3 -m unittest discover -s scripts/tests -t scripts
@@ -21,8 +21,10 @@ Run with the scripts/ dir as the top-level import root:
 
 from __future__ import annotations
 
-import importlib.util
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -36,15 +38,16 @@ REF = (
 SKELETON = REF / "document-template.html"
 CSS = REF / "document-template.css"
 JS = REF / "document-template.js"
-BUILD = REF / "build.py"
+BUILD_JS = REF / "build.js"
+
+# Must match the markers in build.js and the skeleton.
+CSS_MARKER = "/* BUILD:INLINE document-template.css */"
+JS_MARKER = "/* BUILD:INLINE document-template.js */"
 
 
-def _load_build():
-    spec = importlib.util.spec_from_file_location("html_document_build", BUILD)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def _assemble(skeleton: str, css: str, js: str) -> str:
+    """build.js と同じ素朴な置換でアセンブルした出力を返す（不変条件チェック用）。"""
+    return skeleton.replace(CSS_MARKER, css).replace(JS_MARKER, js)
 
 
 class HtmlDocumentTemplateTests(unittest.TestCase):
@@ -53,31 +56,49 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
         cls.skeleton = SKELETON.read_text(encoding="utf-8")
         cls.css = CSS.read_text(encoding="utf-8")
         cls.js = JS.read_text(encoding="utf-8")
-        cls.build = _load_build()
         # The real artifact is the assembled single file; assert invariants on it.
-        cls.html = cls.build.build(cls.skeleton, cls.css, cls.js)
+        cls.html = _assemble(cls.skeleton, cls.css, cls.js)
 
     def test_sources_exist(self) -> None:
-        for path in (SKELETON, CSS, JS, BUILD):
+        for path in (SKELETON, CSS, JS, BUILD_JS):
             self.assertTrue(path.is_file(), f"missing template source: {path}")
 
     def test_skeleton_keeps_build_markers(self) -> None:
-        # The skeleton must keep both markers so build.py can inline the assets.
+        # The skeleton must keep both markers so build.js can inline the assets.
         # The agent edits body content only and leaves these in place.
-        self.assertIn(self.build.CSS_MARKER, self.skeleton, "CSS build marker missing")
-        self.assertIn(self.build.JS_MARKER, self.skeleton, "JS build marker missing")
+        self.assertIn(CSS_MARKER, self.skeleton, "CSS build marker missing")
+        self.assertIn(JS_MARKER, self.skeleton, "JS build marker missing")
 
-    def test_build_inlines_assets_and_consumes_markers(self) -> None:
-        # After build the single file carries the css/js and no leftover markers.
-        self.assertNotIn("BUILD:INLINE", self.html, "build left an un-inlined marker")
+    def test_assembly_consumes_markers(self) -> None:
+        # After assembly the single file carries the css/js and no leftover markers.
+        self.assertNotIn("BUILD:INLINE", self.html, "assembly left an un-inlined marker")
         self.assertIn("--content-width: 1400px", self.html, "css not inlined")
         self.assertIn("mermaid.initialize", self.html, "js (mermaid init) not inlined")
 
-    def test_build_requires_markers(self) -> None:
-        # build() must fail loudly if a marker is absent, so a broken skeleton is
+    @unittest.skipUnless(shutil.which("node"), "node not available")
+    def test_build_js_matches_assembly(self) -> None:
+        # build.js must produce exactly the assembled output (no markers left).
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out.html"
+            out.write_text(self.skeleton, encoding="utf-8")
+            subprocess.run(
+                ["node", str(BUILD_JS), str(out)], check=True, capture_output=True
+            )
+            built = out.read_text(encoding="utf-8")
+        self.assertNotIn("BUILD:INLINE", built)
+        self.assertEqual(built, self.html, "build.js output diverges from assembly")
+
+    @unittest.skipUnless(shutil.which("node"), "node not available")
+    def test_build_js_requires_markers(self) -> None:
+        # build.js must fail loudly when a marker is absent, so a broken skeleton is
         # caught at build time rather than silently shipping an unstyled report.
-        with self.assertRaises(ValueError):
-            self.build.build("<html>no markers</html>", self.css, self.js)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out.html"
+            out.write_text("<html>no markers</html>", encoding="utf-8")
+            result = subprocess.run(
+                ["node", str(BUILD_JS), str(out)], capture_output=True
+            )
+        self.assertNotEqual(result.returncode, 0, "build.js should fail on missing markers")
 
     def test_security_tokens_present(self) -> None:
         required = [

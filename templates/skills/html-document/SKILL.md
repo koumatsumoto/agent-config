@@ -34,7 +34,7 @@ argument-hint: "[topic | output-path.html]"
 3. 内容を文脈別エスケープ（下表）に従って本文へ流し込む。コードは escape 後に `<pre><code>` へ入れる。`BUILD:INLINE` マーカーは消さず残す
 4. 説明に図が要る箇所へ Mermaid を作図し `<figure>` + `<figcaption>` で置く
 5. マーカー入りの HTML を出力パスへ書き出す
-6. `python references/build.py <出力パス>` を実行し、CSS/JS を挿入して単一 HTML にビルドする
+6. `node references/build.js <出力パス>` を実行し、CSS/JS を挿入して単一 HTML にビルドする
 7. ブラウザで開いて検証し、出力パスを報告する
 
 ## Diagram Guidance
