@@ -68,8 +68,11 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     let drag = null;
     fig.addEventListener('pointerdown', (e) => {
       if (e.target.closest('.diagram-tools')) return;
+      // 図ラベル・キャプションのテキスト上では選択を優先し pan しない。余白・ノード・エッジ上だけ pan する
+      if (e.target.closest('text, tspan, foreignObject, figcaption')) return;
+      e.preventDefault(); // 余白からのドラッグでテキスト選択が始まるのを抑止する
       drag = { x: e.clientX - view.x, y: e.clientY - view.y };
-      fig.setPointerCapture(e.pointerId);
+      try { fig.setPointerCapture(e.pointerId); } catch (_) { /* 非アクティブな pointer は無視 */ }
       fig.classList.add('grabbing');
     });
     fig.addEventListener('pointermove', (e) => {
