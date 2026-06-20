@@ -20,7 +20,11 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     const clone = svg.cloneNode(true);
     clone.setAttribute('width', w);
     clone.setAttribute('height', h);
-    clone.style.transform = 'none'; // 画面表示用の拡縮を画像へ持ち込まない
+    // 画面表示用のズーム/パン（inline の width/height/maxWidth/transform）を画像へ持ち込まない
+    clone.style.width = '';
+    clone.style.height = '';
+    clone.style.maxWidth = '';
+    clone.style.transform = 'none';
     const xml = new XMLSerializer().serializeToString(clone);
     const svgUrl = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
     const img = new Image();
@@ -53,9 +57,21 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     if (fig.dataset.enhanced) return;
     fig.dataset.enhanced = '1';
     const view = { scale: 1, x: 0, y: 0 };
+    let base = null; // scale=1 の自然サイズ（初回 apply で記録）
     const apply = () => {
       const svg = fig.querySelector('svg');
-      if (svg) svg.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+      if (!svg) return;
+      if (!base) {
+        const r = svg.getBoundingClientRect();
+        if (r.width < 1) return; // まだ描画されていない
+        base = { w: r.width, h: r.height };
+        svg.style.maxWidth = 'none'; // 拡大時に mermaid の max-width で頭打ちさせない
+      }
+      // ズームは表示サイズ（width/height）で行う → SVG ベクタが解像度に追従し、文字が拡大してもぼけない
+      svg.style.width = (base.w * view.scale) + 'px';
+      svg.style.height = (base.h * view.scale) + 'px';
+      // パンは translate（リサンプルされないので鮮明なまま）
+      svg.style.transform = `translate(${view.x}px, ${view.y}px)`;
     };
     const reset = () => { view.scale = 1; view.x = 0; view.y = 0; apply(); };
 

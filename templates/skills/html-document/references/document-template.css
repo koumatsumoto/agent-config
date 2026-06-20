@@ -89,7 +89,7 @@ figure.diagram .mermaid { display: flex; justify-content: center; cursor: grab; 
 figure.diagram.grabbing .mermaid { cursor: grabbing; }
 figure.diagram svg text { cursor: text; } /* ラベル上はテキスト選択カーソル（余白・ノードは grab で pan） */
 figure.diagram.grabbing { user-select: none; -webkit-user-select: none; } /* pan 中だけ選択を抑止し、通常はテキスト選択可 */
-figure.diagram svg { transform-origin: center center; transition: transform .06s ease-out; will-change: transform; }
+figure.diagram svg { transition: transform .06s ease-out; will-change: transform; flex-shrink: 0; } /* ズームは width/height で行う（ベクタ再描画で鮮明）。flex で縮めない */
 figure.diagram figcaption { margin-top: 10px; color: var(--fg-muted); font-size: 0.875rem; }
 /* 図ごとのツールバー（hover で表示）。JS が動的に挿入する */
 .diagram-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
