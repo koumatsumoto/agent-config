@@ -81,6 +81,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     };
     const reset = () => { view.scale = 1; view.x = 0; view.y = 0; apply(); };
 
+    // 素のホイールで拡縮する（意図的な設計）。図上ではページスクロールより拡縮を優先する
     fig.addEventListener('wheel', (e) => {
       e.preventDefault();
       view.scale = clamp(view.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.2, 8);
