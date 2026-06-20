@@ -6,12 +6,14 @@ single self-contained report. The diagram tools (wheel zoom, drag, PNG/WebP
 export) run as an inline script, so script-src allows 'unsafe-inline' — the
 security floor here is no external egress, not inline-script blocking.
 
-These tests assemble the real output and fail fast when an egress control is
-dropped or widened to a remote host (a report must not phone home): default-src
-and connect-src must stay 'none', img-src must stay local (blob:/data:), and the
-only remote host script-src/img-src may name is the pinned Mermaid CDN. They also
-fail when the build markers go missing or a Mermaid version bump leaves the CSP
-script-src path out of sync with the <script src> URL. Verifying that the SRI
+These tests assemble the real output and fail fast when a passive-egress control
+is dropped or widened to a remote host: default-src and connect-src must stay
+'none', img-src must stay local (blob:/data:), and the only remote host
+script-src/img-src may name is the pinned Mermaid CDN. (Top-level navigation is
+not blockable by a meta CSP, so escaping untrusted content is the primary defense
+— see authoring-guide.md.) They also fail when the build markers go missing or a
+Mermaid version bump leaves the CSP script-src path out of sync with the
+<script src> URL. Verifying that the SRI
 sha384 matches the CDN bytes needs the network and is out of scope here, so a
 version bump still requires a manual SRI recompute.
 
@@ -40,14 +42,25 @@ CSS = REF / "document-template.css"
 JS = REF / "document-template.js"
 BUILD_JS = REF / "build.js"
 
-# Must match the markers in build.js and the skeleton.
-CSS_MARKER = "/* BUILD:INLINE document-template.css */"
-JS_MARKER = "/* BUILD:INLINE document-template.js */"
+def _marker(name: str) -> str:
+    # build.js を真実源にしてマーカー定数を抽出する（テスト側に複製して drift させない）。
+    src = BUILD_JS.read_text(encoding="utf-8")
+    match = re.search(rf"{name} = '([^']*)'", src)
+    assert match is not None, f"{name} not found in build.js"
+    return match.group(1)
+
+
+CSS_MARKER = _marker("CSS_MARKER")
+JS_MARKER = _marker("JS_MARKER")
 
 
 def _assemble(skeleton: str, css: str, js: str) -> str:
-    """build.js と同じ素朴な置換でアセンブルした出力を返す（不変条件チェック用）。"""
-    return skeleton.replace(CSS_MARKER, css).replace(JS_MARKER, js)
+    """build.js と同じく <style>/<script> タグごと置換してアセンブルする（不変条件チェック用）。"""
+    css_tag = f"<style>{CSS_MARKER}</style>"
+    js_tag = f"<script>{JS_MARKER}</script>"
+    return skeleton.replace(css_tag, f"<style>\n{css}\n</style>").replace(
+        js_tag, f"<script>\n{js}\n</script>"
+    )
 
 
 class HtmlDocumentTemplateTests(unittest.TestCase):
@@ -64,10 +77,10 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
             self.assertTrue(path.is_file(), f"missing template source: {path}")
 
     def test_skeleton_keeps_build_markers(self) -> None:
-        # The skeleton must keep both markers so build.js can inline the assets.
-        # The agent edits body content only and leaves these in place.
-        self.assertIn(CSS_MARKER, self.skeleton, "CSS build marker missing")
-        self.assertIn(JS_MARKER, self.skeleton, "JS build marker missing")
+        # The skeleton must keep both placeholders (marker wrapped in its tag) so
+        # build.js can inline the assets. The agent edits body content only.
+        self.assertIn(f"<style>{CSS_MARKER}</style>", self.skeleton, "CSS build placeholder missing")
+        self.assertIn(f"<script>{JS_MARKER}</script>", self.skeleton, "JS build placeholder missing")
 
     def test_assembly_consumes_markers(self) -> None:
         # After assembly the single file carries the css/js and no leftover markers.
@@ -152,10 +165,17 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
         )
         self.assertIsNotNone(csp_match, "CSP meta tag not found")
         csp = csp_match.group(1)
-        self.assertIn("default-src 'none'", csp, "default-src must stay 'none'")
-        self.assertIn(
-            "connect-src 'none'", csp, "connect-src must stay 'none' (no fetch/XHR/beacon)"
-        )
+        # Token-level check: `'none'` only blocks when it is the sole source. A
+        # substring assert would pass `connect-src 'none' https://evil.com`, so
+        # require the directive value to be exactly {'none'}.
+        for directive in ("default-src", "connect-src"):
+            m = re.search(rf"{directive} ([^;]*)", csp)
+            self.assertIsNotNone(m, f"CSP has no {directive} directive")
+            self.assertEqual(
+                set(m.group(1).split()),
+                {"'none'"},
+                f"{directive} must be exactly 'none' (no extra/remote source)",
+            )
         # img-src may allow local blob:/data: for canvas export, but no remote host.
         img = re.search(r"img-src ([^;]*)", csp)
         self.assertIsNotNone(img, "CSP has no img-src directive")

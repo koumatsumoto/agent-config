@@ -40,7 +40,7 @@
 
 - CSP `<meta>` の外部送信の歯止め（`default-src 'none'` / `connect-src 'none'`、`img-src` は `blob:`(/`data:`) のみ、script/img に外部ホストを足さない）を消さない・緩めない。これが egress backstop の本体
 - script は固定 CDN の mermaid と図操作の inline script だけ。`script-src` に外部ホストを足さない。Mermaid は SRI(`integrity`) + `crossorigin="anonymous"` 付き UMD で読み、既定 `securityLevel:'strict'`（内蔵 DOMPurify）で自動描画する。`loose` 化しない
-- `'unsafe-inline'` を許可しているため inline script は XSS backstop にならない。未信頼データはエスケープして埋め、`javascript:` URL・inline イベントハンドラ・外部 icon/フォントは使わない
+- `'unsafe-inline'` を許可しているため inline script は XSS backstop にならない。`connect-src 'none'` 等は fetch/XHR/beacon と外部 img/script を塞ぐが、top-level navigation（`location` 変更・`window.open` の外部 URL）は meta CSP では塞げない。未信頼データを埋める運用では**エスケープ規律が一次防御線**（CSP は受動経路の backstop）。`javascript:` URL・inline イベントハンドラ・外部 icon/フォントは使わない
 - 秘密情報（資格情報・トークン・PII）を含めない
 
 ## スタイル / レイアウト

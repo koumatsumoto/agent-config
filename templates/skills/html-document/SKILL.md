@@ -39,7 +39,7 @@ argument-hint: "[topic | output-path.html]"
 
 - 骨組み HTML に CSS/図操作 script をビルド挿入した単一 HTML を出力する
 - コンテンツ幅 1400px・中央寄せで表示される
-- 外部へのデータ送信が起きない（`connect-src 'none'`、script/img に外部ホストを持たない）
+- 受動的な外部送信（fetch/XHR/beacon・外部 img/script）が起きない（`connect-src 'none'` 等、script/img に外部ホストを持たない）
 - 図が自動描画され、ホイール拡縮・ドラッグ移動でき、WebP で別タブに開ける
 - ブラウザで開いて CSP 違反・SRI mismatch・実行時エラーが出ない
 

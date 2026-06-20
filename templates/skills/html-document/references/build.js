@@ -19,12 +19,15 @@ const HERE = __dirname;
 const CSS_MARKER = '/* BUILD:INLINE document-template.css */';
 const JS_MARKER = '/* BUILD:INLINE document-template.js */';
 
-// マーカーを CSS / JS 本体で置換した単一 HTML を返す。マーカーが無ければ失敗させる。
+// マーカーを CSS / JS 本体で置換した単一 HTML を返す。プレースホルダが無ければ失敗させる。
+// <style>/<script> タグごとアンカーするので、本文に同じコメント文字列が現れても巻き込まない。
 // split/join で置換し、$ を含む JS（テンプレートリテラルの ${...}）が特殊置換として解釈されるのを避ける。
 function build(html, css, js) {
-  if (!html.includes(CSS_MARKER)) throw new Error(`CSS marker not found: ${CSS_MARKER}`);
-  if (!html.includes(JS_MARKER)) throw new Error(`JS marker not found: ${JS_MARKER}`);
-  return html.split(CSS_MARKER).join(css).split(JS_MARKER).join(js);
+  const cssTag = `<style>${CSS_MARKER}</style>`;
+  const jsTag = `<script>${JS_MARKER}</script>`;
+  if (!html.includes(cssTag)) throw new Error(`CSS placeholder not found: ${cssTag}`);
+  if (!html.includes(jsTag)) throw new Error(`JS placeholder not found: ${jsTag}`);
+  return html.split(cssTag).join(`<style>\n${css}\n</style>`).split(jsTag).join(`<script>\n${js}\n</script>`);
 }
 
 function main(argv) {
