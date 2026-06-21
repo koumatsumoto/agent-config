@@ -106,6 +106,7 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "code-review",
     "doc-review",
     "intent-review",
+    "open-html",
     "quality-review",
     "review-loop",
 )
