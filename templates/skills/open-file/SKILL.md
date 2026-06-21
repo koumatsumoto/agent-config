@@ -14,6 +14,8 @@ argument-hint: "[path]"
 - **`.html` / `.htm`**: 拡張子の関連付けで既定ブラウザに描画する
 - **その他のファイル**: 実行せず、Explorer で選択表示（reveal）するだけにとどめる
 
+入力パスは **Linux 形式（`/home/...`, `./x`）でも Windows 形式（`C:\...`, `C:/...`, `\\...`）でも**受け付ける。Windows 形式は先頭で Linux パスへ正規化し、存在確認・種別判定は Linux パスで行う。
+
 ## Context
 
 - Platform: !`uname -sr 2>/dev/null || echo unknown`
@@ -26,7 +28,7 @@ argument-hint: "[path]"
 
 ## Workflow
 
-1. 対象を決める（`$ARGUMENTS` のパス、無ければ直近に生成・言及したファイル）
+1. 対象を決める（`$ARGUMENTS` のパス、無ければ直近に生成・言及したファイル）。Windows 形式パスは Linux パスへ正規化する
 2. 対象が**存在する**ことを確認する。無ければ開かずに知らせる
 3. 環境を判定する（WSL / Windows / それ以外）
 4. 環境に応じて開く（下記）。開けたら絶対パスを添えて報告する
@@ -35,10 +37,15 @@ argument-hint: "[path]"
 
 ### WSL (Ubuntu)
 
-Windows パスへ変換し、種類に応じて `explorer.exe` に渡す。
+入力を Linux パスへ正規化し、種類に応じて Windows パスへ変換して `explorer.exe` に渡す。
 
 ```bash
-target="<target>"
+input="<input>"
+# 入力が Windows 形式なら Linux パスへ正規化する（以降は Linux パスで解決）
+case "$input" in
+  [A-Za-z]:[\\/]* | *\\*) target="$(wslpath -u -- "$input")" ;;
+  *)                      target="$input" ;;
+esac
 [ -e "$target" ] || { echo "open-file: not found -> $target" >&2; exit 1; }
 winpath="$(wslpath -w -- "$target")" || { echo "open-file: path 変換に失敗 -> $target" >&2; exit 1; }
 if [ -d "$target" ]; then
@@ -50,7 +57,8 @@ else
 fi
 ```
 
-- `-- ` で `target` をオプションと解釈させない（先頭 `-` のファイル名対策）
+- 入力判定: `C:\…` / `C:/…`（ドライブ）・`\\…`（UNC）・バックスラッシュを含むものを Windows 形式とみなし `wslpath -u` で正規化する
+- `-- ` で `input` / `target` をオプションと解釈させない（先頭 `-` のファイル名対策）
 - `winpath="$(...)" || { … }` で変換失敗を終了コードで検知する。関数内で `local` と同じ行に代入すると終了コードが隠れるため、その場合は宣言と代入を分ける
 - `explorer.exe` は成功時でも非 0 を返すことがある。終了コードではなく開いたかどうかで判断する
 
@@ -65,8 +73,9 @@ start "" "<file>"
 explorer /select,"<winpath>"
 ```
 
+- 入力が Windows 形式なら `cygpath -u -- "<input>"` で Linux パス（MSYS 形式 `/c/...`）へ正規化してから存在確認する（WSL の `wslpath -u` と同じ役割）
 - 渡す前に対象が存在することを確認する（WSL と同じ）
-- パスが MSYS 形式（`/c/...`）なら `cygpath -w -- "<path>"` で Windows パスへ変換してから渡す（`-- ` で先頭 `-` のファイル名対策）
+- 開く直前に `cygpath -w -- "<path>"` で Windows パスへ変換してから渡す（`-- ` で先頭 `-` のファイル名対策）
 
 ## Safety Rules
 
