@@ -14,6 +14,7 @@ argument-hint: "[target] [level]"
 
 - 変更タイプと対象スコープに応じた Phase / レビュアを正しく選ぶ
 - コードレビュー層 (Phase 2 + Phase 3 の architect / security / adversary) を Phase 4 で統合し、CRITICAL または HIGH があれば BLOCKED とする
+- `PASS` を出す前に見落としを能動的に反証する (Phase 4 の能動的検証・PASS 反証)。ただし裏づけのない疑いで BLOCKED を量産しない
 - doc-review (Phase 5) はコードが解消された最終状態に対して実施する
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
 
@@ -97,7 +98,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 
 ### 起動方法
 
-実行環境の subagent 機構で 3 名を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書く。`<role>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
+実行環境の subagent 機構で 3 名を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。3 名は **最上位 model (Opus 等) + 高 effort で起動する** (Claude Code は Task tool の model override、Codex CLI は同等指定)。Phase 3 は `thorough` / 高リスク昇格時のみ起動されるため、常時最上位による主力レビュアのコスト増は構造的に限定される。harness で effort を直接指定できない場合も可能な範囲で高く保ち、実挙動を確認する。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書く。`<role>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
 
 ```
 あなたは km:review Phase 3 の <role> レビュアです。
@@ -118,13 +119,13 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 ## 既知情報
 - 意図情報 (km:plan issue 本文 / 会話文脈):
   <intent または "no intent context">
-  intent がある場合は「diff が intent を達成しているか」を担当観点で 1 行コメントする
+  intent がある場合は「diff が intent を達成しているか」を担当観点で 1 行コメントする。**具体的・反証可能な DoD / 完了条件が与えられていれば、それを goal anchor として信頼し** (km:review 側で完了条件を再導出・拡張しない)、diff が DoD を満たすかだけを軽く確認する
 
 ## 失敗ケースの扱い
 - 該当観点なし: report-format.md の「指摘ゼロ時」フォーマット
 - context 不足で判定しきれない: 「判定保留」セクションに「何があれば判定できるか」を書く
 - diff が大きすぎる: 担当観点に該当しそうな箇所だけ深掘り、それ以外は判定保留
-- diff から判定するために repo 内の近隣ファイル (middleware / interceptor / 類似 endpoint) が必要なら最大 5 個まで Read してよい
+- diff から判定するために repo 内の近隣ファイルが必要なら、**判定に必要なだけ Read してよい** (固定上限なし。context budget を見て調整)。優先順位は ①該当コードの呼び出し元 / 呼び出し先 ②既存テスト ③同種の既存実装 ④関連 middleware / interceptor。**「判定保留」にする前に「あと何を読めば確定するか」を必ず一度試す**。脱線・budget 超過は避ける
 
 ## 出力形式
 `<review skill root>/experts/report-format.md` に従う。判定基準・確信度・役割固有の補足はすべてそこに集約されている。
@@ -146,13 +147,21 @@ Phase 2 ↔ architect の住み分けは `references/scope-alignment.md` に集�
 
 ## Phase 4: 統合 + コミット判定 (main コンテキスト)
 
-Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテキストで統合する。
+Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテキストで統合する。レビューの最大コストは false negative (見落とし) なので、main コンテキストの能力 (ツール実行・長コンテキスト・自己反証) を **誤った PASS を出さないこと** に使う。
 
 1. **中央 dedup**: 全所見を `(file, ±5 行, 根本原因)` でグルーピングし、同一欠陥を別角度から記述したものも束ね、最も証拠の濃い所見を残して併合注記する。判定基準は `<review skill root>/integration-report.md` の「中央 dedup ルール」。
-2. **偽陽性確認**: 各 CRITICAL/HIGH が diff から具体的に裏づくかを確認し、裏づかない指摘は降格する (substantiation チェック)。
-3. **completeness チェック**: 全所見を俯瞰し、未検査の観点が無いかを 1 パスで確認する。
-4. **判定**: 重大度を合算し、CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS`。
-5. intent context があれば各レビュアの「intent 整合 1 行コメント」を統合サマリーに含める。
+2. **偽陽性確認 (substantiation)**: 各 CRITICAL/HIGH が diff から具体的に裏づくかを確認し、裏づかない指摘は降格する。
+3. **能動的検証** (`thorough` / 高リスク昇格時、**HIGH 以上の `[possible]` / `[likely]` のみ**): read-only 静的推測で止まっている HIGH 以上を main コンテキストで軽量に実証し確定 / 棄却する。手段は ①呼び出し元 / 先を辿る ②既存テストを走らせる (非破壊で安全なときのみ) ③最小再現を組む。`[possible]` → `[confirmed]` に格上げ、裏づかなければ降格 / drop。確定 / 棄却に必要な分だけ行う (深掘りしすぎない)。Phase 3 subagent は read-only 推測のまま据え置き、確定はここに集約する。
+4. **暫定判定**: 重大度を合算し、CRITICAL/HIGH があれば `BLOCKED`、なければ `PASS` 候補。
+5. **completeness**:
+   - **`PASS` 候補のとき (見落としを能動的に反証する)**:
+     1. この diff が **実際に触れた surface** を短く列挙する (公開 API・契約 / 状態・データ移動 / IO・信頼境界 / 認証認可 / 並行・時間 のうち該当軸だけ)。永続化・全レビュアへの共有はせず、本手順の思考補助に限る
+     2. 全所見を一旦伏せて diff を独立に 1 パスし、「全レビュアが見逃した CRITICAL/HIGH が隠れているなら **どの surface か** / なぜ 3 独立レビュア + Phase 2 が揃って見逃しうるか」を問う (anchoring 回避)
+     3. **具体的に潜みうる箇所を名指せたら**、`thorough` / 高リスク時は手順 3 の能動的検証で確定 / 棄却する。確定すれば正規所見に追加し `BLOCKED` に更新。安価に解決できない (または検証手段がない level) ときは「確認推奨」ノート (重大度なし・件数に算入せず `PASS` は維持) に「何が分かれば PASS を覆せるか」を 1 行記録する
+   - **`BLOCKED` のとき**: 既に直すものがあるため、全所見を俯瞰し未検査の観点が無いかを 1 パスで確認するに留める
+   - **歯止め (BLOCKED inflation 防止)**: 既定出力は「未カバー surface / 確認推奨ノート」。`BLOCKED` への昇格は **裏づけ済みの確定所見のみ**。**具体的な潜伏箇所を名指せないなら何も出さない** (裏づけのない疑いを重大度付き所見として量産しない)
+6. **確定判定**: 手順 5 の結果を反映して `BLOCKED` / `PASS` を確定する。
+7. **intent 整合**: intent context があれば各レビュアの intent コメントを統合サマリーに含める。**具体的・反証可能な DoD があれば goal anchor として信頼**し diff ↔ DoD の対応を軽く確認する (完了条件を km:review 側で再導出・拡張しない)。
 
 統合レポート末尾に **優先順位付きアクションリスト** を生成する:
 
@@ -198,7 +207,7 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 - `test-or-config-or-chore-only` → Phase 3 / Phase 5 skip (Phase 2 + Phase 4 のみ)
 - **内容ベースの昇格は降格に優先する**: `quick` / `standard` でも diff が高リスク領域 (Phase 3 の「内容ベースの昇格」参照) に触れるなら、該当専門家を起動する。`test-or-config-or-chore-only` でも、その変更が高リスク (CI 権限・デプロイ・秘密情報など) なら同様に昇格してよい
 
-`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。
+`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス + 確認推奨ノート) は安価なため全レベルで行うが、確認推奨ノートは非ブロッキングで判定を変えない。
 
 ## 指摘対応の方針
 
