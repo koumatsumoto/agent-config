@@ -53,7 +53,7 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 **複合依頼の優先度**:
 
 - 「計画を作って PR まで」「計画を issue にして PR にして」= 計画 + PR delivery → まず `km:plan` で issue 化まで行い、その issue 番号で `km:github-workflow` を起動する。issue を作れずに停止した場合（非 GitHub / 未認証 / secret 検出 / CRITICAL 未収束）は handoff せず、停止理由を報告して判断を委ねる
-- 計画コンテキストの無い ad-hoc issue + PR delivery（「このバグの issue を起こして PR まで」など）→ `km:github-workflow` の `issue-first` mode に委ねる（km:plan は起動しない）
+- 計画コンテキストの無い ad-hoc issue + PR delivery（「このバグの issue を起こして PR まで」など）→ `km:github-workflow` に委ねる（km:plan は起動しない）
 
 ## Phase 1: Plan (clarify & mode)
 
