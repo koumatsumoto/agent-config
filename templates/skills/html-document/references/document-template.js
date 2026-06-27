@@ -5,7 +5,7 @@
 mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: false, flowchart: { htmlLabels: false } });
 
 // 図の操作（完全クライアント側・外部送信なし）。各 figure.diagram に付与する:
-// - マウスホイールで拡大 / 縮小、ドラッグで移動、ダブルクリックでリセット
+// - Ctrl+ホイールまたは ＋ / − ボタンで拡大 / 縮小、ドラッグで移動、ダブルクリック / リセットボタンで初期化
 // - WebP ボタンで SVG を canvas 経由のラスタ画像にして別タブで開く（ポップアップ抑止時はダウンロード）
 // mermaid は load 時に非同期描画するため、ハンドラは figure に張り SVG はイベント時に都度取得する（描画タイミングに依存しない）。
 (() => {
@@ -80,10 +80,12 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
       svg.style.transform = `translate(${view.x}px, ${view.y}px)`;
     };
     const reset = () => { view.scale = 1; view.x = 0; view.y = 0; apply(); };
+    const zoomBy = (factor) => { view.scale = clamp(view.scale * factor, 0.2, 8); apply(); };
 
-    // 素のホイールで拡縮する（意図的な設計）。図上ではページスクロールより拡縮を優先する
+    // 拡縮は Ctrl+ホイールに限定する。素のホイールはページスクロールに通し、図の上でもスクロールを妨げない
     fig.addEventListener('wheel', (e) => {
-      e.preventDefault();
+      if (!e.ctrlKey) return; // 素のホイールはページスクロールに任せる
+      e.preventDefault(); // ブラウザのページ全体ズームを抑止し、図だけを拡縮する
       view.scale = clamp(view.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.2, 8);
       apply();
     }, { passive: false });
@@ -127,16 +129,20 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
 
     const tools = document.createElement('div');
     tools.className = 'diagram-tools';
-    const addButton = (label, onClick) => {
+    const addButton = (label, onClick, title) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = label;
+      if (title) button.title = title;
       button.addEventListener('click', onClick);
       tools.appendChild(button);
     };
     const withSvg = (fn) => () => { const svg = fig.querySelector('svg'); if (svg) fn(svg); };
-    addButton('WebP', withSvg((svg) => openAsImage(svg, 'image/webp', 'webp')));
+    const zoomStep = 1.2;
+    addButton('−', () => zoomBy(1 / zoomStep), '縮小');
+    addButton('＋', () => zoomBy(zoomStep), '拡大');
     addButton('リセット', reset);
+    addButton('WebP', withSvg((svg) => openAsImage(svg, 'image/webp', 'webp')));
     fig.appendChild(tools);
   };
 

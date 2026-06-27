@@ -21,7 +21,7 @@
 - 図は `<figure class="diagram"><pre class="mermaid">...</pre><figcaption>図N: ...</figcaption></figure>` で置く。`<pre>` にすると読込失敗・JS 無効時もソースが読める
 - ノードのラベルは要約した短文にする（長いログ・エラー文字列をそのまま貼らない）
 - `mindmap` / `timeline` は字下げに敏感。`<pre class="mermaid">` 内は相対インデントを揃え、末尾に空白だけの行を残さない
-- `document-template.js` が各 `figure.diagram` にホイール拡縮・ドラッグ移動・WebP 別タブ表示を付ける。`figure class="diagram"` 構造を保てば自動で有効になる（個別のボタン markup は不要）。図ラベルは init の `htmlLabels:false` で SVG `<text>` 化し、canvas 汚染なしに WebP 化できるようにしている
+- `document-template.js` が各 `figure.diagram` に Ctrl+ホイール / ＋−ボタンでの拡縮・ドラッグ移動・WebP 別タブ表示を付ける。`figure class="diagram"` 構造を保てば自動で有効になる（個別のボタン markup は不要）。図ラベルは init の `htmlLabels:false` で SVG `<text>` 化し、canvas 汚染なしに WebP 化できるようにしている
 - mermaid を更新する時は、`document-template.html` の `<script src>` と CSP `script-src` のバージョンパス、`integrity`(SRI) を同時に差し替える（floating 版は SRI と両立しないため使わない）
 
 ## エスケープ

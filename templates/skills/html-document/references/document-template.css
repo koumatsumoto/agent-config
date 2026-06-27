@@ -83,7 +83,7 @@ pre code { background: none; padding: 0; }
 .callout-warning { border-left-color: var(--warning); }
 .callout-important { border-left-color: var(--important); }
 
-/* ===== 図（Mermaid）。ホイール拡縮・ドラッグ移動・画像化ツールバー付き ===== */
+/* ===== 図（Mermaid）。Ctrl+ホイール / ツールボタンで拡縮・ドラッグ移動・画像化ツールバー付き ===== */
 figure.diagram { position: relative; overflow: hidden; margin: 0 0 24px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); text-align: center; background: var(--bg); }
 figure.diagram .mermaid { display: flex; justify-content: center; cursor: grab; }
 figure.diagram.grabbing .mermaid { cursor: grabbing; }
