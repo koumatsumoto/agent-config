@@ -16,7 +16,7 @@
 - **intent への懐疑**: intent context があれば「この変更は本当に目的を達成しているか / そもそも正しいアプローチか」を疑い、達成していないことを示せるか試す
 - **テスト実在**: 変更の振る舞いを通すテストが実在するか (形式的テストでなく)
 
-担当 ISO/IEC 25010 特性 (1 機能適合性 / 4 インタラクション能力 / 5 信頼性) の reference (`<review skill root>/references/iso-25010/{1-functional-suitability,4-interaction-capability,5-reliability}.md`) は diff に関係するものだけ Read する。
+担当 ISO/IEC 25010 特性: 1 機能適合性 / 4 インタラクション能力 / 5 信頼性 を観点として当てる。
 
 ## 証拠と重大度
 

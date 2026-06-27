@@ -28,7 +28,7 @@
 
 ## Workflow
 
-着手前に `<review skill root>/experts/report-format.md` (判定・確信度・偽陽性フィルタ) を Read する。担当 ISO reference (`<review skill root>/references/iso-25010/{6-security,9-safety}.md`) は diff に関係するものだけ読み、判断保留や thorough 深掘りが必要な場合だけ担当 reference を追加で読む。
+着手前に `<review skill root>/experts/report-format.md` (判定・確信度・偽陽性フィルタ) を Read する。担当 ISO/IEC 25010 特性 (6 セキュリティ / 9 安全性、下表の副特性) を観点として当てる。
 
 レビュー手順:
 

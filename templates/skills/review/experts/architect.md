@@ -32,7 +32,7 @@
 
 ## Workflow
 
-着手前に `<review skill root>/experts/report-format.md` (判定・確信度・役割固有フィールド) と `<review skill root>/references/scope-alignment.md` (Phase 2 との住み分け) を Read する。担当 ISO reference (`<review skill root>/references/iso-25010/{2-performance-efficiency,3-compatibility,7-maintainability,8-flexibility}.md`) は diff に関係するものだけ読む。
+着手前に `<review skill root>/experts/report-format.md` (判定・確信度・役割固有フィールド) と `<review skill root>/references/scope-alignment.md` (Phase 2 との住み分け) を Read する。担当 ISO/IEC 25010 特性 (2 性能効率性 / 3 互換性 / 7 保守性 / 8 柔軟性、下表の副特性) を観点として当てる。
 
 レビュー手順:
 

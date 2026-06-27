@@ -109,7 +109,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 - 他レビュアの所見・全体の暫定判定は渡されません (独立レビュー)。レーンの扱い・偽陽性フィルタは report-format.md に従う。重複の集約は Phase 4 が行うので重複回避を予測しなくてよい
 
 ## Read 順序
-まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・役割固有フィールドを把握)、その後 diff を pre-scan する。<role>.md が担当 ISO reference を指す場合、`<review skill root>/references/iso-25010/<該当ファイル>.md` は判断に必要なものだけ Read する。
+まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・役割固有フィールドを把握)、その後 diff を pre-scan する。
 
 ## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>

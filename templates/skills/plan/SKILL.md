@@ -60,7 +60,7 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 1. repo と依頼内容を把握する。`$ARGUMENTS` は計画タイトル / 既存 issue 番号のヒントとして扱う。立案前に関連コード・既存実装・制約を**規模に応じて**調査する: 影響範囲が広い計画は **並行 Explore subagent** で関連箇所・制約を収集してから立案し、軽量な計画は過剰探索を避けて最小限の確認に留める（規模判断は Phase 3 step 2 の rubric と揃える）。subagent 非対応環境では直接 grep / read で調べる。収集した事実は **出典付き（`file:line` 等）** で計画の「依拠する前提」に残す（plan-template.md）
 2. Routing の entry mode を 1 つ決める（Plan Mode かどうか判別できない場合は安全側に倒して `draft-only` とする）
 3. `draft-only` なら質問・調査・下案作成を行い、計画下案を `<proposed_plan>`（チャット上の提示）として示して **停止する**。`.plan/` 書き込み・issue 化は一切行わない。停止時に「materialize / issue 化に進むには『.plan に出して』『計画を issue にして』と依頼する」と案内する
-4. materialize に進む mode では **Clarify Gate**: 計画の骨子（**Goal＝本質的に満たすべき要件・ビジネス価値**、Non-goal＝スコープ境界、合否判定できる受け入れ条件、主要トレードオフ）を左右する未決事項を解消する。要件を取り違えていないか・浅い理解で進めていないかを確かめ、**本質を固めて引き出してから**進む
+4. materialize に進む mode では **Clarify Gate**: 計画の骨子（Goal / Non-goal / 合否判定できる DoD / 主要トレードオフ。各々の定義は plan-template.md）を左右する未決事項を解消する。要件を取り違えていないか・浅い理解で進めていないかを確かめ、**本質を固めて引き出してから**進む
    - **計画を分岐させる未決だけ**を確認する。妥当な前提で進められるものは聞かない。確認は **選択肢 + 推奨案つきでまとめて 1 回**（構造化質問が使える環境では AskUserQuestion）で行い、往復を最小化する
    - 確認で固めた骨子は、計画冒頭の **Goal / Non-goal / Definition of Done anchor** に落とす（plan-template.md）。未解消のまま Phase 2 に進まない
 
