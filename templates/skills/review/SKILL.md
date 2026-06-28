@@ -8,13 +8,13 @@ argument-hint: "[target] [level]"
 
 # Review
 
-複数の review 観点を統合する **単発診断** の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
+複数の観点を統合する **単発診断** の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
 
 ## Success Criteria
 
 - 変更タイプと対象スコープに応じた Phase / レビュアを正しく選ぶ
 - コードレビュー層 (Phase 2 + Phase 3 の architect / security / adversary) を Phase 4 で統合し、CRITICAL または HIGH があれば BLOCKED とする
-- `PASS` を出す前に見落としを能動的に反証する (Phase 4 の能動的検証・PASS 反証)。ただし裏づけのない疑いで BLOCKED を量産しない
+- `PASS` を出す前に、見落としが無いかを能動的に検証する (Phase 4 の能動的検証・PASS 反証)。ただし裏づけのない疑いで BLOCKED を量産しない
 - doc-review (Phase 5) はコードが確定した最終状態に対して実施する
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
 
@@ -94,7 +94,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 ### `<review skill root>` プレースホルダの解決規約
 
-orchestrator (LLM) は実行環境の install root を `<review skill root>` の絶対パスとして解決する (Claude Code は `~/.claude/skills/review/`、Codex CLI は `.agents/skills/review/`)。この解決は (a) subagent に渡す prompt template の文字列、(b) **subagent / main コンテキストが Read する静的ファイル本文** のいずれにも適用される。subagent は静的ファイル本文の `<review skill root>` を読んだ際も自前で絶対パスに置換してから Read する。
+orchestrator (LLM) は実行環境の install root を `<review skill root>` の絶対パスとして解決する (Claude Code は `~/.claude/skills/review/`、Codex CLI は `~/.agents/skills/review/`。いずれも `~` を展開した絶対パスにする)。この解決は (a) subagent に渡す prompt template の文字列、(b) **subagent / main コンテキストが Read する静的ファイル本文** のいずれにも適用される。subagent は静的ファイル本文の `<review skill root>` を読んだ際も自前で絶対パスに置換してから Read する (相対パス・未展開の `~` は subagent の working directory 依存で Read が失敗する)。
 
 ### 起動方法
 
@@ -207,7 +207,7 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 - `test-or-config-or-chore-only` → Phase 3 / Phase 5 skip (Phase 2 + Phase 4 のみ)
 - **内容ベースの昇格は降格に優先する**: `quick` / `standard` でも diff が高リスク領域 (Phase 3 の「内容ベースの昇格」参照) に触れるなら、該当専門家を起動する。`test-or-config-or-chore-only` でも、その変更が高リスク (CI 権限・デプロイ・秘密情報など) なら同様に昇格してよい
 
-`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス + 確認推奨ノート) は安価なため全レベルで行うが、確認推奨ノートは非ブロッキングで判定を変えない。
+`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス) は安価なため全レベルで行う。そこで出る確認推奨ノートは非ブロッキングで判定を変えない。
 
 ## 指摘対応の方針
 

@@ -34,7 +34,7 @@ orchestrator から「変更ファイル一覧 + diff + 変更構成 + 実行 le
 
 ## 判定
 
-重大度は「今すぐ直す重さ」(`experts/report-format.md` と同尺度。Phase 2 は code-level の正しさに範囲を絞る): `CRITICAL` 即時悪用 / 重大インシデント / 即時データ損失、`HIGH` 明確なバグ・仕様回帰・危険な未検証入力、`MEDIUM` 設計不整合・保守性低下・テスト不足、`LOW` 小さな改善。CRITICAL/HIGH でも早期停止せず Phase 4 統合で BLOCKED 判定する。確信度ラベルは Phase 3 規約で、本 Phase は任意添付可。
+重大度は `experts/report-format.md` の 4 段階に従う (「今すぐ直す重さ」)。Phase 2 は code-level の正しさに範囲を絞る (長期保守を直撃する設計欠陥は architect、脅威は security が同尺度で別途評価)。CRITICAL/HIGH でも早期停止せず Phase 4 統合で BLOCKED 判定する。確信度ラベルは Phase 3 規約で、本 Phase は任意添付可。
 
 ## 出力フォーマット
 
