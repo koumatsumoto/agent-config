@@ -21,18 +21,9 @@
 
 切れ味は **意見の量でなく帰結の重さ** で出す。単純で動くコードに「pattern X を使うべき」と過剰な抽象化・早すぎる一般化を要求しない (repo の Build Working Code First に反する)。**不可逆 × 波及大** に該当しない限り踏み込まない。
 
-## 担当 ISO/IEC 25010:2023 特性
-
-| 特性 | 副特性 |
-|---|---|
-| 2 (性能効率性) | 時間効率性, 資源効率性, 容量充足性 |
-| 3 (互換性) | 共存性, 相互運用性 |
-| 7 (保守性) | モジュール性, 再利用性, 解析性, 修正性, 試験性 |
-| 8 (柔軟性) | 適応性, スケーラビリティ, 設置性, 置換性 |
-
 ## Workflow
 
-着手前に `<review skill root>/experts/report-format.md` (判定・確信度・役割固有フィールド) と `<review skill root>/references/scope-alignment.md` (Phase 2 との住み分け) を Read する。担当 ISO reference (`<review skill root>/references/iso-25010/{2-performance-efficiency,3-compatibility,7-maintainability,8-flexibility}.md`) は diff に関係するものだけ読む。
+着手前に `<review skill root>/experts/report-format.md` (判定・確信度・役割固有フィールド) と `<review skill root>/references/scope-alignment.md` (Phase 2 との住み分け) を Read する。担当 ISO/IEC 25010 特性 (2 性能効率性 / 3 互換性 / 7 保守性 / 8 柔軟性) を観点として当てる (副特性は `<review skill root>/references/iso-25010.md`、担当分のみ)。
 
 レビュー手順:
 

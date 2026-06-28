@@ -8,14 +8,14 @@ argument-hint: "[target] [level]"
 
 # Review
 
-複数の review 観点を統合する **単発診断** の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
+複数の観点を統合する **単発診断** の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
 
 ## Success Criteria
 
 - 変更タイプと対象スコープに応じた Phase / レビュアを正しく選ぶ
 - コードレビュー層 (Phase 2 + Phase 3 の architect / security / adversary) を Phase 4 で統合し、CRITICAL または HIGH があれば BLOCKED とする
-- `PASS` を出す前に見落としを能動的に反証する (Phase 4 の能動的検証・PASS 反証)。ただし裏づけのない疑いで BLOCKED を量産しない
-- doc-review (Phase 5) はコードが解消された最終状態に対して実施する
+- `PASS` を出す前に、見落としが無いかを能動的に検証する (Phase 4 の能動的検証・PASS 反証)。ただし裏づけのない疑いで BLOCKED を量産しない
+- doc-review (Phase 5) はコードが確定した最終状態に対して実施する
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
 
 ## Phase 1: 引数解析 + 対象スコープ解決 + 変更タイプ/レベル決定
@@ -35,7 +35,7 @@ argument-hint: "[target] [level]"
    5. それ以外 → 曖昧入力として警告
    6. 全 token なし → 既定 (未コミット差分)
 3. **裸の数字 `42` は曖昧入力として警告**。`km:github-workflow` の `[issue-number]` 引数との混同を防ぐ。明示的に `pr:42` を要求する
-4. **`pr` 系と `--repo` の同時指定はエラー終了** (排他モード)
+4. **`--repo` は他のモード flag (`pr` 系・`--uncommitted`) と同時指定できずエラー終了** (排他モード)
 
 ### Phase 1b. 対象スコープ解決
 
@@ -47,9 +47,9 @@ argument-hint: "[target] [level]"
 | `pr` / `pr:<n>` | `gh pr diff [<n>]` (失敗時は別スコープ指定を促す) |
 | `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙し各ファイルを Read (diff ではなく現状コード全体が対象) |
 
-base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / Phase 3 reviewers / doc-review) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る。
+base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / Phase 3 reviewers / doc-review) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る (`--repo` 時は diff ではなく現状コード本文)。
 
-**Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除外) が Phase 3 の並列レビュア群の context に無理なく収まる規模かを見積もる。収まらない規模ならレビュー品質が落ちるため、Phase 2 以降に進まずサブツリーを絞るよう促す。
+**Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除く) が Phase 3 並列レビュアの context に収まる規模か見積もる。超えるならレビュー品質が落ちるので、Phase 2 に進まずサブツリーを絞るよう促す。
 
 ### Phase 1c. 変更タイプ判定とレベル選択
 
@@ -76,7 +76,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 ## Phase 2: コードレビュー (generalist)
 
-`code-review.md` を Read してその指示に従って main コンテキストでレビューを実施する。一般的なコードの正しさ・規約・可読性を見る generalist レビュー (敵対的視点は Phase 3 の adversary の責務であり、本 Phase では負わない)。
+`code-review.md` に従い main コンテキストでレビューする。コードの正しさ・規約・可読性を見る generalist レビュー (敵対的視点は Phase 3 adversary の責務で、本 Phase では負わない)。
 
 **起動条件**: docs-only 以外 (`code-only` / `code+docs` / `test/config/chore` / `mixed`) で常時起動。
 
@@ -88,17 +88,17 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 `thorough` レベルで起動する。`docs-only` / `test-or-config-or-chore-only` では起動しない。
 
-**内容ベースの昇格**: `quick` / `standard` でも、diff が高リスク領域に触れる場合は該当専門家 (少なくとも security / adversary) を起動してよい。高リスク領域とは、覆すのが高コストな決定 (公開 API・契約・スキーマ・データモデル等の one-way door)、認証 / 認可、データの移動・削除・マイグレーション、秘密情報の扱い、LLM/AI の tool 実行境界・入力境界。昇格した場合は統合レポートに昇格理由を 1 行記録する。
+**内容ベースの昇格**: `quick` / `standard` でも、diff が高リスク領域に触れる場合は該当専門家を起動してよい。**高リスク領域と owner**: 覆すのが高コストな決定 (公開 API・契約・スキーマ・データモデル等の one-way door) → **architect**、認証 / 認可・データの移動 / 削除 / マイグレーション・秘密情報・LLM/AI の tool 実行 / 入力境界 → **security / adversary**。昇格した場合は統合レポートに昇格理由を 1 行記録する。
 
 レビュアは **architect / security / adversary の 3 名**。各々が同じ diff を別視点で**独立に**レビューする ―― 暫定判定も他レビュアの所見も渡さない (アンカリングを避け視点の多様性を最大化する。重複の集約は Phase 4 統合が行う)。
 
 ### `<review skill root>` プレースホルダの解決規約
 
-orchestrator (LLM) は実行環境の install root を `<review skill root>` の絶対パスとして解決する (Claude Code は `~/.claude/skills/review/`、Codex CLI は `.agents/skills/review/`)。この解決は (a) subagent に渡す prompt template の文字列、(b) **subagent / main コンテキストが Read する静的ファイル本文** のいずれにも適用される。subagent は静的ファイル本文の `<review skill root>` を読んだ際も自前で絶対パスに置換してから Read する。
+orchestrator (LLM) は実行環境の install root を `<review skill root>` の絶対パスとして解決する (Claude Code は `~/.claude/skills/review/`、Codex CLI は `~/.agents/skills/review/`。いずれも `~` を展開した絶対パスにする)。この解決は (a) subagent に渡す prompt template の文字列、(b) **subagent / main コンテキストが Read する静的ファイル本文** のいずれにも適用される。subagent は静的ファイル本文の `<review skill root>` を読んだ際も自前で絶対パスに置換してから Read する (相対パス・未展開の `~` は subagent の working directory 依存で Read が失敗する)。
 
 ### 起動方法
 
-実行環境の subagent 機構で 3 名を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。3 名は **最上位 model (Opus 等) + 高 effort で起動する** (Claude Code は Task tool の model override、Codex CLI は同等指定)。Phase 3 は `thorough` / 高リスク昇格時のみ起動されるため、常時最上位による主力レビュアのコスト増は構造的に限定される。harness で effort を直接指定できない場合も可能な範囲で高く保ち、実挙動を確認する。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書く。`<role>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
+実行環境の subagent 機構 (Claude Code は Task tool、Codex CLI は subagent) で 3 名を **同一メッセージ内に並列起動**する。**最上位 model (Opus 等) + 高 effort** で動かす (Phase 3 は `thorough` / 高リスク昇格時のみ走るためコスト増は限定的。effort を直接指定できなければ可能な範囲で高く保つ)。参照パスは `<review skill root>/...` 形式で書き、`<role>` 等のプレースホルダは orchestrator が置換してから渡す。各 subagent に次のプロンプトを渡す:
 
 ```
 あなたは km:review Phase 3 の <role> レビュアです。
@@ -109,11 +109,11 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 - 他レビュアの所見・全体の暫定判定は渡されません (独立レビュー)。レーンの扱い・偽陽性フィルタは report-format.md に従う。重複の集約は Phase 4 が行うので重複回避を予測しなくてよい
 
 ## Read 順序
-まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・役割固有フィールドを把握)、その後 diff を pre-scan する。<role>.md が担当 ISO reference を指す場合、`<review skill root>/references/iso-25010/<該当ファイル>.md` は判断に必要なものだけ Read する。
+まず `<review skill root>/experts/<role>.md` と `<review skill root>/experts/report-format.md` を読み (役割と判定基準・確信度・役割固有フィールドを把握)、その後 diff を pre-scan する。
 
 ## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>
-- diff 内容: <raw diff>
+- diff 内容 (`--repo` 時は diff ではなく現状コード本文): <raw diff>
 - 変更タイプ / 規模: <Phase 1c の出力>
 
 ## 既知情報
@@ -176,7 +176,7 @@ Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテ
 
 ## Phase 5: doc-review (最終状態に対して)
 
-doc-review はコードレビューとは性質が異なり、**コードが解消された最終版の状態**に対してドキュメント整合を確認する。`doc-review.md` を Read して main コンテキストで実施する。doc-review は 2 つの関心を変更構成に応じて扱う (詳細は `doc-review.md`): **A. コード変更のドキュメント影響** をリポジトリ全体のスコープで確認・修正する / **B. 変更ドキュメントの全体整合性** (内部整合・他ドキュメントとの整合・一次情報) を確認する。
+doc-review はコードレビューとは性質が異なり、**コードが確定した最終状態**に対してドキュメント整合を確認する。`doc-review.md` を Read して main コンテキストで実施する。doc-review は 2 つの関心を変更構成に応じて扱う (詳細は `doc-review.md`): **A. コード変更のドキュメント影響** をリポジトリ全体のスコープで確認・修正する / **B. 変更ドキュメントの全体整合性** (内部整合・他ドキュメントとの整合・一次情報) を確認する。
 
 **起動条件** (Phase 4 のコード判定を踏まえる):
 
@@ -207,7 +207,7 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 - `test-or-config-or-chore-only` → Phase 3 / Phase 5 skip (Phase 2 + Phase 4 のみ)
 - **内容ベースの昇格は降格に優先する**: `quick` / `standard` でも diff が高リスク領域 (Phase 3 の「内容ベースの昇格」参照) に触れるなら、該当専門家を起動する。`test-or-config-or-chore-only` でも、その変更が高リスク (CI 権限・デプロイ・秘密情報など) なら同様に昇格してよい
 
-`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス + 確認推奨ノート) は安価なため全レベルで行うが、確認推奨ノートは非ブロッキングで判定を変えない。
+`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス) は安価なため全レベルで行う。そこで出る確認推奨ノートは非ブロッキングで判定を変えない。
 
 ## 指摘対応の方針
 

@@ -15,8 +15,9 @@
 - **信頼性・運用**: ロールバック耐性、デプロイ中の混在状態、フィーチャーフラグ切替時の挙動
 - **intent への懐疑**: intent context があれば「この変更は本当に目的を達成しているか / そもそも正しいアプローチか」を疑い、達成していないことを示せるか試す
 - **テスト実在**: 変更の振る舞いを通すテストが実在するか (形式的テストでなく)
+- **対話性 (UI / 出力を変える diff のみ)**: ユーザ向けメッセージ・エラーの分かりやすさ、誤操作を誘発する既定、a11y 退行 (担当 ISO 4。観点は `<review skill root>/references/iso-25010.md` §4)
 
-担当 ISO/IEC 25010 特性 (1 機能適合性 / 4 インタラクション能力 / 5 信頼性) の reference (`<review skill root>/references/iso-25010/{1-functional-suitability,4-interaction-capability,5-reliability}.md`) は diff に関係するものだけ Read する。
+担当 ISO/IEC 25010 特性: 1 機能適合性 / 4 対話性 / 5 信頼性 を観点として当てる(副特性は `<review skill root>/references/iso-25010.md`)。
 
 ## 証拠と重大度
 
