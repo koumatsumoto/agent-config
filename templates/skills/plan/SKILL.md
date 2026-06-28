@@ -179,22 +179,15 @@ plan 本文は GitHub issue に全文ミラーされるため、秘密情報の�
 4. **更新背景は issue コメントへ**（任意）: 共有したい採否判断・反映背景は `gh issue comment <number> --body-file -` で残す。本文には移さない
 5. **re-sync**: 反映後に `.plan/` ファイルを更新し、**pre-issue Secret Check を通してから**（外部レビュー結果には log や認証情報が混じりやすい）`gh issue edit <number> --body-file <plan-file>` で issue body を再同期する
 
-## Decision Rules
+## Rules（Decision / Safety）
 
-- 計画本文の章立ては固定せず、タスクの難しさに応じて必要な情報を過不足なく含める
-- issue body は `.plan/` の **全文ミラー**。要約・抜粋ではなく同じ markdown を `--body-file` でそのまま渡す（別ファイルや heredoc で本文を組み立て直さない、`--body "..."` を使わない）
-- `.plan/` はローカル一時作業場。共有成果物（issue 本文・PR 本文・commit message・issue/PR comments）から `.plan/` 配下の **具体的なファイル**（`.plan/YYYYMMDD-*.md` 等）を source of truth として参照させない（GitHub 読者は `.plan/` を読めない）。`.plan/` という機能・概念への言及は許容する。正本は GitHub issue / PR の URL に集約する
-- 計画は作って終わりではなく、レビュー → 反映 → issue 化までが 1 単位
-
-## Safety Rules
-
-- Plan Mode 中は `.plan/`, `.gitignore`, GitHub issue を一切変更しない
-- `.plan` が追跡済み、または既存 ignore ルールで除外済みなら `.gitignore` を自動編集しない
-- 明示の無い限り既存 issue を探索・再利用しない
-- marker の無い既存 issue は全文置換前にユーザへ確認する
-- `gh issue create/edit` を行う全経路（新規作成・2-step sync・既存 issue 更新・外部レビュー反映後の再同期）で、実行前に pre-issue Secret Check を通す
-- `gh issue create/edit` が失敗したら成功扱いせず、issue 未作成と、作成済みだが再同期失敗（`URL 未同期`）を区別して報告する
-- 反復しても `CRITICAL` / `HIGH` が残り収束しない場合は issue 化を止め、ユーザに判断を委ねる
-- PR 作成・ブランチ作成・**PR 分割の実行**・push は `km:github-workflow` の責務。本スキルは作業単位への分解（分割の設計）までを担い、分割の実行はしない
-- 計画作成の意図が曖昧な場合は、書き込み前にユーザへ確認する
-- 非 GitHub repo / `gh` 未インストール / `gh` 未認証はいずれも `.plan/` 出力で停止し、原因を区別して報告する
+- **計画本文**: 章立ては固定せず難しさに応じ過不足なく含める。「作って終わり」でなくレビュー → 反映 → issue 化までが 1 単位
+- **`.plan/` は一時作業場**: 共有成果物（issue / PR / commit / comment）から `.plan/` 配下の具体ファイル（`.plan/YYYYMMDD-*.md` 等）を source of truth として参照させない（GitHub 読者は読めない。機能・概念への言及は可）。正本は issue / PR の URL
+- **issue body は全文ミラー**: `.plan/` と同じ markdown を `--body-file` でそのまま渡す（要約・抜粋・heredoc 再構成・`--body "..."` は不可）
+- **Plan Mode 中**: `.plan/` / `.gitignore` / GitHub issue を一切変更しない
+- **`.gitignore`**: `.plan` が追跡済み or 既存 ignore 済みなら自動編集しない
+- **既存 issue**: 明示無き限り探索・再利用しない。marker の無い既存 issue は全文置換前に確認する
+- **Secret Check**: `gh issue create/edit` の全経路（新規・2-step sync・既存更新・外部レビュー反映後の再同期）で実行前に通す
+- **gh 失敗**: 成功扱いせず、issue 未作成と「作成済みだが再同期失敗（URL 未同期）」を区別して報告する
+- **収束しない場合**: 反復しても CRITICAL/HIGH が残れば issue 化を止めユーザに委ねる
+- **スコープ境界**: PR / ブランチ作成・PR 分割の実行・push は `km:github-workflow` の責務（本スキルは分割の設計まで）。意図が曖昧なら書き込み前に確認。非 GitHub / gh 未インストール / 未認証はいずれも `.plan/` 出力で停止し原因を区別して報告
