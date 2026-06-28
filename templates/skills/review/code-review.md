@@ -1,6 +1,6 @@
 # Phase 2: Code Review (generalist)
 
-km:review orchestrator の **Phase 2**。コードレベル (関数・モジュール・システム境界) 全部の generalist code review。Phase 3 architect との住み分けは `references/scope-alignment.md`。
+km:review orchestrator の **Phase 2**。コードレベル (関数・モジュール・システム境界) 全体を対象とする generalist code review。Phase 3 architect との住み分けは `references/scope-alignment.md`。
 
 > 本ファイルの "Step N" は workflow 番号で、orchestrator (SKILL.md) の "Phase N" とは別。
 

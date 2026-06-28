@@ -15,7 +15,7 @@ argument-hint: "[target] [level]"
 - 変更タイプと対象スコープに応じた Phase / レビュアを正しく選ぶ
 - コードレビュー層 (Phase 2 + Phase 3 の architect / security / adversary) を Phase 4 で統合し、CRITICAL または HIGH があれば BLOCKED とする
 - `PASS` を出す前に見落としを能動的に反証する (Phase 4 の能動的検証・PASS 反証)。ただし裏づけのない疑いで BLOCKED を量産しない
-- doc-review (Phase 5) はコードが解消された最終状態に対して実施する
+- doc-review (Phase 5) はコードが確定した最終状態に対して実施する
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
 
 ## Phase 1: 引数解析 + 対象スコープ解決 + 変更タイプ/レベル決定
@@ -49,7 +49,7 @@ argument-hint: "[target] [level]"
 
 base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / Phase 3 reviewers / doc-review) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る。
 
-**Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除外) が Phase 3 の並列レビュア群の context に無理なく収まる規模かを見積もる。収まらない規模ならレビュー品質が落ちるため、Phase 2 以降に進まずサブツリーを絞るよう促す。
+**Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除く) が Phase 3 並列レビュアの context に収まる規模か見積もる。超えるならレビュー品質が落ちるので、Phase 2 に進まずサブツリーを絞るよう促す。
 
 ### Phase 1c. 変更タイプ判定とレベル選択
 
@@ -76,7 +76,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 ## Phase 2: コードレビュー (generalist)
 
-`code-review.md` を Read してその指示に従って main コンテキストでレビューを実施する。一般的なコードの正しさ・規約・可読性を見る generalist レビュー (敵対的視点は Phase 3 の adversary の責務であり、本 Phase では負わない)。
+`code-review.md` に従い main コンテキストでレビューする。コードの正しさ・規約・可読性を見る generalist レビュー (敵対的視点は Phase 3 adversary の責務で、本 Phase では負わない)。
 
 **起動条件**: docs-only 以外 (`code-only` / `code+docs` / `test/config/chore` / `mixed`) で常時起動。
 
@@ -98,7 +98,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 
 ### 起動方法
 
-実行環境の subagent 機構で 3 名を **同一メッセージ内で並列起動** する (Claude Code では Task tool、Codex CLI では subagent と読み替え)。3 名は **最上位 model (Opus 等) + 高 effort で起動する** (Claude Code は Task tool の model override、Codex CLI は同等指定)。Phase 3 は `thorough` / 高リスク昇格時のみ起動されるため、常時最上位による主力レビュアのコスト増は構造的に限定される。harness で effort を直接指定できない場合も可能な範囲で高く保ち、実挙動を確認する。subagent prompt 内の参照パスは `<review skill root>/...` 形式で書く。`<role>` などのプレースホルダは orchestrator が置換してから渡す (未置換のまま subagent に渡さない)。各 subagent に以下のプロンプトを渡す:
+実行環境の subagent 機構 (Claude Code は Task tool、Codex CLI は subagent) で 3 名を **同一メッセージ内に並列起動**する。**最上位 model (Opus 等) + 高 effort** で動かす (Phase 3 は `thorough` / 高リスク昇格時のみ走るためコスト増は限定的。effort を直接指定できなければ可能な範囲で高く保つ)。参照パスは `<review skill root>/...` 形式で書き、`<role>` 等のプレースホルダは orchestrator が置換してから渡す。各 subagent に次のプロンプトを渡す:
 
 ```
 あなたは km:review Phase 3 の <role> レビュアです。
@@ -176,7 +176,7 @@ Phase 2 / Phase 3 (architect / security / adversary) の所見を main コンテ
 
 ## Phase 5: doc-review (最終状態に対して)
 
-doc-review はコードレビューとは性質が異なり、**コードが解消された最終版の状態**に対してドキュメント整合を確認する。`doc-review.md` を Read して main コンテキストで実施する。doc-review は 2 つの関心を変更構成に応じて扱う (詳細は `doc-review.md`): **A. コード変更のドキュメント影響** をリポジトリ全体のスコープで確認・修正する / **B. 変更ドキュメントの全体整合性** (内部整合・他ドキュメントとの整合・一次情報) を確認する。
+doc-review はコードレビューとは性質が異なり、**コードが確定した最終状態**に対してドキュメント整合を確認する。`doc-review.md` を Read して main コンテキストで実施する。doc-review は 2 つの関心を変更構成に応じて扱う (詳細は `doc-review.md`): **A. コード変更のドキュメント影響** をリポジトリ全体のスコープで確認・修正する / **B. 変更ドキュメントの全体整合性** (内部整合・他ドキュメントとの整合・一次情報) を確認する。
 
 **起動条件** (Phase 4 のコード判定を踏まえる):
 

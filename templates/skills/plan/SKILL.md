@@ -6,7 +6,7 @@ argument-hint: "[title-or-topic]"
 
 # Plan
 
-実装前の計画を作り込み、`.plan/YYYYMMDD-<slug>.md` に詳細版を書き出し、そのファイルを対象に agentic な計画レビューを行い、レビュー反映後の本文を GitHub issue に全文ミラーする。Plan / Materialize / Review / Mirror / Report の 5 phase で進める。
+実装前に計画を作り込み、`.plan/YYYYMMDD-<slug>.md` へ書き出し、それを agentic にレビューし、反映後の本文を GitHub issue へ全文ミラーする。Plan / Materialize / Review / Mirror / Report の 5 phase で進める。
 
 ## Context
 
@@ -16,7 +16,7 @@ argument-hint: "[title-or-topic]"
 - `.plan/` ignored?: !`git check-ignore -q .plan/ 2>/dev/null && echo "yes" || echo "no"`
 - `.gitignore` has `.plan/`: !`grep -E '^\.plan/?$' .gitignore 2>/dev/null || echo "(absent)"`
 
-GitHub / `gh` の状態は draft-only では不要なため Context では取得しない。GitHub repo 確認と `gh` 認証は Phase 4 (Mirror) で行う。Context はロード時のスナップショットで、実際の gate 判定は Phase 2 / Phase 4 の手順で実行時に取り直す。
+GitHub / `gh` は draft-only では不要なため Context で取得せず、repo 確認と認証は Phase 4 (Mirror) で行う。Context はロード時のスナップショットで、実際の gate 判定は Phase 2 / 4 で実行時に取り直す。
 
 ## Success Criteria
 
@@ -60,7 +60,7 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 1. repo と依頼内容を把握する。`$ARGUMENTS` は計画タイトル / 既存 issue 番号のヒントとして扱う。立案前に関連コード・既存実装・制約を**規模に応じて**調査する: 影響範囲が広い計画は **並行 Explore subagent** で関連箇所・制約を収集してから立案し、軽量な計画は過剰探索を避けて最小限の確認に留める（規模判断は Phase 3 step 2 の rubric と揃える）。subagent 非対応環境では直接 grep / read で調べる。収集した事実は **出典付き（`file:line` 等）** で計画の「依拠する前提」に残す（plan-template.md）
 2. Routing の entry mode を 1 つ決める（Plan Mode かどうか判別できない場合は安全側に倒して `draft-only` とする）
 3. `draft-only` なら質問・調査・下案作成を行い、計画下案を `<proposed_plan>`（チャット上の提示）として示して **停止する**。`.plan/` 書き込み・issue 化は一切行わない。停止時に「materialize / issue 化に進むには『.plan に出して』『計画を issue にして』と依頼する」と案内する
-4. materialize に進む mode では **Clarify Gate**: 計画の骨子（Goal / Non-goal / 合否判定できる DoD / 主要トレードオフ。各々の定義は plan-template.md）を左右する未決事項を解消する。要件を取り違えていないか・浅い理解で進めていないかを確かめ、**本質を固めて引き出してから**進む
+4. materialize に進む mode では **Clarify Gate**: 計画の骨子（Goal / Non-goal / 合否判定できる DoD / 主要トレードオフ。各々の定義は plan-template.md）を左右する未決事項を解消する。要件を取り違えていないか・浅い理解で進めていないかを確かめ、**本質を引き出して固めてから**進む
    - **計画を分岐させる未決だけ**を確認する。妥当な前提で進められるものは聞かない。確認は **選択肢 + 推奨案つきでまとめて 1 回**（構造化質問が使える環境では AskUserQuestion）で行い、往復を最小化する
    - 確認で固めた骨子は、計画冒頭の **Goal / Non-goal / Definition of Done anchor** に落とす（plan-template.md）。未解消のまま Phase 2 に進まない
 
@@ -101,7 +101,7 @@ GitHub / `gh` の状態は draft-only では不要なため Context では取得
 3. 返ってきた指摘を重大度別に整理し、**plan 本文へ直接反映する**。指摘内容・修正経緯は plan 本文にも issue 本文にも書き戻さない。共有用に履歴を残したい場合は issue 作成後に issue comments を使う（comments の内容を本文へ再同期しない）
 4. `CRITICAL` / `HIGH` が解消するまで反復する。**初回はフルレビュー、2 回目以降は前回未解決の `CRITICAL` / `HIGH` の解消確認に絞った差分レビュー**にする（毎回フルで回さず、収束に向けてコストを絞る）。反復は **3 周を上限**とする。`MEDIUM` / `LOW` は原則反映し、意図的に残すものだけ plan 本文の「受け入れ済みリスク」として記録する（記録項目は plan-template.md に従う）
 5. 反復上限に達しても `CRITICAL` / `HIGH` が収束しない場合は issue 化を止め、未収束の指摘とともにユーザに判断を委ねる
-6. レビュー結果が **空・形式不一致・subagent が対象ファイルを読めず失敗** したのいずれかは、レビュー未実施として「収束」とみなさない（正規の `指摘なし`（重大度別件数すべて 0）とは区別する）。原因（多くは未解決のパス）を解消して再実行し、**実体のあるレビューが完了するまで issue 化しない**
+6. レビュー結果が **空・形式不一致・subagent が対象ファイルを読めず失敗** のいずれかは、レビュー未実施として「収束」とみなさない（正規の `指摘なし`（重大度別件数すべて 0）とは区別する）。原因（多くは未解決のパス）を解消して再実行し、**実体のあるレビューが完了するまで issue 化しない**
 
 subagent 起動プロンプト。`<plan skill root>` と計画ファイルは、メイン agent が **`~` を展開した絶対パス**に置換してから渡す（subagent はメイン agent の working directory を共有しないため、相対パス・未展開の `~` は解決できない）。install root は Claude Code が `~/.claude/skills/plan/`、Codex CLI が `~/.agents/skills/plan/`:
 
@@ -158,7 +158,7 @@ GitHub 管理 repo でのみ実行する。明示が無い限り **新規計画�
 
 ## Secret Check
 
-plan 本文は GitHub issue に全文ミラーされるため、秘密情報の混入は public 公開に直結する。`.plan/` がローカル ignore されていても、検出時にファイルがディスクに残れば事故リスクは減らない。Phase 2 (pre-write) と Phase 4 (pre-issue) の 2 gate で、組み立て中の本文と最終本文の両方を走査する。
+plan 本文は GitHub issue に全文ミラーされるため、秘密情報の混入は公開に直結する。`.plan/` がローカル ignore されていても、検出時にファイルがディスクに残れば事故リスクは減らない。Phase 2 (pre-write) と Phase 4 (pre-issue) の 2 gate で、組み立て中の本文と最終本文の両方を走査する。
 
 検出パターン:
 
