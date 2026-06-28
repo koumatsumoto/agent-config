@@ -2,8 +2,6 @@
 
 km:review orchestrator の **Phase 5**。**Phase 4 統合 (コード判定) の後**、コード/設計が確定した最終状態に対してドキュメント整合を確認する (起動条件・defer 規約は SKILL.md の Phase 5 を参照)。
 
-> 本ファイル内の "Step N" は workflow 番号で、orchestrator (SKILL.md) の "Phase N" とは別の番号空間。
-
 doc-review は次の 2 つの関心を扱う。どちら (または両方) を実施するかは orchestrator (SKILL.md Phase 5 起動条件) が変更構成に応じて決める。
 
 - **A. コード変更のドキュメント影響**: コード変更が、リポジトリ全体のどのドキュメントの記述を古く / 誤りにするかを **広く確認し、該当ドキュメントを修正する**。

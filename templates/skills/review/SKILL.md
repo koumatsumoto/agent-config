@@ -35,7 +35,7 @@ argument-hint: "[target] [level]"
    5. それ以外 → 曖昧入力として警告
    6. 全 token なし → 既定 (未コミット差分)
 3. **裸の数字 `42` は曖昧入力として警告**。`km:github-workflow` の `[issue-number]` 引数との混同を防ぐ。明示的に `pr:42` を要求する
-4. **`pr` 系と `--repo` の同時指定はエラー終了** (排他モード)
+4. **`--repo` は他のモード flag (`pr` 系・`--uncommitted`) と同時指定できずエラー終了** (排他モード)
 
 ### Phase 1b. 対象スコープ解決
 
@@ -47,7 +47,7 @@ argument-hint: "[target] [level]"
 | `pr` / `pr:<n>` | `gh pr diff [<n>]` (失敗時は別スコープ指定を促す) |
 | `--repo <subtree>` | `git ls-files <subtree>` で対象ファイル列挙し各ファイルを Read (diff ではなく現状コード全体が対象) |
 
-base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / Phase 3 reviewers / doc-review) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る。
+base/head/sha が解決できなければエラー終了。下位コンポーネント (Phase 2 / Phase 3 reviewers / doc-review) は「解決済みのファイル一覧 + diff 内容」を共通コンテキストで受け取る (`--repo` 時は diff ではなく現状コード本文)。
 
 **Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除く) が Phase 3 並列レビュアの context に収まる規模か見積もる。超えるならレビュー品質が落ちるので、Phase 2 に進まずサブツリーを絞るよう促す。
 
@@ -88,7 +88,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 `thorough` レベルで起動する。`docs-only` / `test-or-config-or-chore-only` では起動しない。
 
-**内容ベースの昇格**: `quick` / `standard` でも、diff が高リスク領域に触れる場合は該当専門家 (少なくとも security / adversary) を起動してよい。高リスク領域とは、覆すのが高コストな決定 (公開 API・契約・スキーマ・データモデル等の one-way door)、認証 / 認可、データの移動・削除・マイグレーション、秘密情報の扱い、LLM/AI の tool 実行境界・入力境界。昇格した場合は統合レポートに昇格理由を 1 行記録する。
+**内容ベースの昇格**: `quick` / `standard` でも、diff が高リスク領域に触れる場合は該当専門家を起動してよい。**高リスク領域と owner**: 覆すのが高コストな決定 (公開 API・契約・スキーマ・データモデル等の one-way door) → **architect**、認証 / 認可・データの移動 / 削除 / マイグレーション・秘密情報・LLM/AI の tool 実行 / 入力境界 → **security / adversary**。昇格した場合は統合レポートに昇格理由を 1 行記録する。
 
 レビュアは **architect / security / adversary の 3 名**。各々が同じ diff を別視点で**独立に**レビューする ―― 暫定判定も他レビュアの所見も渡さない (アンカリングを避け視点の多様性を最大化する。重複の集約は Phase 4 統合が行う)。
 
@@ -113,7 +113,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 
 ## レビュー対象
 - 変更ファイル一覧: <Phase 1b の出力>
-- diff 内容: <raw diff>
+- diff 内容 (`--repo` 時は diff ではなく現状コード本文): <raw diff>
 - 変更タイプ / 規模: <Phase 1c の出力>
 
 ## 既知情報
