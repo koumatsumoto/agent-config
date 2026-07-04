@@ -39,6 +39,8 @@ Context はロード時のスナップショット。sweep の実処理は下記
 | `workflow` | 共通ワークフロー資産（skill / rules / 共通方針ファイル） | `.kaizen/` に残置し、正本 repo での sweep で回収 |
 | `knowledge` | 恒久知識・ドメイン知見 | 実際にロードされる資産へ fold（経路は下の triage で振り分け） |
 
+dest は改善点の**反映先**を決めるものであって、「今 PR で直すべき欠陥を直す」義務を免除しない。ある気づきが出荷物の欠陥（バグ・セキュリティ欠陥）を示すなら、dest に関わらず同 PR で修正し、恒久知識としての記録（fold）や issue 化は修正に**追加して**行う（記録が修正の代わりにならない）。一つの気づきが「直すべき欠陥」かつ「残すべき知見」の二面を持つときは両方を実行する。
+
 ### Report 時の triage
 
 km:github-workflow の報告 step から参照される。その PR の `.kaizen/` entry を dest 別に片付ける:
@@ -46,12 +48,12 @@ km:github-workflow の報告 step から参照される。その PR の `.kaizen
 - **`pr`**: 対応済みを確認して entry を消す
 - **`repo`**: kaizen ラベル付き follow-up issue へ昇格して URL を報告する（ラベルが無ければ `gh label create kaizen` で作成）。昇格後 entry を消す
 - **`workflow`**: `.kaizen/` に残置し、残置した旨と件数を報告する（worktree 掃除で消えても人間が気づけるようにするセーフティネット）
-- **`knowledge`**: fold 先で振り分ける
+- **`knowledge`**: fold 先で振り分ける（fold は知見の記録であって、その知見が示す欠陥の修正ではない。欠陥なら上記のとおり同 PR でも直す）
   - fold 先が当該 repo 内のロードされる資産（repo の方針ファイル / docs / skill 本文）なら、今回の作業に関係する場合は同じ PR で fold し、無関係なら `repo` と同様に follow-up issue 化する
   - fold 先が共通ワークフロー資産なら、**dest を `workflow` に付け替えて残置する**（残置 entry を `workflow` 1 種に正規化し、sweep の回収対象を単純に保つ）
 - **一回限り・その日限りの事情**: 捨てる
 
-改善点がゼロなら triage は何も報告しない（定型ノイズを出さない）。
+改善点がゼロなら triage は何も報告しない（定型ノイズを出さない）。報告はユーザー向けの結果（何を直したか / どの issue を立てたか / どこに記録したか / 何を後続に残したか）で書き、`dest` / `残置` / `sweep` / `secret check` のような内部機構の語をそのままユーザー報告に持ち込まない。
 
 ## 面 2: Sweep（`/km:kaizen`）
 
