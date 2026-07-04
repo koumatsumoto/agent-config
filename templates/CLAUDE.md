@@ -23,6 +23,7 @@
 - レビューは `km:review` を入口にする。個別 review skill はターゲットが明確な場合だけ使う
 - コミット作成は `km:commit` を参照する
 - skill の改善・変更検証は `km:skill-improve` を使う（改善サイクルと A/B 運用テスト）
+- 開発中に気づいた改善点の記録・棚卸しは `km:kaizen` を参照する（`.kaizen/` への capture と反映先への振り分け）
 - `.plan/` はローカル一時作業場。共有成果物では GitHub issue / PR / comment を正本にし、`.plan/` 配下の具体的なファイルを source of truth として参照しない
 
 ## 成果物への記録方針
