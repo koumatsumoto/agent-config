@@ -56,13 +56,13 @@ python scripts/cli.py install
 
 このコマンドは以下を反映する。
 
-- `~/.claude/CLAUDE.md` (テンプレートで上書き。既存は `*.bak` へ退避。詳細は後述)
+- `~/.claude/CLAUDE.md` (詳細は後述)
 - `~/.claude/rules/`
 - `~/.claude/skills/`
 - `~/.claude/statusline.py`
 - `~/.claude/subagent-statusline.py`
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
-- `~/.codex/AGENTS.md` (テンプレートで上書き。既存は `*.bak` へ退避。詳細は後述)
+- `~/.codex/AGENTS.md` (詳細は後述)
 - `~/.codex/config.toml`
 - `~/.agents/skills/`
 
@@ -101,9 +101,9 @@ python scripts/cli.py install
 
 ### `CLAUDE.md` / `AGENTS.md` の取り扱い
 
-`templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、**テンプレートを source of truth として上書き反映**する。install のたびに `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` をテンプレートで置き換え（既存は `*.bak` へ退避、`replaced:` 出力）、repo 側の更新がそのまま各マシンへ伝播する。純テンプレコピー扱いなので `clean` は削除対象に含め、`verify` はテンプレートとの差分（drift）を検査する。
+`templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、テンプレートを source of truth として毎回上書きする。repo 側の更新がそのまま各マシンへ伝播する。指針を変えたい場合は `templates/` 側を編集して再 install する。
 
-マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ただし **ユーザレベルの `~/.claude/CLAUDE.local.md` は Claude Code の自動読み込み対象外**（自動読み込みされるユーザメモリは `~/.claude/CLAUDE.md` のみ）である点に注意する。グローバル指針を変えたい場合は `templates/` 側を編集して再 install する。
+マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ユーザレベルの `~/.claude/CLAUDE.local.md` は自動読み込みされない。
 
 ## 検証
 
@@ -166,8 +166,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | Repository Source | Destination |
 | --- | --- |
-| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` (テンプレートで上書き。既存は `*.bak` へ退避) |
-| `templates/AGENTS.md` | `~/.codex/AGENTS.md` (テンプレートで上書き。既存は `*.bak` へ退避) |
+| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
