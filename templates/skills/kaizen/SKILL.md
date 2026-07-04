@@ -66,7 +66,7 @@ km:github-workflow の報告 step から参照される。その PR の `.kaizen
    - 他 repo への読み書きが permission / sandbox で許可されない場合は縮退し、entry は残置のまま、スキャン結果（repo と件数）だけ報告する
 2. **傾向分析**: 複数 PR・複数 repo 横断で同型の摩擦を集約する。**同じ型が 2 回以上現れたら rule / skill / チェックリスト化の候補**として恒久化を提案する（単発の摩擦は恒久化しない）
 3. **fold 振り分け**: 反映先別に振り分ける
-   - **skill の変更** → km:skill-improve へ handoff（変更の検証・採用判定はあちらの責務）
+   - **skill の変更** → km:skill-improve へ handoff する。sweep 内で共有 skill を自分で編集して自己検証で採用しない（変更の検証・採用判定はあちらの責務。共有 skill は全 repo に波及するため、著者バイアスのない独立検証に載せる）
    - **共通方針ファイル / rules / repo プロセス** → 通常の issue → PR delivery（km:github-workflow）
    - **恒久知識** → 実際にロードされる資産へ fold
    - **価値を説明できないもの** → 棄却
