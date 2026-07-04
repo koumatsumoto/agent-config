@@ -20,17 +20,18 @@ import cli
 
 
 def _verified_spec() -> cli.FileSpec:
-    """First TEMPLATE_FILES spec that clean()/verify() actually manage.
+    """A TEMPLATE_FILES spec that clean()/verify() manage.
 
-    Seed-only (skip_if_exists) files are excluded from those operations, so
-    tests asserting removal / drift detection must target a managed spec.
+    Every template file is a full-template copy, so any spec works for tests
+    asserting removal / drift detection; the first one is representative.
     """
-    return next(s for s in cli.TEMPLATE_FILES if not s.skip_if_exists)
+    return cli.TEMPLATE_FILES[0]
 
 
-def _seed_specs() -> list[cli.FileSpec]:
-    """skip_if_exists specs (CLAUDE.md / AGENTS.md): seeded once, then user-managed."""
-    return [s for s in cli.TEMPLATE_FILES if s.skip_if_exists]
+def _global_guideline_specs() -> list[cli.FileSpec]:
+    """The shared agent guidelines refreshed from the template on every install."""
+    dests = {".claude/CLAUDE.md", ".codex/AGENTS.md"}
+    return [s for s in cli.TEMPLATE_FILES if s.dest_rel in dests]
 
 
 # --------------------------------------------------------------------------- #
@@ -642,13 +643,12 @@ class InstallTests(unittest.TestCase):
     def test_idempotent(self) -> None:
         self._run_install()
         out = self._run_install()
-        # On second run every line should be a no-op: ok: ... for managed files,
-        # skip: ... for seed-only files that already exist.
+        # On second run every line should be a no-op: ok: ... for every managed
+        # file whose content already matches the template.
         changed = [
             line for line in out.splitlines()
             if line
             and not line.startswith("ok:")
-            and not line.startswith("skip:")
             and not line.startswith("Install ")
         ]
         self.assertEqual(changed, [], f"unexpected change lines: {changed}")
@@ -682,31 +682,35 @@ class InstallTests(unittest.TestCase):
         merged = json.loads(settings.read_text(encoding="utf-8"))
         self.assertEqual(merged["theme"], "user-pick")
 
-    def test_seed_only_specs_are_the_global_guidelines(self) -> None:
-        # Pin intent: only the user-editable global guidelines are seed-only.
-        seed_dests = {s.dest_rel for s in _seed_specs()}
-        self.assertEqual(seed_dests, {".claude/CLAUDE.md", ".codex/AGENTS.md"})
-
-    def test_seed_files_created_when_absent(self) -> None:
+    def test_global_guidelines_installed_as_template_copies(self) -> None:
         self._run_install()
-        seeds = _seed_specs()
-        self.assertTrue(seeds, "expected at least one seed-only spec")
-        for spec in seeds:
-            seed = self.home / spec.dest_rel
-            self.assertTrue(seed.is_file(), f"missing seed: {seed}")
+        specs = _global_guideline_specs()
+        self.assertTrue(specs, "expected the global guideline specs")
+        for spec in specs:
+            dest = self.home / spec.dest_rel
+            src = cli.REPO_ROOT / spec.src_rel
+            self.assertTrue(dest.is_file(), f"missing: {dest}")
+            self.assertEqual(
+                dest.read_bytes(), src.read_bytes(), f"not a template copy: {dest}"
+            )
 
-    def test_seed_files_not_overwritten_when_present(self) -> None:
-        for spec in _seed_specs():
-            seed = self.home / spec.dest_rel
-            seed.parent.mkdir(parents=True, exist_ok=True)
-            seed.write_text("user-edited guideline", encoding="utf-8")
+    def test_global_guidelines_overwritten_when_present(self) -> None:
+        # Machine-local edits belong in a *.local.md; the guideline files
+        # themselves are refreshed from the template so repo edits propagate.
+        for spec in _global_guideline_specs():
+            dest = self.home / spec.dest_rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text("stale local edit", encoding="utf-8")
         out = self._run_install()
-        for spec in _seed_specs():
-            seed = self.home / spec.dest_rel
-            # The user's content is left intact and no .bak is taken.
-            self.assertEqual(seed.read_text(encoding="utf-8"), "user-edited guideline")
-            self.assertFalse(seed.with_name(seed.name + ".bak").exists())
-        self.assertIn("skip:", out)
+        for spec in _global_guideline_specs():
+            dest = self.home / spec.dest_rel
+            src = cli.REPO_ROOT / spec.src_rel
+            # The user's content is replaced with the template, backed up to .bak.
+            self.assertEqual(dest.read_bytes(), src.read_bytes())
+            bak = dest.with_name(dest.name + ".bak")
+            self.assertTrue(bak.exists(), f"missing bak: {bak}")
+            self.assertEqual(bak.read_text(encoding="utf-8"), "stale local edit")
+        self.assertIn("replaced:", out)
 
     def test_dir_perms_0700_on_posix(self) -> None:
         if not cli.is_posix():
@@ -751,8 +755,6 @@ class CleanTests(unittest.TestCase):
     def test_removes_managed_files(self) -> None:
         self._run_clean()
         for spec in cli.TEMPLATE_FILES:
-            if spec.skip_if_exists:
-                continue
             dest = self.home / spec.dest_rel
             self.assertFalse(dest.exists(), f"still present: {dest}")
 
@@ -764,8 +766,6 @@ class CleanTests(unittest.TestCase):
     def test_creates_bak_for_each(self) -> None:
         self._run_clean()
         for spec in cli.TEMPLATE_FILES:
-            if spec.skip_if_exists:
-                continue
             bak = self.home / (spec.dest_rel + ".bak")
             self.assertTrue(bak.exists(), f"missing bak: {bak}")
 
@@ -776,15 +776,6 @@ class CleanTests(unittest.TestCase):
             settings.exists(),
             "clean() must not remove ~/.claude/settings.json (carries user values)",
         )
-
-    def test_preserves_seed_files(self) -> None:
-        self._run_clean()
-        for spec in _seed_specs():
-            seed = self.home / spec.dest_rel
-            self.assertTrue(
-                seed.exists(),
-                f"clean() must not remove seed-only file (user-managed): {seed}",
-            )
 
     def test_skip_when_already_absent(self) -> None:
         self._run_clean()
@@ -834,16 +825,23 @@ class VerifyTests(unittest.TestCase):
             report = cli.verify(self.home)
         self.assertTrue(any("mode drift" in m for m in report.failures))
 
-    def test_seed_file_drift_not_flagged(self) -> None:
-        # A user-edited seed file (CLAUDE.md / AGENTS.md) legitimately diverges
-        # from the template, so verify must not report drift for it.
-        for spec in _seed_specs():
+    def test_global_guideline_drift_flagged(self) -> None:
+        # The guideline files are pure template copies, so an edit to one is
+        # drift that verify must report (machine-local rules go in a *.local.md).
+        specs = _global_guideline_specs()
+        self.assertTrue(specs, "expected the global guideline specs")
+        for spec in specs:
             (self.home / spec.dest_rel).write_text(
                 "my own global guideline", encoding="utf-8"
             )
         with patch("sys.stdout", new=StringIO()):
             report = cli.verify(self.home)
-        self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
+        for spec in specs:
+            dest = self.home / spec.dest_rel
+            self.assertTrue(
+                any("drift" in m and str(dest) in m for m in report.failures),
+                report.failures,
+            )
 
     def test_settings_missing_template_key_detected(self) -> None:
         settings = self.home / cli.SETTINGS_DEST_REL

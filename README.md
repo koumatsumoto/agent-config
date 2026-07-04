@@ -56,17 +56,17 @@ python scripts/cli.py install
 
 このコマンドは以下を反映する。
 
-- `~/.claude/CLAUDE.md` (既存があれば上書きしない。初回のみ配置。詳細は後述)
+- `~/.claude/CLAUDE.md` (テンプレートで上書き。既存は `*.bak` へ退避。詳細は後述)
 - `~/.claude/rules/`
 - `~/.claude/skills/`
 - `~/.claude/statusline.py`
 - `~/.claude/subagent-statusline.py`
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
-- `~/.codex/AGENTS.md` (既存があれば上書きしない。初回のみ配置。詳細は後述)
+- `~/.codex/AGENTS.md` (テンプレートで上書き。既存は `*.bak` へ退避。詳細は後述)
 - `~/.codex/config.toml`
 - `~/.agents/skills/`
 
-`settings.json` / `CLAUDE.md` / `AGENTS.md` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
+`settings.json` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
 
 `rules` / `skills` ツリーは配備先をテンプレートに一致させる。**管理ディレクトリ内のテンプレートに無いファイル / サブディレクトリは prune する** (`pruned: ...` 出力、`*.bak` へ退避)。ただし **ツリー直下のトップレベルエントリ (テンプレートに無いファイル・ディレクトリ — ユーザが置いた独自 skill 等) は保護され、prune されない**。
 
@@ -101,7 +101,9 @@ python scripts/cli.py install
 
 ### `CLAUDE.md` / `AGENTS.md` の取り扱い
 
-`templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、**seed-only** で反映する。`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` が無い場合のみ初期配置し、既に存在する場合は上書きせずローカル編集を保護する（install は `skip:` を出力）。`settings.json` と同様にユーザ管理ファイル扱いとし、`clean` でも削除せず、`verify` でもテンプレートとの差分（drift）を検査しない。グローバル指針を更新したい場合は配置先を直接編集するか、`templates/` 側を編集したうえで既存ファイルを退避してから再 install する。
+`templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、**テンプレートを source of truth として上書き反映**する。install のたびに `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` をテンプレートで置き換え（既存は `*.bak` へ退避、`replaced:` 出力）、repo 側の更新がそのまま各マシンへ伝播する。純テンプレコピー扱いなので `clean` は削除対象に含め、`verify` はテンプレートとの差分（drift）を検査する。
+
+マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ただし **ユーザレベルの `~/.claude/CLAUDE.local.md` は Claude Code の自動読み込み対象外**（自動読み込みされるユーザメモリは `~/.claude/CLAUDE.md` のみ）である点に注意する。グローバル指針を変えたい場合は `templates/` 側を編集して再 install する。
 
 ## 検証
 
@@ -164,8 +166,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | Repository Source | Destination |
 | --- | --- |
-| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` (seed-only: 既存は上書きしない) |
-| `templates/AGENTS.md` | `~/.codex/AGENTS.md` (seed-only: 既存は上書きしない) |
+| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` (テンプレートで上書き。既存は `*.bak` へ退避) |
+| `templates/AGENTS.md` | `~/.codex/AGENTS.md` (テンプレートで上書き。既存は `*.bak` へ退避) |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
