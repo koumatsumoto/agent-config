@@ -1,12 +1,7 @@
 {
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/statusline.py",
-    "refreshInterval": 30
-  },
-  "subagentStatusLine": {
-    "type": "command",
-    "command": "~/.claude/subagent-statusline.py"
+  "attribution": {
+    "commit": "",
+    "pr": ""
   },
   "permissions": {
     "deny": [
@@ -32,17 +27,30 @@
       "Read(**/local.settings.json)",
       "Bash(npx *)"
     ],
-    "defaultMode": "plan"
+    "defaultMode": "auto"
+  },
+  "enableWorkflows": false,
+  "workflowKeywordTriggerEnabled": false,
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.py",
+    "refreshInterval": 30
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "~/.claude/subagent-statusline.py"
   },
   "language": "日本語",
+  "feedbackSurveyRate": 0,
   "effortLevel": "xhigh",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
-  "fileCheckpointingEnabled": true,
   "tui": "fullscreen",
+  "outputStyle": "Explanatory",
+  "verbose": true,
+  "fileCheckpointingEnabled": true,
   "showTurnDuration": true,
   "showMessageTimestamps": true,
-  "feedbackSurveyRate": 0
+  "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true
 }
