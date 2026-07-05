@@ -14,3 +14,5 @@
 3. **規約準拠** (命名・コメント・関数長) → Phase 2 / **アーキ判断との整合** (パターン選択・責務分割・進化方向) → architect
 
 例: 1 ファイル内で完結する循環 import の初期化順序 → Phase 2 (current diff 内の構造) / 同じ循環 import が repo 全体 5 箇所に拡散 → architect (横断・長期保守性)。
+
+なお Phase 2 は code-review.md Step 2 の範囲で「前提・不変条件を能動的に崩す」確認と不変条件継承 probe も行う (能動的な敵対分析の主担当は Phase 3 adversary、重複は Phase 4 dedup が吸収)。これは Phase 2 の code-level 正しさ検査の一部であり、上表の architect との住み分けは変えない。
