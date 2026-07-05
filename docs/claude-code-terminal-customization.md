@@ -66,7 +66,7 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 ## 2. Output Styles
 
-`/config` → Output style で選択するか、カスタムスタイルを作成する。
+有効化は `/config` → Output style（選択は local レベル = プロジェクトの `.claude/settings.local.json` に保存）か、settings.json の `outputStyle` キー（user / project / local）で行う。style は session 開始時に一度だけ読み込まれ、変更の反映には `/clear` または新セッションが必要。
 
 ### 組み込みスタイル
 
@@ -76,7 +76,7 @@ Claude Code ターミナルのカスタマイズ方法とセキュリティベ�
 
 ### カスタムスタイル
 
-`~/.claude/output-styles/<name>.md` にファイルを作成:
+配置場所は user レベル `~/.claude/output-styles/<name>.md` かプロジェクトレベル `.claude/output-styles/<name>.md`。このリポジトリは `fable-like`（モデル切替時に Fable 相当の行動規範を注入）を `templates/output-styles/` から user レベルへ配布する（有効化・運用は README を参照）。独自スタイルを作る場合はファイルを作成:
 
 ```yaml
 ---
