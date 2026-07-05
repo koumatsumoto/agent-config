@@ -15,6 +15,7 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 - `templates/CLAUDE.md` - Claude Code 向け共通方針
 - `templates/rules/` - Claude Code 向け markdown rules
 - `templates/skills/` - Claude / Codex 共用の skills
+- `templates/output-styles/` - Claude Code 向け custom output styles (モデル切替時の行動規範。`fable-like` 同梱)
 - `templates/config.toml` - Codex CLI 用設定テンプレート
 - `templates/statusline.py` - Claude Code 用 status line (リッチ 2 行レイアウト)
 - `templates/subagent-statusline.py` - Claude Code サブエージェント行の status line
@@ -59,6 +60,7 @@ python scripts/cli.py install
 - `~/.claude/CLAUDE.md` (詳細は後述)
 - `~/.claude/rules/`
 - `~/.claude/skills/`
+- `~/.claude/output-styles/`
 - `~/.claude/statusline.py`
 - `~/.claude/subagent-statusline.py`
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
@@ -104,6 +106,14 @@ python scripts/cli.py install
 `templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、テンプレートを source of truth として毎回上書きする。repo 側の更新がそのまま各マシンへ伝播する。指針を変えたい場合は `templates/` 側を編集して再 install する。
 
 マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ユーザレベルの `~/.claude/CLAUDE.local.md` は自動読み込みされない。
+
+### Output Styles の取り扱い
+
+`templates/output-styles/` は Claude Code の custom output style を `~/.claude/output-styles/` へ配布する。同梱の `fable-like` は、モデルを Opus / Sonnet に切り替えたセッションでも Fable 5 相当の行動様式（結論先行の報告・即行動・検証の実証・スコープ規律）を system prompt 末尾に注入する（`keep-coding-instructions: true` により組み込みのソフトウェアエンジニアリング指示は保持する）。
+
+- **有効化**: `/config` → Output style で `fable-like` を選ぶ（選択は local レベル = プロジェクトの `.claude/settings.local.json` に保存）か、`.claude/settings.local.json` に `"outputStyle": "fable-like"` を直接書く。反映は `/clear` または新セッション（style は session 開始時にのみ読み込まれる）
+- **運用注意**: user レベル `~/.claude/settings.json` の `outputStyle` はテンプレート宣言キー（既定 `Explanatory`）で、install 再実行のたびに repo の値へ戻る。そのため fable-like は user レベルでなく**プロジェクトレベル**（`.claude/settings.local.json` 等）で有効化する
+- **無効化 (Fable に戻す)**: `/config` で outputStyle を元に戻すか、`.claude/settings.local.json` の `outputStyle` を削除する。反映は同じく `/clear` または新セッション
 
 ## 検証
 
@@ -170,6 +180,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
+| `templates/output-styles/` | `~/.claude/output-styles/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (shallow merge) |

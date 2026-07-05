@@ -75,6 +75,7 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
 TEMPLATE_TREES: tuple[TreeSpec, ...] = (
     TreeSpec("templates/rules", ".claude/rules"),
     TreeSpec("templates/skills", ".claude/skills"),
+    TreeSpec("templates/output-styles", ".claude/output-styles"),
     TreeSpec("templates/skills", ".agents/skills"),
 )
 
