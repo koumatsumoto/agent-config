@@ -4,7 +4,7 @@
 Reads the session JSON that Claude Code pipes on stdin and prints up to two
 lines:
 
-    Line 1: 🤖 model [agent] [·effort] │ bar pct% (used/window) $cost [⟲ cacheN%] [⇌ api ◷ wall]
+    Line 1: 🤖 model [agent] [·effort] [[style]] │ bar pct% (used/window) $cost [⟲ cacheN%] [⇌ api ◷ wall]
     Line 2: 🌳 branch N files +A/-R [🔗PR#num] │ 5h:N% ~reset │ 7d:N% ~DAY.hAM
 
 Maintainer notes (why it is shaped this way):
@@ -219,6 +219,16 @@ def effort_segment(level: str) -> str:
     return f" ·{level}" if level else ""
 
 
+def output_style_segment(name: str) -> str:
+    """Show a non-default output style as `[name]`.
+
+    Claude Code's built-in "default" style is the null state, so tagging it is
+    noise; only a custom style earns a segment. Square brackets set it apart
+    from the ·effort marker that precedes it in the model cluster.
+    """
+    return f" [{name}]" if name and name.lower() != "default" else ""
+
+
 def context_segment(payload: dict[str, object]) -> str:
     pct = int(round(as_num(dig(payload, "context_window", "used_percentage"))))
     pct = max(0, min(100, pct))
@@ -424,6 +434,7 @@ def build_line1(payload: dict[str, object]) -> str:
     if agent:
         head += f" {agent}"
     head += effort_segment(sanitize(as_str(dig(payload, "effort", "level"))))
+    head += output_style_segment(sanitize(as_str(dig(payload, "output_style", "name"))))
     # Metrics ($cost ⟲ cache ⇌ api ◷ wall) ride with the context bar separated
     # by a space; only the model↔metrics divider keeps the │.
     body = f"{context_segment(payload)} {metrics_segment(payload)}"
