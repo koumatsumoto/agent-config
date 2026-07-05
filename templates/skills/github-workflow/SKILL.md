@@ -42,6 +42,7 @@ Context だけで機械的に判定する。`gh repo view` が失敗（`NOT-A-GI
 
 - km:commit でコミットし、ブランチを push し、PR を作成（既存があれば更新）する
 - issue があれば PR 本文に独立行で `Closes #<num>` を入れる（複数 PR に分けるなら中間は `Refs #<num>`、最終だけ `Closes #<num>`）
+- 対象 issue が **km:plan 管理**（本文に `<!-- km:plan:managed -->` marker）で「実装時確認事項」節を持つ場合、各項目の **消化結果**を PR 本文・報告に含める（該当作業単位の検証に紐付いていればその確認結果、対応しないなら残す理由）。km:plan が「実装後に詰める」として委譲した項目を handoff で silent drop させない（`.kaizen/` の改善点 triage とは別系統。こちらは issue 本文の委譲項目が対象）
 - CI / checks は見られれば確認して結果を報告に含める
 - `.kaizen/` に記録した改善点を km:kaizen の Report 時 triage で片付ける（`pr` は同 PR で対応済み、`repo` は follow-up issue 化、`workflow` は残置と件数、`knowledge` は fold 先で振り分け）。PR URL・変更要約・検証結果とあわせて、triage の結果を**ユーザー向けの言葉**で報告する（何を直したか / どの issue を立てたか等。`dest`・`sweep` 等の内部機構語は出さない）。改善点がゼロなら「改善点: なし」の類は書かない
 
