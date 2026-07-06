@@ -88,7 +88,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 ## Phase 2: コードレビュー (generalist)
 
-`code-review.md` に従い main コンテキストでレビューする。コードの正しさ・規約・可読性を見る generalist レビュー。能動的な敵対分析の主担当は Phase 3 adversary だが、本 Phase も code-review.md Step 2 の範囲で「変更が置く前提・不変条件を能動的に崩す」確認と経路間の不変条件継承の確認を行う (重複は Phase 4 dedup が吸収)。
+`code-review.md` に従い main コンテキストでレビューする。コードの正しさ・規約・可読性を見る generalist レビュー。能動的な敵対分析の主担当は Phase 3 adversary だが、本 Phase も code-review.md Step 2 の範囲 (前提の能動破壊・diff 外照合による不変条件の継承確認) を行う (重複は Phase 4 dedup が吸収)。
 
 **起動条件**: docs-only 以外 (`code-only` / `code+docs` / `test/config/chore` / `mixed`) で常時起動。
 
@@ -149,7 +149,7 @@ orchestrator (LLM) は実行環境の install root を `<review skill root>` の
 
 `<role>` は `architect`, `security`, `adversary` のいずれか。3 つを同一メッセージ内で発行する (sequential ではなく parallel)。`<report file>` は orchestrator が割り当てた `<report dir>/phase3-<role>.md`。
 
-**ロール識別子と出力見出しのマッピング**: `architect` → `### システムアーキテクト`、`security` → `### セキュリティ専門家`、`adversary` → `### 敵対レビュア`。
+**ロール識別子と出力見出しのマッピング**は `report-format.md` の機械可読契約を単一ソースとする (`architect` → `### システムアーキテクト` 等。パース対象文字列なので二重管理しない)。
 
 ### 各レビュアの視点
 
@@ -222,7 +222,7 @@ BLOCKED を出したレビューは「修正後の再確認」を必要とする
 
 - **起動条件**: `--recheck` token、かつ「直前の km:review が BLOCKED で修正差分を伴う再依頼」と判断できること。判断材料は同一セッションの会話文脈、または **新セッションではユーザの現ターン依頼 + 永続化された統合レポート** (「前回の指摘を直したので再チェック」等)。どちらでも可 (セッション境界に依存しない)
 - **入力**: 未解決所見の一覧 + 修正差分。一覧は会話文脈、または **永続化された統合レポート** (`<report dir>/integration.md`) から取得する。**フォールバック (通常実行へ切替)**: (a) 一覧をいずれからも入手できない、(b) 読み込んだ `integration.md` の判定が BLOCKED でない (別 run に上書きされた疑い)、(c) その所見が今回の対象差分と噛み合わない — のいずれかなら recheck とせず通常実行に切り替え、その旨を報告に明記する (存在しない・陳腐化した所見一覧を推測で使わない)
-- **実行主体**: 解消確認と修正 hunk の欠陥走査は **独立 subagent 1 名への差分指示** で行う (著者バイアス回避)。この subagent は **通常の Phase 2/3 と同じ方法論を継承する**: `code-review.md` Step 2 (3 層 + 不変条件継承 probe) で修正 hunk を走査し、対象が挙動資産分類なら `references/prompt-asset-lens.md` を読み、返信前に報告ファイル + 完了 sentinel を書く (中断時の部分回収を recheck 経路にも適用)。指示の骨子: 未解決所見ごとに解消済み / 未解消を判定し、修正 hunk に新たな欠陥がないかを上記方法論で走査。main コンテキストは統合と判定のみを担う
+- **実行主体**: 解消確認と修正 hunk の欠陥走査は **独立 subagent 1 名への差分指示** で行う (著者バイアス回避)。この subagent は **通常の Phase 2/3 と同じ方法論を継承する**: `code-review.md` Step 2 (3 層 + diff 外照合) で修正 hunk を走査し、対象が挙動資産分類なら `references/prompt-asset-lens.md` を読み、返信前に報告ファイル + 完了 sentinel を書く (中断時の部分回収を recheck 経路にも適用)。指示の骨子: 未解決所見ごとに解消済み / 未解消を判定し、修正 hunk に新たな欠陥がないかを上記方法論で走査。main コンテキストは統合と判定のみを担う
 - **PASS 反証の必須**: recheck で `PASS` を出す前に、全レベル共通の PASS 反証 (反実仮想 1 パス、Phase 4 手順 5 の安価な版) を必須で実施する
 - **Phase 3 の再起動 (昇格)**: 修正が高リスク領域に **新たに** 触れる場合のみ、該当 expert を起動する (既存の内容ベース昇格と同一基準)
 - **defer 済み doc-review の再開**: recheck の結果が `PASS` になったら、defer されていた Phase 5 を実行して最終判定を確定する
@@ -249,7 +249,7 @@ doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき 
 - `test-or-config-or-chore-only` → Phase 3 / Phase 5 skip (Phase 2 + Phase 4 のみ)
 - **内容ベースの昇格は降格に優先する**: `quick` / `standard` でも diff が高リスク領域 (Phase 3 の「内容ベースの昇格」参照) に触れるなら、該当専門家を起動する。`test-or-config-or-chore-only` でも、その変更が高リスク (CI 権限・デプロイ・秘密情報など) なら同様に昇格してよい
 
-`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表。ただし不変条件継承 probe は `quick`・`test/config/chore` でも無条件で、深度を絞る対象外)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス) は安価なため全レベルで行う。そこで出る確認推奨ノートは非ブロッキングで判定を変えない。
+`quick` と `standard` は Phase 起動条件こそ同じだが、`quick` では Phase 2 / doc-review 内部の検査深度を絞る (詳細は `code-review.md` / `doc-review.md` の深度表。ただし不変条件の継承サブプローブは全レベル無条件で深度削減の対象外 — `code-review.md` Step 2「diff 外照合」)。Phase 4 の **能動的検証 (`[possible]` HIGH+ の実証) と PASS 反証の確定ステップは `thorough` / 高リスク昇格時のみ** 行う (ツール実行を伴うため)。PASS 反証の反実仮想 (surface 列挙 + 独立 1 パス) は安価なため全レベルで行う。そこで出る確認推奨ノートは非ブロッキングで判定を変えない。
 
 ## 指摘対応の方針
 
