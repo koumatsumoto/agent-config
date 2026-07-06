@@ -15,4 +15,4 @@
 
 例: 1 ファイル内で完結する循環 import の初期化順序 → Phase 2 (current diff 内の構造) / 同じ循環 import が repo 全体 5 箇所に拡散 → architect (横断・長期保守性)。
 
-なお Phase 2 は code-review.md Step 2 の範囲で「前提・不変条件を能動的に崩す」確認と不変条件継承 probe も行う (能動的な敵対分析の主担当は Phase 3 adversary、重複は Phase 4 dedup が吸収)。これは Phase 2 の code-level 正しさ検査の一部であり、上表の architect との住み分けは変えない。
+なお Phase 2 も code-review.md Step 2 の範囲 (前提の能動破壊・diff 外照合による不変条件の継承) を行うが (主担当は Phase 3 adversary、重複は Phase 4 dedup が吸収)、これは code-level 正しさ検査であり上表の architect との住み分けは変えない。
