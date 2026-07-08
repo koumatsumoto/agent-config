@@ -111,19 +111,6 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "review-loop",
 )
 
-# Profile files shipped previously but no longer maintained. The .codex root is
-# intentionally not pruned wholesale because it may contain user-managed files,
-# so retired profiles are removed by explicit file name.
-DECOMMISSIONED_CODEX_PROFILES: tuple[str, ...] = (
-    "autonomous.config.toml",
-    "deep.config.toml",
-    "full_trust.config.toml",
-    "interactive.config.toml",
-    "live_web.config.toml",
-    "research.config.toml",
-    "review.config.toml",
-)
-
 
 def clean_targets(home: Path) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
@@ -355,18 +342,6 @@ def remove_decommissioned_skills(home: Path) -> list[Path]:
             if target.is_dir() or target.is_symlink():
                 remove_with_backup(target)
                 removed.append(target)
-    return removed
-
-
-def remove_decommissioned_codex_profiles(home: Path) -> list[Path]:
-    """Remove deployed Codex profiles that are no longer shipped."""
-    removed: list[Path] = []
-    root = home / ".codex"
-    for name in DECOMMISSIONED_CODEX_PROFILES:
-        target = root / name
-        if target.is_file() or target.is_symlink():
-            remove_with_backup(target)
-            removed.append(target)
     return removed
 
 
@@ -657,8 +632,6 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
                 print(f"pruned: {dest}")
 
     for dest in remove_decommissioned_skills(home):
-        print(f"removed (decommissioned): {dest}")
-    for dest in remove_decommissioned_codex_profiles(home):
         print(f"removed (decommissioned): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
