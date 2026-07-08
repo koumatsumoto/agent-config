@@ -68,7 +68,7 @@ python scripts/cli.py install
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
 - `~/.codex/AGENTS.md` (詳細は後述)
 - `~/.codex/config.toml`
-- `~/.codex/*.config.toml` (Codex profile: `autonomous` / `deep` / `full_trust` / `interactive` / `live_web` / `readonly` / `research` / `review`)
+- `~/.codex/*.config.toml` (Codex profile: `readonly` / `full`)
 - `~/.codex/rules/`
 - `~/.agents/skills/`
 
@@ -218,18 +218,18 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 ## Codex 設計メモ
 
-- default model は `gpt-5.5`、reasoning effort は `medium`、verbosity も `medium` にして、通常実装の品質と速度のバランスを取っている
-- `web_search = "cached"` を明示し、通常調査はキャッシュ検索、最新確認は `research` profile を使い分ける前提にしている
+- default model は `gpt-5.5`、reasoning effort は `high`、verbosity は `medium` にして、通常実装でも深めに検討する
+- `web_search = "cached"` を明示し、通常調査はキャッシュ検索を使う。最新確認が必要な場合は live web を明示して使う
 - `plan_mode_reasoning_effort = "high"` を明示し、Plan mode では通常ターンより深く考えさせる
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
 - default は `workspace-write + on-request + approvals_reviewer = "auto_review"` を前提にする。通常の workspace 内読み取り・編集・安全なコマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路へ送る
 - `sandbox_workspace_write.network_access = false` を明示し、`gh` / package manager / curl などの shell network は default では sandbox 内で直接動かさない。必要な場合は目的と影響を説明して承認経路に送る
-- Codex profile は `~/.codex/<profile>.config.toml` として配布する。`autonomous` は default と同じ安全自律姿勢を明示する profile、`interactive` は user approval、`full_trust` は `danger-full-access + never` の明示的な完全信頼 profile
-- `approval_policy = "never"` は `full_trust` のみに置く。通常の自律運用は承認待ちを減らすのではなく、workspace sandbox と auto review で安全な範囲を自律化する
+- Codex profile は `~/.codex/<profile>.config.toml` として配布する。管理対象は `readonly` と `full` だけに絞る
+- `approval_policy = "never"` は `full` のみに置く。通常の自律運用は承認待ちを消すのではなく、workspace sandbox と auto review で安全な範囲を自律化する
 - `~/.codex/rules/` は sandbox 外へ出る承認要求に対して、force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt へ寄せる。workspace sandbox 内で実行できる Bash を強制遮断するものではないため、危険な in-sandbox コマンドの抑止は `AGENTS.md` の行動規範で扱う
-- 承認経路をユーザ判断に戻したい場合は `interactive` profile、sandbox も外した完全信頼運用にしたい場合は `full_trust` profile を使う
+- 読み取り専用で探索したい場合は `readonly` profile、sandbox も外した完全信頼運用にしたい場合は `full` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 

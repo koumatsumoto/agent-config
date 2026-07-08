@@ -41,21 +41,15 @@
 
 ### Profile の使い分け
 
-- 作業前に profile を選ぶ。通常実装は default、最新確認は `research`、レビューは `review`、読み取り専用探索は `readonly`
-- profile は `~/.codex/<profile>.config.toml` として管理する。`[profiles.*]` ではなく、`codex --profile research` のように起動時に選ぶ
-- default: `gpt-5.5 medium + workspace-write + on-request + auto_review + cached web + shell network off`。通常の読み取り・編集・安全な workspace 内コマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路に送る
-- `autonomous`: default と同じ安全自律 profile。明示的に自律運用したいときに使う。`approval_policy = "never"` は使わない
-- `research`: `high reasoning + live web`。最新確認や外部仕様調査を進める。shell network は default と同じく sandbox 内では無効
-- `review`: `read-only + high reasoning + auto_review`。レビュー、監査、影響調査
+- 通常実装は default を使う。読み取り専用探索は `readonly`、sandbox と承認を外す明示的な完全信頼運用は `full`
+- profile は `~/.codex/<profile>.config.toml` として管理する。`[profiles.*]` ではなく、`codex --profile readonly` のように起動時に選ぶ
+- default: `gpt-5.5 high + workspace-write + on-request + auto_review + cached web + shell network off`。通常の読み取り・編集・安全な workspace 内コマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路に送る
 - `readonly`: 読み取り専用で安全にコードベースを探索したいとき
-- `interactive`: `workspace-write + on-request + user approval + shell network off`。承認判断を必ずユーザへ戻したいとき
-- `deep`: default の安全設定のまま reasoning effort だけ高める
-- `live_web`: default の安全設定のまま web search だけ live にする
-- `full_trust`: `danger-full-access + never`。sandbox と承認待ちを外す明示的な完全信頼 profile。ユーザが危険性を理解して指定したときだけ使う
+- `full`: `gpt-5.5 xhigh + danger-full-access + never`。sandbox と承認待ちを外す明示的な完全信頼 profile。ユーザが危険性を理解して指定したときだけ使う
 
 ### 最新性の確認
 
-- 最新情報、価格、仕様、法令、外部 API、ニュース性のある内容は cached search に頼らず `research` profile で確認する
+- 最新情報、価格、仕様、法令、外部 API、ニュース性のある内容は cached search だけで判断せず、必要に応じて live web を明示して確認する
 - 既知のリポジトリ内情報は web より先にローカルファイルを読む
 - 外部仕様を参照したら、判断と事実を分けて要約する
 

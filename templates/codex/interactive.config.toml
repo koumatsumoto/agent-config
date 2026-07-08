@@ -1,8 +1,0 @@
-# Codex CLI profile: interactive
-# Ask the user directly for sandbox escapes and external side effects.
-approval_policy = "on-request"
-approvals_reviewer = "user"
-sandbox_mode = "workspace-write"
-
-[sandbox_workspace_write]
-network_access = false

@@ -325,6 +325,31 @@ class DecommissionedSkillsTests(unittest.TestCase):
         )
 
 
+class DecommissionedCodexProfilesTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="decom-codex-test-"))
+        self.codex = self.home / ".codex"
+        self.codex.mkdir(parents=True)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_removes_decommissioned_profile_file_with_backup(self) -> None:
+        name = cli.DECOMMISSIONED_CODEX_PROFILES[0]
+        old = self.codex / name
+        old.write_text("old profile", encoding="utf-8")
+        removed = cli.remove_decommissioned_codex_profiles(self.home)
+        self.assertEqual(removed, [old])
+        self.assertFalse(old.exists())
+        self.assertEqual(old.with_name(name + ".bak").read_text(encoding="utf-8"), "old profile")
+
+    def test_preserves_user_added_profile_file(self) -> None:
+        custom = self.codex / "mine.config.toml"
+        custom.write_text("mine", encoding="utf-8")
+        self.assertEqual(cli.remove_decommissioned_codex_profiles(self.home), [])
+        self.assertTrue(custom.exists())
+
+
 class BackupTests(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))
@@ -677,6 +702,18 @@ class InstallTests(unittest.TestCase):
             user_skill.exists(), "a user-added top-level skill must never be pruned"
         )
 
+    def test_install_removes_decommissioned_codex_profiles(self) -> None:
+        self._run_install()
+        stale = self.home / ".codex/autonomous.config.toml"
+        stale.write_text("old profile", encoding="utf-8")
+        out = self._run_install()
+        self.assertFalse(stale.exists())
+        self.assertEqual(
+            stale.with_name("autonomous.config.toml.bak").read_text(encoding="utf-8"),
+            "old profile",
+        )
+        self.assertIn("removed (decommissioned):", out)
+
     def test_settings_user_value_preserved_on_rerun(self) -> None:
         self._run_install()
         settings = self.home / cli.SETTINGS_DEST_REL
@@ -702,14 +739,8 @@ class InstallTests(unittest.TestCase):
     def test_codex_profiles_installed_as_top_level_config_files(self) -> None:
         self._run_install()
         expected = {
-            ".codex/autonomous.config.toml",
-            ".codex/deep.config.toml",
-            ".codex/full_trust.config.toml",
-            ".codex/interactive.config.toml",
-            ".codex/live_web.config.toml",
+            ".codex/full.config.toml",
             ".codex/readonly.config.toml",
-            ".codex/research.config.toml",
-            ".codex/review.config.toml",
         }
         specs = _codex_profile_specs()
         self.assertEqual({s.dest_rel for s in specs}, expected)
@@ -728,7 +759,7 @@ class InstallTests(unittest.TestCase):
             (cli.REPO_ROOT / "templates/codex-rules/default.rules").read_bytes(),
         )
 
-    def test_codex_never_approval_limited_to_full_trust_profile(self) -> None:
+    def test_codex_never_approval_limited_to_full_profile(self) -> None:
         files = [
             cli.REPO_ROOT / spec.src_rel
             for spec in cli.TEMPLATE_FILES
@@ -738,7 +769,7 @@ class InstallTests(unittest.TestCase):
             path.relative_to(cli.REPO_ROOT).as_posix()
             for path in files
             if 'approval_policy = "never"' in path.read_text(encoding="utf-8")
-            and path.name != "full_trust.config.toml"
+            and path.name != "full.config.toml"
         ]
         self.assertEqual(offenders, [])
 

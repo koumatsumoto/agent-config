@@ -1,3 +1,0 @@
-# Codex CLI profile: live_web
-# Use live web search while inheriting the base safety posture.
-web_search = "live"

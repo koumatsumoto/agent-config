@@ -69,14 +69,8 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
     FileSpec("templates/AGENTS.md", ".codex/AGENTS.md", 0o600),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
-    FileSpec("templates/codex/autonomous.config.toml", ".codex/autonomous.config.toml", 0o600),
-    FileSpec("templates/codex/deep.config.toml", ".codex/deep.config.toml", 0o600),
-    FileSpec("templates/codex/full_trust.config.toml", ".codex/full_trust.config.toml", 0o600),
-    FileSpec("templates/codex/interactive.config.toml", ".codex/interactive.config.toml", 0o600),
-    FileSpec("templates/codex/live_web.config.toml", ".codex/live_web.config.toml", 0o600),
+    FileSpec("templates/codex/full.config.toml", ".codex/full.config.toml", 0o600),
     FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
-    FileSpec("templates/codex/research.config.toml", ".codex/research.config.toml", 0o600),
-    FileSpec("templates/codex/review.config.toml", ".codex/review.config.toml", 0o600),
 )
 
 # Directory trees synced recursively (with per-file .bak backup).
@@ -115,6 +109,19 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "open-html",
     "quality-review",
     "review-loop",
+)
+
+# Profile files shipped previously but no longer maintained. The .codex root is
+# intentionally not pruned wholesale because it may contain user-managed files,
+# so retired profiles are removed by explicit file name.
+DECOMMISSIONED_CODEX_PROFILES: tuple[str, ...] = (
+    "autonomous.config.toml",
+    "deep.config.toml",
+    "full_trust.config.toml",
+    "interactive.config.toml",
+    "live_web.config.toml",
+    "research.config.toml",
+    "review.config.toml",
 )
 
 
@@ -348,6 +355,18 @@ def remove_decommissioned_skills(home: Path) -> list[Path]:
             if target.is_dir() or target.is_symlink():
                 remove_with_backup(target)
                 removed.append(target)
+    return removed
+
+
+def remove_decommissioned_codex_profiles(home: Path) -> list[Path]:
+    """Remove deployed Codex profiles that are no longer shipped."""
+    removed: list[Path] = []
+    root = home / ".codex"
+    for name in DECOMMISSIONED_CODEX_PROFILES:
+        target = root / name
+        if target.is_file() or target.is_symlink():
+            remove_with_backup(target)
+            removed.append(target)
     return removed
 
 
@@ -638,6 +657,8 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
                 print(f"pruned: {dest}")
 
     for dest in remove_decommissioned_skills(home):
+        print(f"removed (decommissioned): {dest}")
+    for dest in remove_decommissioned_codex_profiles(home):
         print(f"removed (decommissioned): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to

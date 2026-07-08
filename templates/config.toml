@@ -4,7 +4,7 @@
 # Copy this file to ~/.codex/config.toml via install.sh.
 
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 model_verbosity = "medium"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"

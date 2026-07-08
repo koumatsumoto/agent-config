@@ -1,4 +1,0 @@
-# Codex CLI profile: review
-# Read-only, higher-reasoning profile for audits and code review.
-sandbox_mode = "read-only"
-model_reasoning_effort = "high"
