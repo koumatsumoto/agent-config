@@ -69,6 +69,8 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
     FileSpec("templates/AGENTS.md", ".codex/AGENTS.md", 0o600),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
+    FileSpec("templates/codex/full.config.toml", ".codex/full.config.toml", 0o600),
+    FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
 )
 
 # Directory trees synced recursively (with per-file .bak backup).
@@ -77,6 +79,7 @@ TEMPLATE_TREES: tuple[TreeSpec, ...] = (
     TreeSpec("templates/skills", ".claude/skills"),
     TreeSpec("templates/output-styles", ".claude/output-styles"),
     TreeSpec("templates/skills", ".agents/skills"),
+    TreeSpec("templates/codex-rules", ".codex/rules"),
 )
 
 # settings.json — special handling: shallow merge instead of overwrite.

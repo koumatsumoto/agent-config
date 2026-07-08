@@ -4,23 +4,24 @@
 # Copy this file to ~/.codex/config.toml via install.sh.
 
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 model_verbosity = "medium"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Trust-first default for local development on owned repositories.
-# This keeps routine file edits inside the workspace sandbox, allows outbound
-# network for developer CLIs, and still lets Codex request a one-off sandbox
-# bypass for operations the sandbox cannot safely model, such as protected git
-# metadata updates in some environments.
+# Autonomous-by-default local development baseline. Routine workspace reads,
+# edits, and safe commands run without blocking the agent. Anything that needs
+# to leave the workspace sandbox, use shell network, or perform a side-effecting
+# app/MCP action is routed through the approval path, where auto_review can deny
+# critical risk fail-closed.
 approval_policy = "on-request"
+approvals_reviewer = "auto_review"
 sandbox_mode = "workspace-write"
 web_search = "cached"
 check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]
 
 [sandbox_workspace_write]
-network_access = true
+network_access = false
 
 [features]
 enable_request_compression = true
@@ -43,34 +44,3 @@ status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-use
 [history]
 persistence = "save-all"
 max_bytes = 50000000
-
-[profiles.deep]
-model_reasoning_effort = "high"
-
-[profiles.research]
-model_reasoning_effort = "high"
-web_search = "live"
-
-[profiles.full_trust]
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-
-[profiles.autonomous]
-approval_policy = "never"
-sandbox_mode = "workspace-write"
-
-[profiles.interactive]
-approval_policy = "on-request"
-sandbox_mode = "workspace-write"
-
-[profiles.review]
-approval_policy = "never"
-sandbox_mode = "read-only"
-model_reasoning_effort = "high"
-
-[profiles.readonly]
-approval_policy = "never"
-sandbox_mode = "read-only"
-
-[profiles.live_web]
-web_search = "live"

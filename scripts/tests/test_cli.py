@@ -34,6 +34,11 @@ def _global_guideline_specs() -> list[cli.FileSpec]:
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel in dests]
 
 
+def _codex_profile_specs() -> list[cli.FileSpec]:
+    """Codex profile files loaded by `codex --profile <name>`."""
+    return [s for s in cli.TEMPLATE_FILES if s.dest_rel.startswith(".codex/") and s.dest_rel.endswith(".config.toml")]
+
+
 # --------------------------------------------------------------------------- #
 # fs helpers
 # --------------------------------------------------------------------------- #
@@ -693,6 +698,43 @@ class InstallTests(unittest.TestCase):
             self.assertEqual(
                 dest.read_bytes(), src.read_bytes(), f"not a template copy: {dest}"
             )
+
+    def test_codex_profiles_installed_as_top_level_config_files(self) -> None:
+        self._run_install()
+        expected = {
+            ".codex/full.config.toml",
+            ".codex/readonly.config.toml",
+        }
+        specs = _codex_profile_specs()
+        self.assertEqual({s.dest_rel for s in specs}, expected)
+        for spec in specs:
+            dest = self.home / spec.dest_rel
+            src = cli.REPO_ROOT / spec.src_rel
+            self.assertTrue(dest.is_file(), f"missing: {dest}")
+            self.assertEqual(dest.read_bytes(), src.read_bytes())
+
+    def test_codex_rules_installed(self) -> None:
+        self._run_install()
+        rules = self.home / ".codex/rules/default.rules"
+        self.assertTrue(rules.is_file(), f"missing: {rules}")
+        self.assertEqual(
+            rules.read_bytes(),
+            (cli.REPO_ROOT / "templates/codex-rules/default.rules").read_bytes(),
+        )
+
+    def test_codex_never_approval_limited_to_full_profile(self) -> None:
+        files = [
+            cli.REPO_ROOT / spec.src_rel
+            for spec in cli.TEMPLATE_FILES
+            if spec.dest_rel.startswith(".codex/") and spec.dest_rel.endswith(".toml")
+        ]
+        offenders = [
+            path.relative_to(cli.REPO_ROOT).as_posix()
+            for path in files
+            if 'approval_policy = "never"' in path.read_text(encoding="utf-8")
+            and path.name != "full.config.toml"
+        ]
+        self.assertEqual(offenders, [])
 
     def test_global_guidelines_overwritten_when_present(self) -> None:
         # Machine-local edits belong in a *.local.md; the guideline files
