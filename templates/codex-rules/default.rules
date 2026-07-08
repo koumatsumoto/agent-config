@@ -1,0 +1,47 @@
+# Codex exec policy rules for approval requests outside the sandbox.
+#
+# These rules are evaluated for commands Codex wants to run outside the
+# workspace sandbox. They do not block Bash commands that already run inside the
+# workspace sandbox; AGENTS.md carries the in-sandbox operating rule.
+
+prefix_rule(
+  pattern = ["git", "push", "--force"],
+  decision = "prompt",
+  justification = "Force-pushing rewrites remote history; require explicit user approval.",
+)
+
+prefix_rule(
+  pattern = ["git", "push", "--force-with-lease"],
+  decision = "prompt",
+  justification = "Force-pushing rewrites remote history; require explicit user approval.",
+)
+
+prefix_rule(
+  pattern = ["git", "reset", "--hard"],
+  decision = "prompt",
+  justification = "Hard reset discards local work; require explicit user approval.",
+)
+
+prefix_rule(
+  pattern = ["rm", "-rf"],
+  decision = "prompt",
+  justification = "Recursive deletion outside the sandbox must be explicitly approved.",
+)
+
+prefix_rule(
+  pattern = ["gh", "pr", "create"],
+  decision = "prompt",
+  justification = "Creating a pull request writes to GitHub; require approval or auto_review.",
+)
+
+prefix_rule(
+  pattern = ["gh", "issue", "create"],
+  decision = "prompt",
+  justification = "Creating an issue writes to GitHub; require approval or auto_review.",
+)
+
+prefix_rule(
+  pattern = ["gh", "release"],
+  decision = "prompt",
+  justification = "Release operations write externally; require approval or auto_review.",
+)

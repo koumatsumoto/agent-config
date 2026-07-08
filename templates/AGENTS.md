@@ -42,13 +42,16 @@
 ### Profile の使い分け
 
 - 作業前に profile を選ぶ。通常実装は default、最新確認は `research`、レビューは `review`、読み取り専用探索は `readonly`
-- default: `gpt-5.5 medium + workspace-write + on-request + cached web + shell network`。通常の編集と gh / package manager はそのまま動かし、sandbox 外実行が必要な操作だけ確認する既定
-- `research`: `gpt-5.5 high + workspace-write + on-request + live web + shell network`。最新確認や外部仕様調査を進める
-- `review`: `read-only + never + cached web + high reasoning`。レビュー、監査、影響調査
+- profile は `~/.codex/<profile>.config.toml` として管理する。`[profiles.*]` ではなく、`codex --profile research` のように起動時に選ぶ
+- default: `gpt-5.5 medium + workspace-write + on-request + auto_review + cached web + shell network off`。通常の読み取り・編集・安全な workspace 内コマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路に送る
+- `autonomous`: default と同じ安全自律 profile。明示的に自律運用したいときに使う。`approval_policy = "never"` は使わない
+- `research`: `high reasoning + live web`。最新確認や外部仕様調査を進める。shell network は default と同じく sandbox 内では無効
+- `review`: `read-only + high reasoning + auto_review`。レビュー、監査、影響調査
 - `readonly`: 読み取り専用で安全にコードベースを探索したいとき
-- `interactive`: `workspace-write + on-request + cached web + shell network`。承認付きの対話運用に戻したいとき
-- `autonomous`: `workspace-write + never + cached web + shell network`。承認待ちを完全に避けたいが sandbox は残したいとき
-- `full_trust`: `danger-full-access + never`。sandbox も外した完全信頼運用を明示したいときだけ使う
+- `interactive`: `workspace-write + on-request + user approval + shell network off`。承認判断を必ずユーザへ戻したいとき
+- `deep`: default の安全設定のまま reasoning effort だけ高める
+- `live_web`: default の安全設定のまま web search だけ live にする
+- `full_trust`: `danger-full-access + never`。sandbox と承認待ちを外す明示的な完全信頼 profile。ユーザが危険性を理解して指定したときだけ使う
 
 ### 最新性の確認
 
@@ -59,6 +62,8 @@
 ### 実装ルール
 
 - 独立した調査や読み取りは並列化する
-- `gh`、package manager、外部 API 確認などの CLI network は default で許可されている前提で使う
-- 破壊的操作、権限変更、外部書き込みは必要性を説明してから進める
+- `gh`、package manager、外部 API 確認などの shell network は default で sandbox 内実行できない前提で扱う。必要なら目的と影響を説明し、承認経路に送る
+- 破壊的操作、権限変更、外部書き込みは必要性・影響・代替手段を確認してから進める。意図が曖昧なまま実行しない
+- `rm -rf`、`git reset --hard`、force push、権限変更、秘密情報の読み取り、外部サービスへの書き込みは危険操作として扱う。ユーザが明示していない場合は実行しない。明示されている場合も対象と影響を具体化してから承認を得る
+- `~/.codex/rules/` は sandbox 外へ出る承認要求を制御する。workspace sandbox 内で実行できる Bash まで強制遮断する仕組みではないため、危険な in-sandbox コマンドはこの AGENTS.md の行動規範で抑止する
 - 変更前後で確認手段を持つ。可能ならテスト、無理なら差分と静的確認を残す

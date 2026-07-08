@@ -1,0 +1,3 @@
+# Codex CLI profile: deep
+# Use deeper reasoning while inheriting the base safety posture.
+model_reasoning_effort = "high"

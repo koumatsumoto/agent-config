@@ -1,0 +1,4 @@
+# Codex CLI profile: full_trust
+# Explicit escape hatch for fully trusted sessions only.
+approval_policy = "never"
+sandbox_mode = "danger-full-access"

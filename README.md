@@ -17,6 +17,8 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 - `templates/skills/` - Claude / Codex 共用の skills
 - `templates/output-styles/` - Claude Code 向け custom output styles (モデル切替時の行動規範。`fable-like` 同梱)
 - `templates/config.toml` - Codex CLI 用設定テンプレート
+- `templates/codex/*.config.toml` - Codex CLI 用 profile テンプレート (`~/.codex/<profile>.config.toml`)
+- `templates/codex-rules/` - Codex CLI 用 exec policy rules
 - `templates/statusline.py` - Claude Code 用 status line (リッチ 2 行レイアウト)
 - `templates/subagent-statusline.py` - Claude Code サブエージェント行の status line
 - `templates/settings.json` - Claude Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
@@ -66,6 +68,8 @@ python scripts/cli.py install
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
 - `~/.codex/AGENTS.md` (詳細は後述)
 - `~/.codex/config.toml`
+- `~/.codex/*.config.toml` (Codex profile: `autonomous` / `deep` / `full_trust` / `interactive` / `live_web` / `readonly` / `research` / `review`)
+- `~/.codex/rules/`
 - `~/.agents/skills/`
 
 `settings.json` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
@@ -185,9 +189,11 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (shallow merge) |
 | `templates/config.toml` | `~/.codex/config.toml` |
+| `templates/codex/*.config.toml` | `~/.codex/*.config.toml` |
+| `templates/codex-rules/` | `~/.codex/rules/` |
 | `templates/skills/` | `~/.agents/skills/` |
 
-注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の `rules` 機能とは別物であり、このリポジトリではまだ配布対象にしていない。
+注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の exec policy rules は `templates/codex-rules/` から `~/.codex/rules/` へ配布する。
 
 ## 公式仕様
 
@@ -204,7 +210,9 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
   - CLI Overview: `https://developers.openai.com/codex/cli`
   - Config Basics: `https://developers.openai.com/codex/config-basic`
   - Config Reference: `https://developers.openai.com/codex/config-reference`
+  - Advanced Config: `https://developers.openai.com/codex/config`
   - Rules: `https://developers.openai.com/codex/rules`
+  - Hooks: `https://developers.openai.com/codex/hooks`
   - AGENTS.md: `https://developers.openai.com/codex/guides/agents-md`
   - Skills: `https://developers.openai.com/codex/skills`
 
@@ -216,9 +224,12 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- default は `workspace-write + on-request` を前提にし、通常のファイル操作は workspace sandbox に保ちながら、sandbox 外実行が必要な操作だけ確認する
-- `sandbox_workspace_write.network_access = true` を明示し、gh / package manager / curl など通常の開発 CLI を default のまま動かす
-- 承認待ちを完全に避けたい場合は `autonomous` profile、sandbox も外した完全信頼運用にしたい場合は `full_trust` profile を使う
+- default は `workspace-write + on-request + approvals_reviewer = "auto_review"` を前提にする。通常の workspace 内読み取り・編集・安全なコマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路へ送る
+- `sandbox_workspace_write.network_access = false` を明示し、`gh` / package manager / curl などの shell network は default では sandbox 内で直接動かさない。必要な場合は目的と影響を説明して承認経路に送る
+- Codex profile は `~/.codex/<profile>.config.toml` として配布する。`autonomous` は default と同じ安全自律姿勢を明示する profile、`interactive` は user approval、`full_trust` は `danger-full-access + never` の明示的な完全信頼 profile
+- `approval_policy = "never"` は `full_trust` のみに置く。通常の自律運用は承認待ちを減らすのではなく、workspace sandbox と auto review で安全な範囲を自律化する
+- `~/.codex/rules/` は sandbox 外へ出る承認要求に対して、force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt へ寄せる。workspace sandbox 内で実行できる Bash を強制遮断するものではないため、危険な in-sandbox コマンドの抑止は `AGENTS.md` の行動規範で扱う
+- 承認経路をユーザ判断に戻したい場合は `interactive` profile、sandbox も外した完全信頼運用にしたい場合は `full_trust` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 

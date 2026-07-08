@@ -1,0 +1,4 @@
+# Codex CLI profile: research
+# Use deeper reasoning and live web search for current external facts.
+model_reasoning_effort = "high"
+web_search = "live"
