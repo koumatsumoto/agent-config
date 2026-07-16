@@ -5,8 +5,8 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 ## 概要
 
 - 正本は `templates/` 配下
-- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (POSIX / Windows 両対応)
-- POSIX 環境では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
+- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (Linux / macOS / Windows 対応)
+- Linux / macOS / Git Bash では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - リポジトリ内の `README.md` と `docs/` は説明用。runtime contract は `templates/` 側を正とする
 
 ## Source Of Truth
@@ -37,12 +37,12 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 
 ## セットアップ
 
-正規のエントリポイントは `scripts/cli.py` のサブコマンド呼び出し。POSIX には bash ラッパーも同梱する。
+正規のエントリポイントは `scripts/cli.py` のサブコマンド呼び出し。Python コマンド名の差は bash ラッパーの resolver に、filesystem / process の差は Python CLI の POSIX / native Windows 分岐に閉じ込め、インストール処理本体は 3 OS で共有する。Linux / macOS / Git Bash には bash ラッパーも同梱する。
 
-POSIX (Ubuntu / macOS / WSL):
+Linux / macOS:
 
 ```bash
-bash install.sh
+./install.sh
 # または同等
 python3 scripts/cli.py install
 ```
@@ -53,9 +53,19 @@ Windows (PowerShell / cmd):
 python scripts/cli.py install
 ```
 
-要件: Python 3.12+ (stdlib のみで動作。外部依存なし)。
+要件: Python 3.12+ (stdlib のみで動作。外部依存なし)。bash ラッパーは `python3`、`python` の順に PATH を探索し、要件を満たす interpreter を使う。
 
-> **コマンド表記**: 本 README では POSIX 向けに `python3` を使う。Windows には `python3` コマンドが存在しない (Microsoft Store / installer はどちらも `python` のみ提供) ため、Windows ユーザは以降の例の `python3` をすべて `python` に読み替えること。
+> **OS ごとの Python**: Linux / macOS の例は `python3`、Windows の例は `python` と表記する。macOS 12.3 以降は従来の `python` (Python 2.7) が削除されており、素の macOS に Python 3.12+ があるとは限らない。`python3 --version` が要件を満たさない場合は Python 3.12+ を別途インストールする。installer 自体は macOS 固有の system Python に依存しない。
+
+サポート境界は次のとおり。
+
+| OS | 推奨入口 | platform 固有処理 |
+| --- | --- | --- |
+| Linux | `./install.sh` | POSIX permission と `python3` / `python` 探索 |
+| macOS | `./install.sh` | Linux と同じ POSIX 処理。標準 bash で smoke test |
+| Windows | `python scripts/cli.py install` | NTFS では POSIX mode を扱わず、status line は interpreter の絶対パスで起動 |
+
+Windows の Git Bash では `./install.sh` もサポートし、`python3` が無い環境では同じ resolver が `python` を選ぶ。WSL は Linux として扱う。
 
 このコマンドは以下を反映する。
 
@@ -103,7 +113,7 @@ python scripts/cli.py install
 | `showMessageTimestamps` | `true` | 各メッセージにタイムスタンプを付与する |
 | `feedbackSurveyRate` | `0` | セッション品質アンケートを抑止する |
 
-> **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、`install.sh` がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIX では `~` パスのまま（shebang + 実行ビットで起動）。
+> **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、Python CLI がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIX では `~` パスのまま（shebang + 実行ビットで起動）。
 
 ### `CLAUDE.md` / `AGENTS.md` の取り扱い
 
@@ -124,7 +134,7 @@ python scripts/cli.py install
 インストール結果の確認:
 
 ```bash
-# POSIX
+# Linux / macOS
 bash scripts/verify-install.sh
 python3 scripts/cli.py verify
 ```
@@ -134,10 +144,10 @@ python3 scripts/cli.py verify
 python scripts/cli.py verify
 ```
 
-`scripts/cli.py` の unittest (POSIX / Windows どちらでも実行可能):
+`scripts/cli.py` の unittest (Linux / macOS / Windows で実行可能):
 
 ```bash
-# POSIX
+# Linux / macOS
 python3 -m unittest discover -s scripts/tests -t scripts -v
 ```
 
@@ -146,12 +156,12 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` と `windows-latest` の Python 3.12 / 3.13 マトリクスで unittest を実行する。
+GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` / `macos-latest` / `windows-latest` の Python 3.12 / 3.13 マトリクスで unittest と bash wrapper の smoke test を実行する。
 
 ## クリーンアップ
 
 ```bash
-# POSIX
+# Linux / macOS
 bash clean.sh
 python3 scripts/cli.py clean
 ```
