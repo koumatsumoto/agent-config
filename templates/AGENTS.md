@@ -43,9 +43,10 @@
 
 - 通常実装は default を使う。読み取り専用探索は `readonly`、sandbox と承認を外す明示的な完全信頼運用は `full`
 - profile は `~/.codex/<profile>.config.toml` として管理する。`[profiles.*]` ではなく、`codex --profile readonly` のように起動時に選ぶ
-- default: `gpt-5.5 high + workspace-write + on-request + auto_review + cached web + shell network off`。通常の読み取り・編集・安全な workspace 内コマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路に送る
+- default: `gpt-5.6-sol high + pragmatic + low verbosity + workspace-write + on-request + auto_review + cached web + shell network off`。通常の読み取り・編集・安全な workspace 内コマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路に送る
 - `readonly`: 読み取り専用で安全にコードベースを探索したいとき
-- `full`: `gpt-5.5 xhigh + danger-full-access + never`。sandbox と承認待ちを外す明示的な完全信頼 profile。ユーザが危険性を理解して指定したときだけ使う
+- `full`: `gpt-5.6-sol xhigh + pragmatic + low verbosity + danger-full-access + never`。sandbox と承認待ちを外す明示的な完全信頼 profile。ユーザが危険性を理解して指定したときだけ使う
+- reasoning effort は default / Plan mode で `high`、full で `xhigh` を使い、`low` / `ultra` は管理設定に使わない
 
 ### 最新性の確認
 
