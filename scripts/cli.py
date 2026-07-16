@@ -3,7 +3,11 @@
 
 Installs / cleans / verifies the Claude Code + Codex CLI templates under the
 user's home directory, plus a standalone settings.json shallow-merge command.
-Cross-platform (POSIX + Windows), stdlib-only, security-hardened.
+Supports Linux, macOS, and Windows; stdlib-only and security-hardened.
+
+Platform behavior is capability-based: Linux and macOS share POSIX filesystem
+and process semantics, while native Windows gets the small set of adaptations
+required by NTFS and cmd.exe.
 
 Usage:
     python scripts/cli.py install

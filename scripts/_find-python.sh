@@ -3,9 +3,9 @@
 # Prints the resolved command name to stdout. Exits non-zero on failure with
 # a human-readable error on stderr.
 #
-# Used by install.sh / clean.sh / scripts/verify-install.sh so they work both
-# on POSIX (where the convention is `python3`) and on Windows under Git Bash
-# (where the official Python installer only exposes `python`).
+# Used by install.sh / clean.sh / scripts/verify-install.sh. Linux and macOS
+# commonly expose `python3`; Windows commonly exposes `python`. Probing both
+# keeps the wrappers platform-neutral while enforcing one runtime contract.
 set -euo pipefail
 
 for candidate in python3 python; do
