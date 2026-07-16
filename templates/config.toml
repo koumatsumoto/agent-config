@@ -3,9 +3,9 @@
 # OpenAI Codex CLI base configuration managed by agent-config.
 # Copy this file to ~/.codex/config.toml via install.sh.
 
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
-model_verbosity = "medium"
+model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
 # Autonomous-by-default local development baseline. Routine workspace reads,

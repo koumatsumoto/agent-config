@@ -11,6 +11,7 @@ import os
 import shutil
 import sys
 import tempfile
+import tomllib
 import unittest
 from io import StringIO
 from pathlib import Path
@@ -712,6 +713,36 @@ class InstallTests(unittest.TestCase):
             src = cli.REPO_ROOT / spec.src_rel
             self.assertTrue(dest.is_file(), f"missing: {dest}")
             self.assertEqual(dest.read_bytes(), src.read_bytes())
+
+    def test_codex_model_defaults_and_managed_efforts(self) -> None:
+        base = tomllib.loads(
+            (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(base["model"], "gpt-5.6-sol")
+        self.assertEqual(base["model_reasoning_effort"], "high")
+        self.assertEqual(base["plan_mode_reasoning_effort"], "high")
+        self.assertEqual(base["personality"], "pragmatic")
+        self.assertEqual(base["model_verbosity"], "low")
+
+        full = tomllib.loads(
+            (cli.REPO_ROOT / "templates/codex/full.config.toml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(full["model_reasoning_effort"], "xhigh")
+
+        managed_efforts = {
+            data[key]
+            for path in (
+                cli.REPO_ROOT / "templates/config.toml",
+                cli.REPO_ROOT / "templates/codex/readonly.config.toml",
+                cli.REPO_ROOT / "templates/codex/full.config.toml",
+            )
+            for data in [tomllib.loads(path.read_text(encoding="utf-8"))]
+            for key in ("model_reasoning_effort", "plan_mode_reasoning_effort")
+            if key in data
+        }
+        self.assertTrue(managed_efforts.isdisjoint({"low", "ultra"}))
 
     def test_codex_rules_installed(self) -> None:
         self._run_install()

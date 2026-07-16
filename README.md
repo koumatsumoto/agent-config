@@ -218,9 +218,10 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 ## Codex 設計メモ
 
-- default model は `gpt-5.5`、reasoning effort は `high`、verbosity は `medium` にして、通常実装でも深めに検討する
+- default model は `gpt-5.6-sol`、reasoning effort は `high`、personality は `pragmatic`、verbosity は `low` にして、複雑な実装を簡潔に報告する
+- 管理する reasoning effort は default / Plan mode の `high` と full の `xhigh` に絞り、`low` / `ultra` は使わない
 - `web_search = "cached"` を明示し、通常調査はキャッシュ検索を使う。最新確認が必要な場合は live web を明示して使う
-- `plan_mode_reasoning_effort = "high"` を明示し、Plan mode では通常ターンより深く考えさせる
+- `plan_mode_reasoning_effort = "high"` を明示し、Plan mode でも reasoning effort を `high` に保つ
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
