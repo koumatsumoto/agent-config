@@ -1,12 +1,12 @@
 ---
 name: km:github-workflow
-description: Reference and orchestrate the basic GitHub PR delivery workflow (precheck, plan, develop, review, report). Consult for the branch / commit / PR / issue-linkage flow; use directly when the user clearly wants to finish with a PR. Delegates planning to km:plan, review to km:review, commit to km:commit.
+description: Reference and orchestrate the basic GitHub PR delivery workflow (precheck, plan, develop, verify, report). Consult for the branch / commit / PR / issue-linkage flow; use directly when the user clearly wants to finish with a PR. Delegates planning to km:plan, independent deep review to km:review, commit to km:commit.
 argument-hint: "[issue-number]"
 ---
 
 # GitHub Workflow
 
-GitHub 管理リポジトリで変更を PR として届けるための基本ワークフロー。流れと委譲先だけを定義し、詳細は各 skill に委ねる（計画: km:plan / レビュー: km:review / コミット: km:commit）。
+GitHub 管理リポジトリで変更を PR として届けるための基本ワークフロー。流れと委譲先だけを定義し、詳細は各 skill に委ねる（計画: km:plan / 独立レビュー: km:review / コミット: km:commit）。メインが計画・判断・統合・完了確認を所有し、検証・レビューはリスクに比例させる（guideline「オーケストレーション」「リスク比例の検証・レビュー」の適用形）。
 
 ## Context
 
@@ -30,12 +30,17 @@ Context だけで機械的に判定する。`gh repo view` が失敗（`NOT-A-GI
 ## 2. 開発
 
 - ブランチを切る前に `git status` を見て、無関係な未コミット変更を今回のブランチに持ち込まない。混在していれば分離を確認する
+- **委譲判断**: 分割の利益（並列性・文脈分離）が起動・引き渡し・再統合のコストを上回る場合だけ、入力・期待成果・検証条件を固定した bounded task として実装 worker に切り出す。小さな局所変更・共有文脈が大きい変更・実装中も設計判断が要る変更はメインが直接実装する。worker の成果物はメインが完了条件に照らして検証してから統合する
 - 既存コードの様式・責務境界に合わせ、完了条件を満たす最小限の動く変更を実装する
 - 気付いた改善点は km:kaizen の capture 規約に従い、その場で `.kaizen/` に 1 行残す（会話 context に留めない）。dest（`pr` / `repo` / `workflow` / `knowledge`）は気づいた時点で付ける
 
-## 3. レビュー
+## 3. 検証とレビュー
 
-- km:review でレビューする
+- **完了確認（常時・メインの責務）**: 完了条件・差分・テスト / 検証結果を照合し、無関係変更の混入がないことを確かめる。低リスク変更はこの確認で閉じる。独立レビューを省いた場合は、その判断根拠（低リスク判定）を報告に 1 行残す
+- **独立レビュー（km:review）を起動する条件**:
+  - **高影響領域（hard gate・必須）**: security / 認証・認可 / 秘密情報 / データ移行・削除 / 不可逆操作 / 公開契約・スキーマ / 広範囲な設計変更に触れるとき。判定は列挙への字面一致でなく影響の性質（不可逆性・攻撃面・信頼境界・波及範囲）で行い、迷ったら起動側に倒す
+  - ユーザーが明示的にレビューを依頼したとき（変更規模によらず）
+  - 重要な不確実性が残り、独立視点で確信度が上がるとき
 - km:review の判定が BLOCKED の間は、指摘に対応して再レビューを繰り返す（PASS まで）。収束しなければユーザーに委ねる
 
 ## 4. 報告

@@ -1,14 +1,18 @@
 ---
 name: km:review
 description: >
-  Reviews code changes (uncommitted, commits, PRs, subtrees) for bugs, design, security, and
-  quality. Use when the user says "レビューして" or "PR をレビューして".
-argument-hint: "[target] [level]"
+  Independent multi-lens code review add-on (uncommitted, commits, PRs, subtrees) for bugs,
+  design, security, and quality. Use when the user explicitly asks for a review ("レビューして",
+  "深く / 敵対的にレビュー", "PR をレビューして"), when a change touches high-impact areas
+  (security / auth / secrets / data migration / irreversible operations / public contracts), or
+  when independent confirmation is wanted. Routine post-implementation completion checks
+  (DoD / diff / test verification) belong to the caller, not this skill. Depth adapts to risk.
+argument-hint: "[target]"
 ---
 
 # Review
 
-複数の観点を統合する **単発診断** の review orchestrator。レビュー対象を引数 / 会話文脈から決め、レベルに応じて Phase を起動する。
+複数の観点を統合する **単発診断** の review orchestrator。通常の完了確認（完了条件・差分・テストの照合）は呼び出し元メインの責務で、本 skill はその上に載せる**独立した追加レビュー**。レビュー対象を引数 / 会話文脈から決め、リスク・不確実性の評価から観点と深さを適応的に選ぶ。
 
 ## Success Criteria
 
@@ -18,7 +22,7 @@ argument-hint: "[target] [level]"
 - doc-review (Phase 5) はコードが確定した最終状態に対して実施する
 - 実行した Phase とスキップした Phase の両方が分かるレポートにする
 
-## Phase 1: 引数解析 + 対象スコープ解決 + 変更タイプ/レベル決定
+## Phase 1: 引数解析 + 対象スコープ解決 + 変更タイプ/深度決定
 
 ### Phase 1a. 引数パース仕様
 
@@ -32,7 +36,7 @@ argument-hint: "[target] [level]"
    1. `^pr$` または `^pr:[0-9]+$` → PR モード
    2. `..` を含む → コミット範囲モード
    3. `^[0-9a-f]{7,40}$` → 単一コミットモード (sha)
-   4. `^(quick|standard|thorough)$` → level 指定
+   4. `^(quick|standard|thorough)$` → 深さヒント（後方互換。リスク評価の入力として扱う）
    5. それ以外 → 曖昧入力として警告
    6. 全 token なし → 既定 (未コミット差分)
 3. **裸の数字 `42` は曖昧入力として警告**。`km:github-workflow` の `[issue-number]` 引数との混同を防ぐ。明示的に `pr:42` を要求する
@@ -52,7 +56,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 **Context budget 防御 (`--repo` のみ)**: 対象テキスト (binary / lockfile / generated は除く) が Phase 3 並列レビュアの context に収まる規模か見積もる。超えるならレビュー品質が落ちるので、Phase 2 に進まずサブツリーを絞るよう促す。
 
-### Phase 1c. 変更タイプ判定とレベル選択
+### Phase 1c. 変更タイプ判定とリスク評価（深度導出）
 
 変更タイプの判定入力:
 
@@ -74,9 +78,9 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 - **fail-safe は code 側**: 判定が割れる・確信が持てないときは挙動資産 (コード相当) に倒す (「迷ったら `mixed`」)。挙動資産を `docs-only` に落として Phase 2/3 をスキップさせる fail-open を避ける
 - **効果**: 挙動資産を **含む** diff は (人間向け docs の有無を問わず) `code+docs` とする — コード層 = Phase 2/3 が挙動を、doc 層 = Phase 5 関心 B が散文としての整合を見る。挙動資産が `docs-only` に落ちて Phase 2/3 をスキップする経路を塞ぐ
 
-変更構成 (正規ラベル): `docs-only` / `code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`。レベルは `thorough` / `standard` / `quick` で、Phase 1a で抽出されなければ会話文脈から推論、それも無理なら既定 `standard`。
+変更構成 (正規ラベル): `docs-only` / `code-only` / `code+docs` / `test-or-config-or-chore-only` / `mixed`。
 
-**レベル推奨 (助言。判定は変えない)**: 確定したレベルとは別に、diff の特性から推奨レベルを理由 1 行付きで提示する。特性の軸: 規模 (変更行数・ファイル数) / 新規経路の有無 (新関数・エンドポイント・分岐・手順) / 不可逆性 (公開契約・スキーマ・データ移行) / 攻撃面 (認証認可・秘密情報・外部入力) / 挙動資産か。**ユーザの明示指定が常に優先**され、推奨は実行レベルを自動で変えない。推奨と実行レベルが食い違う場合のみ、統合レポートに 1 行明記する (例:「推奨 thorough / 実行 standard — 新規経路 + 不可逆契約変更のため」)。
+**リスク・不確実性評価 (深さの導出)**: 次の軸で diff を評価し、実行する深さを自ら決める — 規模 (変更行数・ファイル数) / 新規経路の有無 (新関数・エンドポイント・分岐・手順) / 不可逆性 (公開契約・スキーマ・データ移行) / 攻撃面 (認証認可・秘密情報・外部入力) / 挙動資産か。導出結果は 3 段の内部深度 (`quick` / `standard` / `thorough`) として下位コンポーネントの深度表に接続する。高リスク軸に触れれば該当専門家を起動し、複数軸に触れる・広範囲・不可逆なら全専門家 (`thorough`) へ引き上げる。ユーザが深さを明示した場合はそれが常に優先。**選んだ深度と理由 1 行を統合レポートに明記する** (例:「深度 thorough — 新規経路 + 不可逆契約変更のため」)。迷ったら深い側に倒す。
 
 ### 引数なし呼び出しのデフォルト動作
 
@@ -98,7 +102,7 @@ base/head/sha が解決できなければエラー終了。下位コンポーネ
 
 ## Phase 3: 第三者レビュー (3 名並列)
 
-`thorough` レベルで起動する。`docs-only` / `test-or-config-or-chore-only` では起動しない。
+Phase 1c のリスク評価で該当した専門家を起動する（`docs-only` / `test-or-config-or-chore-only` では起動しない）。
 
 **内容ベースの昇格**: `quick` / `standard` でも、diff が高リスク領域に触れる場合は該当専門家を起動してよい。**高リスク領域と owner**: 覆すのが高コストな決定 (公開 API・契約・スキーマ・データモデル等の one-way door) → **architect**、認証 / 認可・データの移動 / 削除 / マイグレーション・秘密情報・LLM/AI の tool 実行 / 入力境界 → **security / adversary**。昇格した場合は統合レポートに昇格理由を 1 行記録する。
 
@@ -235,9 +239,9 @@ BLOCKED を出したレビューは「修正後の再確認」を必要とする
 
 doc-review (Phase 5) のみ、Phase 4 のコード判定が `BLOCKED` のとき defer する (docs-only を除く)。
 
-## レベル別実行マトリクス
+## 深度別実行マトリクス（Phase 1c が導出する内部深度）
 
-| Level | Phase 2 | Phase 3 | Phase 4 統合 | Phase 5 doc-review |
+| 深度 | Phase 2 | Phase 3 | Phase 4 統合 | Phase 5 doc-review |
 |---|---|---|---|---|
 | `quick` | ✓ (浅) | スキップ | ✓ | 変更構成依存 / PASS 時 |
 | `standard` | ✓ | スキップ | ✓ | 変更構成依存 / PASS 時 |
