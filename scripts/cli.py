@@ -106,26 +106,22 @@ INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 # managed names would otherwise linger after install. The installer deletes each
 # explicit managed name and its same-name backup from every skills tree during the
 # migration window.
-RENAMED_SKILL_DIRECTORIES: tuple[str, ...] = (
-    "commit",
-    "github-workflow",
-    "html-document",
-    "open-file",
-    "plan",
-    "review",
-    "skill-improve",
-    "third-party-oss-security-review",
-)
-
 DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "code-review",
+    "commit",
     "doc-review",
+    "github-workflow",
+    "html-document",
     "intent-review",
     "kaizen",
+    "open-file",
     "open-html",
+    "plan",
     "quality-review",
+    "review",
     "review-loop",
-    *RENAMED_SKILL_DIRECTORIES,
+    "skill-improve",
+    "third-party-oss-security-review",
 )
 
 

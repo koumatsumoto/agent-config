@@ -370,18 +370,6 @@ class SkillMetadataTests(unittest.TestCase):
             self.assertTrue(name.startswith("km-"), f"missing km- prefix: {name}")
             self.assertEqual(skill_file.parent.name, name)
 
-        self.assertTrue(
-            all(
-                (skills_root / f"km-{legacy_name}" / "SKILL.md").is_file()
-                for legacy_name in cli.RENAMED_SKILL_DIRECTORIES
-            ),
-            "renamed skills must have a matching managed directory",
-        )
-        self.assertTrue(
-            set(cli.RENAMED_SKILL_DIRECTORIES).issubset(cli.DECOMMISSIONED_SKILLS),
-            "legacy directories must be deleted during the install migration",
-        )
-
     def test_colon_tokens_are_stable_protocol_markers_only(self) -> None:
         repo_root = cli.REPO_ROOT
         source_files = [repo_root / "README.md", repo_root / "CLAUDE.md"]
@@ -745,7 +733,7 @@ class InstallTests(unittest.TestCase):
         self.assertIn("pruned:", out)
 
     def test_install_deletes_legacy_skill_and_backup(self) -> None:
-        legacy_name = cli.RENAMED_SKILL_DIRECTORIES[0]
+        legacy_name = "commit"
         roots = [self.home / ".claude/skills", self.home / ".agents/skills"]
         for root in roots:
             for source_name in (legacy_name, f"{legacy_name}.bak"):
