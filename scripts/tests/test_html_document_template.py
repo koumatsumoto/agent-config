@@ -1,4 +1,4 @@
-"""Guards the security invariants of the km:html-document HTML template.
+"""Guards the security invariants of the km-html-document HTML template.
 
 The template ships as a skeleton (document-template.html) plus separate asset
 files (document-template.css, document-template.js) that build.js inlines into a
@@ -34,7 +34,7 @@ REF = (
     Path(__file__).resolve().parents[2]
     / "templates"
     / "skills"
-    / "html-document"
+    / "km-html-document"
     / "references"
 )
 SKELETON = REF / "document-template.html"

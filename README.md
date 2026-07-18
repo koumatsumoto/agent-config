@@ -86,9 +86,9 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 
 `rules` / `skills` ツリーは配備先をテンプレートに一致させる。**管理ディレクトリ内のテンプレートに無いファイル / サブディレクトリは prune する** (`pruned: ...` 出力、`*.bak` へ退避)。ただし **ツリー直下のトップレベルエントリ (テンプレートに無いファイル・ディレクトリ — ユーザが置いた独自 skill 等) は保護され、prune されない**。
 
-配布を終了した組み込み skill 名は退役対象として明示管理する。再読み込みを許容しない完全退役対象は、skill loader による誤検出を防ぐため現行ディレクトリと同じ `skills/` 配下の同名バックアップを sibling の `retired-skills/` へ退避する。退避先が既にある場合は連番を付け、ローカル変更を上書きしない。
+配布を終了した組み込み skill 名と、組み込み skill の rename 前の旧名は明示管理する。skill loader による誤検出を防ぐため、installer は該当する現行ディレクトリと同名バックアップを `skills/` から削除する。既存の sibling `retired-skills/` も削除し、新旧または退役済みの skill を discovery 対象の近傍へ残さない。
 
-`km:kaizen` の退役時、repo-local の `.kaizen/` は自動収集しない。外部 issue 作成や他 repo の削除を installer の副作用にしないため、残存 entry は利用者が確認し、後続対応の価値を説明できるものだけ follow-up issue へ移して残りを削除する。
+`km-kaizen` の退役時、repo-local の `.kaizen/` は自動収集しない。外部 issue 作成や他 repo の削除を installer の副作用にしないため、残存 entry は利用者が確認し、後続対応の価値を説明できるものだけ follow-up issue へ移して残りを削除する。
 
 ### `settings.json` の取り扱い
 
@@ -252,11 +252,11 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | スキル | 説明 |
 | --- | --- |
-| `km:review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) とレベル (quick / standard / thorough) を指定できる 1 回完結の診断レビュー。Phase 2 (generalist code-review) → Phase 3 (3 専門家: architect / qa / security 並列) → Phase 4 (doc-review) の sequential gating で実行し、CRITICAL/HIGH 検出時はその Phase で停止して報告 |
-| `km:third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
-| `km:commit` | Conventional Commits 形式で git commit |
-| `km:github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
-| `km:plan` | 実装前の計画を作成し、`.plan/` への詳細出力、計画レビュー、GitHub issue 化までを行う |
+| `km-review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) とレベル (quick / standard / thorough) を指定できる 1 回完結の診断レビュー。Phase 2 (generalist code-review) → Phase 3 (3 専門家: architect / qa / security 並列) → Phase 4 (doc-review) の sequential gating で実行し、CRITICAL/HIGH 検出時はその Phase で停止して報告 |
+| `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
+| `km-commit` | Conventional Commits 形式で git commit |
+| `km-github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
+| `km-plan` | 実装前の計画を作成し、`.plan/` への詳細出力、計画レビュー、GitHub issue 化までを行う |
 
 ## ライセンス
 

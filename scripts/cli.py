@@ -101,24 +101,32 @@ STATUSLINE_COMMANDS: tuple[tuple[str, str], ...] = (
 # Top-level home subdirectories that the installer may write into.
 INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 
-# Skill directories shipped previously but no longer maintained. prune_tree keeps
-# top-level skill dirs with no source counterpart (they may be user-added), so a
-# decommissioned skill would otherwise linger after install. The installer removes
-# each by explicit name (with .bak backup) from every skills tree during the
+# Top-level skill directory names that are no longer maintained. prune_tree keeps
+# entries with no source counterpart because they may be user-added, so obsolete
+# managed names would otherwise linger after install. The installer deletes each
+# explicit managed name and its same-name backup from every skills tree during the
 # migration window.
+RENAMED_SKILL_DIRECTORIES: tuple[str, ...] = (
+    "commit",
+    "github-workflow",
+    "html-document",
+    "open-file",
+    "plan",
+    "review",
+    "skill-improve",
+    "third-party-oss-security-review",
+)
+
 DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "code-review",
     "doc-review",
     "intent-review",
+    "kaizen",
     "open-html",
     "quality-review",
     "review-loop",
+    *RENAMED_SKILL_DIRECTORIES,
 )
-
-# Skills that must not remain discoverable under either their active name or a
-# same-directory `.bak` name. Their contents move outside the discovery root so
-# local modifications remain recoverable.
-RETIRED_SKILLS: tuple[str, ...] = ("kaizen",)
 
 
 def clean_targets(home: Path) -> list[Path]:
@@ -336,10 +344,11 @@ def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]
 
 
 def remove_decommissioned_skills(home: Path) -> list[Path]:
-    """Remove deployed skill dirs that are no longer shipped (with .bak backup).
+    """Delete deployed skill names that must no longer be discoverable.
 
     prune_tree preserves top-level entries with no source counterpart (possibly
-    user-added), so decommissioned skills are removed by explicit name here.
+    user-added), so obsolete managed names and their backups are deleted by
+    explicit name here.
     """
     removed: list[Path] = []
     skill_roots = [
@@ -347,45 +356,30 @@ def remove_decommissioned_skills(home: Path) -> list[Path]:
     ]
     for root in skill_roots:
         for name in DECOMMISSIONED_SKILLS:
-            target = root / name
-            if target.is_dir() or target.is_symlink():
-                remove_with_backup(target)
-                removed.append(target)
-    return removed
-
-
-def _available_archive_path(path: Path) -> Path:
-    if not (path.exists() or path.is_symlink()):
-        return path
-    index = 2
-    while True:
-        candidate = path.with_name(f"{path.name}.{index}")
-        if not (candidate.exists() or candidate.is_symlink()):
-            return candidate
-        index += 1
-
-
-def archive_retired_skills(home: Path) -> list[tuple[Path, Path]]:
-    """Move retired skill dirs and same-root backups outside discovery roots."""
-    archived: list[tuple[Path, Path]] = []
-    skill_roots = [
-        home / t.dest_rel for t in TEMPLATE_TREES if t.src_rel == "templates/skills"
-    ]
-    for root in skill_roots:
-        for name in RETIRED_SKILLS:
-            archive_root = root.parent / "retired-skills" / name
-            assert_within(archive_root, root.parent)
-            for source, label in (
-                (root / name, "active"),
-                (root / f"{name}.bak", "backup"),
-            ):
-                if not (source.exists() or source.is_symlink()):
+            for target in (root / name, root / f"{name}.bak"):
+                if not (target.exists() or target.is_symlink()):
                     continue
-                ensure_secure_dir(archive_root, DIR_MODE)
-                destination = _available_archive_path(archive_root / label)
-                os.rename(source, destination)
-                archived.append((source, destination))
-    return archived
+                if target.is_symlink():
+                    target.unlink()
+                else:
+                    assert_within(target, root)
+                if target.exists() and target.is_dir():
+                    shutil.rmtree(target)
+                elif target.exists():
+                    target.unlink()
+                removed.append(target)
+        archive_root = root.parent / "retired-skills"
+        if archive_root.exists() or archive_root.is_symlink():
+            if archive_root.is_symlink():
+                archive_root.unlink()
+            else:
+                assert_within(archive_root, root.parent)
+            if archive_root.exists() and archive_root.is_dir():
+                shutil.rmtree(archive_root)
+            elif archive_root.exists():
+                archive_root.unlink()
+            removed.append(archive_root)
+    return removed
 
 
 def remove_with_backup(path: Path) -> str:
@@ -675,15 +669,7 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
                 print(f"pruned: {dest}")
 
     for dest in remove_decommissioned_skills(home):
-        print(f"removed (decommissioned): {dest}")
-    retired = archive_retired_skills(home)
-    for source, destination in retired:
-        print(f"archived (retired): {source} -> {destination}")
-    if retired:
-        print(
-            "notice: inspect repo-local .kaizen entries; promote valuable findings "
-            "to follow-up issues and delete the rest"
-        )
+        print(f"removed (obsolete skill data): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.12, and on Windows it is exactly the python that must be
