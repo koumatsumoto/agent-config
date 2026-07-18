@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -297,15 +298,22 @@ class DecommissionedSkillsTests(unittest.TestCase):
     def tearDown(self) -> None:
         shutil.rmtree(self.home, ignore_errors=True)
 
-    def test_removes_decommissioned_skill_dir_with_backup(self) -> None:
+    def test_deletes_decommissioned_skill_and_backup(self) -> None:
         name = cli.DECOMMISSIONED_SKILLS[0]
         old = self.skills / name
         old.mkdir()
         (old / "SKILL.md").write_text("old", encoding="utf-8")
+        backup = self.skills / f"{name}.bak"
+        backup.mkdir()
+        (backup / "SKILL.md").write_text("backup", encoding="utf-8")
+        archive = self.skills.parent / "retired-skills"
+        (archive / name).mkdir(parents=True)
+        (archive / name / "SKILL.md").write_text("archive", encoding="utf-8")
         removed = cli.remove_decommissioned_skills(self.home)
-        self.assertIn(old, removed)
+        self.assertEqual(removed, [old, backup, archive])
         self.assertFalse(old.exists())
-        self.assertTrue(old.with_name(name + ".bak").is_dir())
+        self.assertFalse(backup.exists())
+        self.assertFalse(archive.exists())
 
     def test_preserves_user_added_and_current_skills(self) -> None:
         keep = self.skills / "my-skill"
@@ -325,48 +333,61 @@ class DecommissionedSkillsTests(unittest.TestCase):
             sorted(removed), sorted([self.skills / name, agents / name])
         )
 
+    @unittest.skipUnless(cli.is_posix(), "symlink behavior is POSIX-only")
+    def test_unlinks_obsolete_symlinks_without_following_them(self) -> None:
+        name = cli.DECOMMISSIONED_SKILLS[0]
+        outside = self.home / "outside"
+        outside.mkdir()
+        (outside / "keep.txt").write_text("keep", encoding="utf-8")
+        os.symlink(outside, self.skills / name)
+        os.symlink(outside, self.skills.parent / "retired-skills")
 
-class RetiredSkillsTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.home = Path(tempfile.mkdtemp(prefix="retired-test-"))
+        cli.remove_decommissioned_skills(self.home)
 
-    def tearDown(self) -> None:
-        shutil.rmtree(self.home, ignore_errors=True)
+        self.assertFalse((self.skills / name).exists())
+        self.assertFalse((self.skills.parent / "retired-skills").exists())
+        self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "keep")
 
-    def test_archives_kaizen_and_backup_outside_every_skills_root(self) -> None:
-        roots = [self.home / ".claude/skills", self.home / ".agents/skills"]
-        sources = []
-        for root in roots:
-            for name in ("kaizen", "kaizen.bak"):
-                source = root / name
-                source.mkdir(parents=True)
-                (source / "SKILL.md").write_text(name, encoding="utf-8")
-                sources.append(source)
 
-        archived = cli.archive_retired_skills(self.home)
+class SkillMetadataTests(unittest.TestCase):
+    def test_names_use_standard_format_and_match_directory(self) -> None:
+        skills_root = cli.REPO_ROOT / "templates" / "skills"
+        skill_files = sorted(skills_root.glob("*/SKILL.md"))
+        self.assertTrue(skill_files, "no managed skills found")
 
-        self.assertEqual([source for source, _ in archived], sources)
-        self.assertTrue(all(not source.exists() for source in sources))
-        for source, destination in archived:
-            self.assertNotEqual(destination.parent.parent, source.parent)
-            self.assertEqual(
-                (destination / "SKILL.md").read_text(encoding="utf-8"),
-                source.name,
+        for skill_file in skill_files:
+            name_line = next(
+                (
+                    line
+                    for line in skill_file.read_text(encoding="utf-8").splitlines()
+                    if line.startswith("name: ")
+                ),
+                None,
+            )
+            self.assertIsNotNone(name_line, f"missing name: {skill_file}")
+            name = name_line.removeprefix("name: ")
+            self.assertRegex(name, r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+            self.assertTrue(name.startswith("km-"), f"missing km- prefix: {name}")
+            self.assertEqual(skill_file.parent.name, name)
+
+    def test_colon_tokens_are_stable_protocol_markers_only(self) -> None:
+        repo_root = cli.REPO_ROOT
+        source_files = [repo_root / "README.md", repo_root / "CLAUDE.md"]
+        for root_name in ("scripts", "templates"):
+            source_files.extend(
+                path
+                for path in (repo_root / root_name).rglob("*")
+                if path.is_file()
+                and path.suffix in {".css", ".html", ".js", ".md", ".py", ".sh"}
             )
 
-    def test_archive_collision_preserves_both_versions(self) -> None:
-        source = self.home / ".claude/skills/kaizen"
-        source.mkdir(parents=True)
-        (source / "SKILL.md").write_text("first", encoding="utf-8")
-        first = cli.archive_retired_skills(self.home)[0][1]
+        tokens: set[str] = set()
+        for path in source_files:
+            tokens.update(
+                re.findall(r"km:[a-z][a-z0-9:-]*", path.read_text(encoding="utf-8"))
+            )
 
-        source.mkdir()
-        (source / "SKILL.md").write_text("second", encoding="utf-8")
-        second = cli.archive_retired_skills(self.home)[0][1]
-
-        self.assertNotEqual(first, second)
-        self.assertEqual((first / "SKILL.md").read_text(encoding="utf-8"), "first")
-        self.assertEqual((second / "SKILL.md").read_text(encoding="utf-8"), "second")
+        self.assertEqual(tokens, {"km:plan:managed", "km:review:report:complete"})
 
 
 class BackupTests(unittest.TestCase):
@@ -704,12 +725,32 @@ class InstallTests(unittest.TestCase):
 
     def test_prunes_orphan_in_managed_skill_on_reinstall(self) -> None:
         self._run_install()
-        orphan = self.home / ".claude/skills/review/experts/__orphan__.md"
+        orphan = self.home / ".claude/skills/km-review/experts/__orphan__.md"
         orphan.write_text("stale", encoding="utf-8")
         out = self._run_install()
         self.assertFalse(orphan.exists(), "orphan in a managed skill must be pruned")
         self.assertTrue(orphan.with_name("__orphan__.md.bak").exists())
         self.assertIn("pruned:", out)
+
+    def test_install_deletes_legacy_skill_and_backup(self) -> None:
+        legacy_name = "commit"
+        roots = [self.home / ".claude/skills", self.home / ".agents/skills"]
+        for root in roots:
+            for source_name in (legacy_name, f"{legacy_name}.bak"):
+                source = root / source_name
+                source.mkdir(parents=True)
+                (source / "SKILL.md").write_text(source_name, encoding="utf-8")
+            archive = root.parent / "retired-skills" / legacy_name
+            archive.mkdir(parents=True)
+            (archive / "SKILL.md").write_text("archive", encoding="utf-8")
+
+        self._run_install()
+
+        for root in roots:
+            self.assertTrue((root / f"km-{legacy_name}/SKILL.md").is_file())
+            self.assertFalse((root / legacy_name).exists())
+            self.assertFalse((root / f"{legacy_name}.bak").exists())
+            self.assertFalse((root.parent / "retired-skills").exists())
 
     def test_install_preserves_user_added_skill(self) -> None:
         self._run_install()
