@@ -115,6 +115,11 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "review-loop",
 )
 
+# Skills that must not remain discoverable under either their active name or a
+# same-directory `.bak` name. Their contents move outside the discovery root so
+# local modifications remain recoverable.
+RETIRED_SKILLS: tuple[str, ...] = ("kaizen",)
+
 
 def clean_targets(home: Path) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
@@ -347,6 +352,40 @@ def remove_decommissioned_skills(home: Path) -> list[Path]:
                 remove_with_backup(target)
                 removed.append(target)
     return removed
+
+
+def _available_archive_path(path: Path) -> Path:
+    if not (path.exists() or path.is_symlink()):
+        return path
+    index = 2
+    while True:
+        candidate = path.with_name(f"{path.name}.{index}")
+        if not (candidate.exists() or candidate.is_symlink()):
+            return candidate
+        index += 1
+
+
+def archive_retired_skills(home: Path) -> list[tuple[Path, Path]]:
+    """Move retired skill dirs and same-root backups outside discovery roots."""
+    archived: list[tuple[Path, Path]] = []
+    skill_roots = [
+        home / t.dest_rel for t in TEMPLATE_TREES if t.src_rel == "templates/skills"
+    ]
+    for root in skill_roots:
+        for name in RETIRED_SKILLS:
+            archive_root = root.parent / "retired-skills" / name
+            assert_within(archive_root, root.parent)
+            for source, label in (
+                (root / name, "active"),
+                (root / f"{name}.bak", "backup"),
+            ):
+                if not (source.exists() or source.is_symlink()):
+                    continue
+                ensure_secure_dir(archive_root, DIR_MODE)
+                destination = _available_archive_path(archive_root / label)
+                os.rename(source, destination)
+                archived.append((source, destination))
+    return archived
 
 
 def remove_with_backup(path: Path) -> str:
@@ -637,6 +676,14 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
 
     for dest in remove_decommissioned_skills(home):
         print(f"removed (decommissioned): {dest}")
+    retired = archive_retired_skills(home)
+    for source, destination in retired:
+        print(f"archived (retired): {source} -> {destination}")
+    if retired:
+        print(
+            "notice: inspect repo-local .kaizen entries; promote valuable findings "
+            "to follow-up issues and delete the rest"
+        )
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.12, and on Windows it is exactly the python that must be
