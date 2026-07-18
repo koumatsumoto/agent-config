@@ -28,7 +28,8 @@ Context だけで機械的に判定する。`gh repo view` が失敗（`NOT-A-GI
 ## 2. 開発
 
 - ブランチを切る前に `git status` を確認し、無関係な未コミット変更を今回のブランチに持ち込まない（混在していれば分離を確認する）
-- 気付いた改善点は km:kaizen の capture 規約に従い、その場で `.kaizen/` に 1 行残す（dest を付ける。会話 context に留めない）
+- 作業中に見つけた今回の成果物に関係する欠陥は、記録を修正の代わりにせず同じ PR で直す
+- スコープ外の発見は、後続対応の価値を説明できるものだけ報告前に follow-up issue 化する。一時的または価値を説明できないものは残さない
 
 ## 3. 検証とレビュー
 
@@ -40,10 +41,11 @@ Context だけで機械的に判定する。`gh repo view` が失敗（`NOT-A-GI
 - km:commit でコミットし、ブランチを push し、PR を作成（既存があれば更新）する。issue には PR 本文の独立行 `Closes #<num>` で連携する（複数 PR に分けるなら最終だけ `Closes`、中間は `Refs`）
 - 対象 issue が km:plan 管理（本文に `<!-- km:plan:managed -->` marker）で「実装時確認事項」節を持つ場合、各項目の消化結果（検証に紐付く確認結果 / 対応しないなら残す理由）を PR 本文・報告に含め、silent drop させない
 - CI / checks は見られれば確認して結果を報告に含める
-- `.kaizen/` に記録した改善点を km:kaizen の Report 時 triage で片付け、その結果を PR URL・変更要約・検証結果とあわせて**ユーザー向けの言葉**で報告する（`dest` 等の内部機構語は出さない。改善点ゼロなら言及しない）
+- follow-up issue を作成した場合は URL と要旨を報告する。該当する発見が無ければ「改善点なし」のような定型報告はしない
 
 ## Rules
 
 - `--force` push しない
+- issue 本文は公開前に credential / token、実在の個人パス、非公開 repo 名、個人環境の識別子を含まない形へ抽象化する
 - issue / PR 本文は `gh ... --body-file - <<'EOF'` で渡す（`--body "..."` や非クォート heredoc は backtick / `$()` が展開され事故るため使わない）
 - branch 作成 / push / PR 作成の要求が曖昧なら、先にユーザーに確認する

@@ -326,6 +326,49 @@ class DecommissionedSkillsTests(unittest.TestCase):
         )
 
 
+class RetiredSkillsTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="retired-test-"))
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_archives_kaizen_and_backup_outside_every_skills_root(self) -> None:
+        roots = [self.home / ".claude/skills", self.home / ".agents/skills"]
+        sources = []
+        for root in roots:
+            for name in ("kaizen", "kaizen.bak"):
+                source = root / name
+                source.mkdir(parents=True)
+                (source / "SKILL.md").write_text(name, encoding="utf-8")
+                sources.append(source)
+
+        archived = cli.archive_retired_skills(self.home)
+
+        self.assertEqual([source for source, _ in archived], sources)
+        self.assertTrue(all(not source.exists() for source in sources))
+        for source, destination in archived:
+            self.assertNotEqual(destination.parent.parent, source.parent)
+            self.assertEqual(
+                (destination / "SKILL.md").read_text(encoding="utf-8"),
+                source.name,
+            )
+
+    def test_archive_collision_preserves_both_versions(self) -> None:
+        source = self.home / ".claude/skills/kaizen"
+        source.mkdir(parents=True)
+        (source / "SKILL.md").write_text("first", encoding="utf-8")
+        first = cli.archive_retired_skills(self.home)[0][1]
+
+        source.mkdir()
+        (source / "SKILL.md").write_text("second", encoding="utf-8")
+        second = cli.archive_retired_skills(self.home)[0][1]
+
+        self.assertNotEqual(first, second)
+        self.assertEqual((first / "SKILL.md").read_text(encoding="utf-8"), "first")
+        self.assertEqual((second / "SKILL.md").read_text(encoding="utf-8"), "second")
+
+
 class BackupTests(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))

@@ -86,6 +86,10 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 
 `rules` / `skills` ツリーは配備先をテンプレートに一致させる。**管理ディレクトリ内のテンプレートに無いファイル / サブディレクトリは prune する** (`pruned: ...` 出力、`*.bak` へ退避)。ただし **ツリー直下のトップレベルエントリ (テンプレートに無いファイル・ディレクトリ — ユーザが置いた独自 skill 等) は保護され、prune されない**。
 
+配布を終了した組み込み skill 名は退役対象として明示管理する。再読み込みを許容しない完全退役対象は、skill loader による誤検出を防ぐため現行ディレクトリと同じ `skills/` 配下の同名バックアップを sibling の `retired-skills/` へ退避する。退避先が既にある場合は連番を付け、ローカル変更を上書きしない。
+
+`km:kaizen` の退役時、repo-local の `.kaizen/` は自動収集しない。外部 issue 作成や他 repo の削除を installer の副作用にしないため、残存 entry は利用者が確認し、後続対応の価値を説明できるものだけ follow-up issue へ移して残りを削除する。
+
 ### `settings.json` の取り扱い
 
 `templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/cli.py` の merge ロジック。単体では `python3 scripts/cli.py merge <template> <dest>` で実行できる)。
