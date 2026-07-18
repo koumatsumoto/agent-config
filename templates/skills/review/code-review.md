@@ -16,7 +16,7 @@ orchestrator から「変更ファイル一覧 + diff + 変更構成 + 実行 le
 
 `thorough` は読み込みを関連モジュールまで広げ、`quick` は規約・可読性を Quick に下げ変更ファイル中心に絞る。コミット / PR では Conventional 接頭辞も補助に使える (`refactor:` 振る舞い不変の検証 / `fix:` 再発防止テスト / `perf:` 性能特性)。新規ファイル中心では類似実装を 1-3 ファイル読み、設計判断が repo と揃うか確認する。
 
-対象が **挙動資産** (skill / rule / prompt 定義。判定は SKILL.md Phase 1c) に分類された実行では、orchestrator の指示で `references/prompt-asset-lens.md` を読み、そこに定義された写像で汎用レンズを prompt 資産の意味へ当てる (通常の code diff では読まない)。
+対象が **挙動資産** (skill / rule / prompt 定義。判定は SKILL.md Phase 1) に分類された実行では、orchestrator の指示で `references/prompt-asset-lens.md` を読み、そこに定義された写像で汎用レンズを prompt 資産の意味へ当てる (通常の code diff では読まない)。
 
 ## Step 2: 設計・実装 (3 層)
 
