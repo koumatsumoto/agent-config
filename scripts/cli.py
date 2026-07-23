@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """agent-config management CLI.
 
-Installs / cleans / verifies the Claude Code + Codex CLI templates under the
-user's home directory, plus a standalone settings.json shallow-merge command.
+Installs / cleans / verifies the Claude Code + Codex CLI + Qwen Code templates
+under the user's home directory, plus a standalone settings.json shallow-merge
+command.
 Supports Linux, macOS, and Windows; stdlib-only and security-hardened.
 
 Platform behavior is capability-based: Linux and macOS share POSIX filesystem
@@ -75,6 +76,7 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
     FileSpec("templates/codex/full.config.toml", ".codex/full.config.toml", 0o600),
     FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
+    FileSpec("templates/QWEN.md", ".qwen/QWEN.md", 0o600),
 )
 
 # Directory trees synced recursively (with per-file .bak backup).
@@ -84,11 +86,16 @@ TEMPLATE_TREES: tuple[TreeSpec, ...] = (
     TreeSpec("templates/output-styles", ".claude/output-styles"),
     TreeSpec("templates/skills", ".agents/skills"),
     TreeSpec("templates/codex-rules", ".codex/rules"),
+    TreeSpec("templates/skills", ".qwen/skills"),
 )
 
 # settings.json — special handling: shallow merge instead of overwrite.
 SETTINGS_TEMPLATE_REL = "templates/settings.json"
 SETTINGS_DEST_REL = ".claude/settings.json"
+
+# Qwen Code settings.json — shallow merge, no statusline transform.
+QWEN_SETTINGS_TEMPLATE_REL = "templates/qwen-settings.json"
+QWEN_SETTINGS_DEST_REL = ".qwen/settings.json"
 
 # settings.json keys whose `command` launches a deployed status-line script,
 # mapped to that script's path relative to home. The installer rewrites these
@@ -99,7 +106,7 @@ STATUSLINE_COMMANDS: tuple[tuple[str, str], ...] = (
 )
 
 # Top-level home subdirectories that the installer may write into.
-INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
+INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents", ".qwen")
 
 # Top-level skill directory names that are no longer maintained. prune_tree keeps
 # entries with no source counterpart because they may be user-added, so obsolete
@@ -587,7 +594,7 @@ def _check_settings_contract(report: VerifyReport, template: Path, dest: Path) -
 
 def verify(home: Path, repo_root: Path = REPO_ROOT) -> VerifyReport:
     report = VerifyReport()
-    print("Verify Claude + Codex configuration")
+    print("Verify Claude + Codex + Qwen Code configuration")
 
     for spec in TEMPLATE_FILES:
         src = repo_root / spec.src_rel
@@ -607,6 +614,11 @@ def verify(home: Path, repo_root: Path = REPO_ROOT) -> VerifyReport:
     report.record(settings_dest.exists(), f"missing: {settings_dest}")
     _check_mode(report, settings_dest, FILE_MODE)
     _check_settings_contract(report, repo_root / SETTINGS_TEMPLATE_REL, settings_dest)
+
+    qwen_settings_dest = home / QWEN_SETTINGS_DEST_REL
+    report.record(qwen_settings_dest.exists(), f"missing: {qwen_settings_dest}")
+    _check_mode(report, qwen_settings_dest, FILE_MODE)
+    _check_settings_contract(report, repo_root / QWEN_SETTINGS_TEMPLATE_REL, qwen_settings_dest)
 
     return report
 
@@ -633,7 +645,7 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         ensure_secure_dir(d, DIR_MODE)
         boundary_dirs.append(d)
 
-    print("Install Claude + Codex configuration")
+    print("Install Claude + Codex + Qwen Code configuration")
 
     for spec in TEMPLATE_FILES:
         src = repo_root / spec.src_rel
@@ -686,6 +698,18 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         print(f"backup: {home / SETTINGS_DEST_REL}.bak")
         print(f"merged: {home / SETTINGS_DEST_REL}")
 
+    qwen_settings_status = merge_into(
+        repo_root / QWEN_SETTINGS_TEMPLATE_REL,
+        home / QWEN_SETTINGS_DEST_REL,
+    )
+    if qwen_settings_status == "ok":
+        print(f"ok: {home / QWEN_SETTINGS_DEST_REL}")
+    elif qwen_settings_status == "created":
+        print(f"created: {home / QWEN_SETTINGS_DEST_REL}")
+    else:
+        print(f"backup: {home / QWEN_SETTINGS_DEST_REL}.bak")
+        print(f"merged: {home / QWEN_SETTINGS_DEST_REL}")
+
     # Re-apply directory perms (in case rsync-style operations widened them).
     for sub in INSTALL_HOME_DIRS:
         chmod_if_posix(home / sub, DIR_MODE)
@@ -694,7 +718,7 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
 
 
 def clean(home: Path) -> int:
-    print("Clean Claude + Codex configuration")
+    print("Clean Claude + Codex + Qwen Code configuration")
     for target in clean_targets(home):
         result = remove_with_backup(target)
         if result == "skipped":

@@ -1,0 +1,34 @@
+{
+  "fastModel": "",
+  "tools": {
+    "approvalMode": "auto",
+    "sandbox": true
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/.env.development)",
+      "Read(**/.env.production)",
+      "Read(**/.env.staging)",
+      "Read(**/.env.test)",
+      "Read(**/env.php*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials/**)",
+      "Read(**/.aws/**)",
+      "Read(**/.ssh/**)",
+      "Read(**/*.pubxml)",
+      "Read(**/*.cscfg)",
+      "Read(**/*.config)",
+      "Read(**/.npmrc)",
+      "Read(**/appsettings.json)",
+      "Read(**/local.settings.json)"
+    ]
+  },
+  "general": {
+    "outputLanguage": "日本語"
+  }
+}

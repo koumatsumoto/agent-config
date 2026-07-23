@@ -67,7 +67,7 @@ Context はロード時のスナップショット。gate 判定は Phase 2 / 4 
    - 採否判断・反映の往復は本文に書き戻さない（共有したければ issue 化後に issue comments へ）
 3. **収束させる**: `CRITICAL` / `HIGH` ゼロまで反復する。初回はフルレビュー、2 回目以降は未解決 `CRITICAL` / `HIGH` の解消確認に絞った差分レビュー。上限 3 周で収束しなければ issue 化を止め、未収束の指摘とともにユーザに委ねる。レビュー結果が空・形式不一致・対象ファイル読取失敗のときは未実施として扱い、原因（多くはパス）を直して再実行するまで issue 化しない
 
-subagent 起動プロンプト（`<plan skill root>` と計画ファイルは `~` を展開した**絶対パス**に置換して渡す。install root: Claude Code は `~/.claude/skills/km-plan/`、Codex CLI は `~/.agents/skills/km-plan/`）:
+subagent 起動プロンプト（`<plan skill root>` と計画ファイルは `~` を展開した**絶対パス**に置換して渡す。install root: Claude Code は `~/.claude/skills/km-plan/`、Codex CLI は `~/.agents/skills/km-plan/`、Qwen Code は `~/.qwen/skills/km-plan/`）:
 
 ```
 あなたは km-plan の第三者計画レビュアです。計画の著者ではない独立した視点で、実装計画を critical にレビューしてください。
