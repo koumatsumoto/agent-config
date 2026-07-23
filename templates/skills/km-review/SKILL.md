@@ -65,7 +65,7 @@ Phase 2 との住み分けは `references/scope-alignment.md`、ロール識別�
 - **判定保留の規律**: 保留にする前に「あと何を読めば確定するか」を必ず一度試す。近隣ファイルは判定に必要なだけ Read してよい（優先: 呼び出し元 / 先 → 既存テスト → 同種の既存実装）
 - **出力**: 返信前に割り当てられた `<report dir>/phase3-<role>.md` へ報告全文 + 完了 sentinel `<!-- km:review:report:complete -->` を書く（所見の一次形成時点で sentinel 無し draft を書いておくのを推奨）。返信は件数 + ファイルパス + CRITICAL / HIGH のタイトルのみ。返信とファイルが食い違えばファイルが正
 
-`<review skill root>` は install root の絶対パス（Claude Code は `~/.claude/skills/km-review/`、Codex CLI は `~/.agents/skills/km-review/`、`~` は展開）に解決してから渡す。subagent が静的ファイル本文中の `<review skill root>` を見た場合も同様に解決させる（相対パス・未展開の `~` は working directory 依存で Read が失敗する）。
+`<review skill root>` は install root の絶対パス（Claude Code は `~/.claude/skills/km-review/`、Codex CLI は `~/.agents/skills/km-review/`、Qwen Code は `~/.qwen/skills/km-review/`、`~` は展開）に解決してから渡す。subagent が静的ファイル本文中の `<review skill root>` を見た場合も同様に解決させる（相対パス・未展開の `~` は working directory 依存で Read が失敗する）。
 
 ## 報告のファイル永続化
 

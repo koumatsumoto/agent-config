@@ -772,6 +772,25 @@ class InstallTests(unittest.TestCase):
         merged = json.loads(settings.read_text(encoding="utf-8"))
         self.assertEqual(merged["theme"], "user-pick")
 
+    def test_creates_qwen_settings_json(self) -> None:
+        self._run_install()
+        settings = self.home / cli.QWEN_SETTINGS_DEST_REL
+        self.assertTrue(settings.is_file())
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        self.assertEqual(data["fastModel"], "")
+        self.assertEqual(data["tools"]["approvalMode"], "auto")
+
+    def test_qwen_settings_user_value_preserved_on_rerun(self) -> None:
+        self._run_install()
+        settings = self.home / cli.QWEN_SETTINGS_DEST_REL
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        data["model"] = {"name": "user-model", "reasoningEffort": "high"}
+        settings.write_text(json.dumps(data), encoding="utf-8")
+        self._run_install()
+        merged = json.loads(settings.read_text(encoding="utf-8"))
+        self.assertEqual(merged["model"]["name"], "user-model")
+        self.assertEqual(merged["fastModel"], "")
+
     def test_global_guidelines_installed_as_template_copies(self) -> None:
         self._run_install()
         specs = _global_guideline_specs()
@@ -934,6 +953,14 @@ class CleanTests(unittest.TestCase):
             "clean() must not remove ~/.claude/settings.json (carries user values)",
         )
 
+    def test_preserves_qwen_settings_json(self) -> None:
+        self._run_clean()
+        settings = self.home / cli.QWEN_SETTINGS_DEST_REL
+        self.assertTrue(
+            settings.exists(),
+            "clean() must not remove ~/.qwen/settings.json (carries user values)",
+        )
+
     def test_skip_when_already_absent(self) -> None:
         self._run_clean()
         out = self._run_clean()
@@ -1036,6 +1063,18 @@ class VerifyTests(unittest.TestCase):
         with patch("sys.stdout", new=StringIO()):
             report = cli.verify(self.home)
         self.assertFalse(any(override_key in m for m in report.failures), report.failures)
+
+    def test_qwen_settings_missing_template_key_detected(self) -> None:
+        settings = self.home / cli.QWEN_SETTINGS_DEST_REL
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        del data["fastModel"]
+        settings.write_text(json.dumps(data), encoding="utf-8")
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.home)
+        self.assertTrue(
+            any("settings missing template key" in m and "fastModel" in m for m in report.failures),
+            report.failures,
+        )
 
 
 if __name__ == "__main__":

@@ -1,11 +1,11 @@
 # agent-config
 
-Claude Code / Codex CLI の共通設定テンプレートを管理するリポジトリ。
+Claude Code / Codex CLI / Qwen Code の共通設定テンプレートを管理するリポジトリ。
 
 ## 概要
 
 - 正本は `templates/` 配下
-- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (Linux / macOS / Windows 対応)
+- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/`、`~/.qwen/` に反映 (Linux / macOS / Windows 対応)
 - Linux / macOS / Git Bash では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - リポジトリ内の `README.md` と `docs/` は説明用。runtime contract は `templates/` 側を正とする
 
@@ -13,8 +13,9 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 
 - `templates/AGENTS.md` - Codex CLI 向け共通方針
 - `templates/CLAUDE.md` - Claude Code 向け共通方針
+- `templates/QWEN.md` - Qwen Code 向け共通方針
 - `templates/rules/` - Claude Code 向け markdown rules
-- `templates/skills/` - Claude / Codex 共用の skills
+- `templates/skills/` - Claude / Codex / Qwen Code 共用の skills
 - `templates/output-styles/` - Claude Code 向け custom output styles (モデル切替時の行動規範。`fable-like` 同梱)
 - `templates/config.toml` - Codex CLI 用設定テンプレート
 - `templates/codex/*.config.toml` - Codex CLI 用 profile テンプレート (`~/.codex/<profile>.config.toml`)
@@ -22,6 +23,7 @@ Claude Code / Codex CLI の共通設定テンプレートを管理するリポ�
 - `templates/statusline.py` - Claude Code 用 status line (リッチ 2 行レイアウト)
 - `templates/subagent-statusline.py` - Claude Code サブエージェント行の status line
 - `templates/settings.json` - Claude Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
+- `templates/qwen-settings.json` - Qwen Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
 
 `docs/` は参考資料として残す。履歴メモや検討計画は git で追跡し、作業中の計画メモが必要な場合は repo 直下の `.plan/` に置く。
 
@@ -81,6 +83,9 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 - `~/.codex/*.config.toml` (Codex profile: `readonly` / `full`)
 - `~/.codex/rules/`
 - `~/.agents/skills/`
+- `~/.qwen/QWEN.md` (詳細は後述)
+- `~/.qwen/skills/`
+- `~/.qwen/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
 
 `settings.json` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
 
@@ -119,9 +124,9 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 
 > **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、Python CLI がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIX では `~` パスのまま（shebang + 実行ビットで起動）。
 
-### `CLAUDE.md` / `AGENTS.md` の取り扱い
+### `CLAUDE.md` / `AGENTS.md` / `QWEN.md` の取り扱い
 
-`templates/CLAUDE.md`（Claude 向け）と `templates/AGENTS.md`（Codex 向け）は全プロジェクト共通の AI Agent 動作指針で、テンプレートを source of truth として毎回上書きする。repo 側の更新がそのまま各マシンへ伝播する。指針を変えたい場合は `templates/` 側を編集して再 install する。
+`templates/CLAUDE.md`（Claude 向け）、`templates/AGENTS.md`（Codex 向け）、`templates/QWEN.md`（Qwen Code 向け）は全プロジェクト共通の AI Agent 動作指針で、テンプレートを source of truth として毎回上書きする。repo 側の更新がそのまま各マシンへ伝播する。指針を変えたい場合は `templates/` 側を編集して再 install する。
 
 マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ユーザレベルの `~/.claude/CLAUDE.local.md` は自動読み込みされない。
 
@@ -132,6 +137,24 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 - **有効化**: `/config` → Output style で `fable-like` を選ぶ（選択は local レベル = プロジェクトの `.claude/settings.local.json` に保存）か、`.claude/settings.local.json` に `"outputStyle": "fable-like"` を直接書く。反映は `/clear` または新セッション（style は session 開始時にのみ読み込まれる）
 - **運用注意**: user レベル `~/.claude/settings.json` の `outputStyle` はテンプレート宣言キー（既定 `Explanatory`）で、install 再実行のたびに repo の値へ戻る。そのため fable-like は user レベルでなく**プロジェクトレベル**（`.claude/settings.local.json` 等）で有効化する
 - **無効化 (Fable に戻す)**: `/config` で outputStyle を元に戻すか、`.claude/settings.local.json` の `outputStyle` を削除する。反映は同じく `/clear` または新セッション
+
+### Qwen Code `settings.json` の取り扱い
+
+`templates/qwen-settings.json` は Claude Code 用と同様に **shallow merge** で `~/.qwen/settings.json` へ反映する。
+
+- 初回インストール時: テンプレート全体を `~/.qwen/settings.json` として作成する
+- 2 回目以降: テンプレートが宣言するトップレベルキーはテンプレート値で上書きし、テンプレートが宣言しないキー (`env`, `modelProviders`, `model`, `providerMetadata` 等) はユーザ設定を保持する
+- `model` キーはテンプレートに含めない。shallow merge がトップレベルキーを丸ごと置換するため、含めると既存の `model.name`・`model.baseUrl` が脱落する。`model.reasoningEffort` はユーザ側で設定する
+
+`templates/qwen-settings.json` が配布する推奨キー:
+
+| キー | 値 | 目的 |
+| --- | --- | --- |
+| `fastModel` | `""` | バックグラウンド処理に軽量モデルを使わない (Codex の `fast_mode = false` 相当) |
+| `tools.approvalMode` | `"auto"` | LLM classifier が安全な操作を自動承認する (Claude Code の `defaultMode: "auto"` 相当) |
+| `tools.sandbox` | `true` | サンドボックスを有効化する (Codex の `sandbox_mode` 相当) |
+| `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止 | 機密ファイルへのアクセスを既定で遮断する (Claude Code と同等) |
+| `general.outputLanguage` | `"日本語"` | 応答言語を日本語に固定する |
 
 ## 検証
 
@@ -196,16 +219,19 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | --- | --- |
 | `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
+| `templates/QWEN.md` | `~/.qwen/QWEN.md` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/output-styles/` | `~/.claude/output-styles/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (shallow merge) |
+| `templates/qwen-settings.json` | `~/.qwen/settings.json` (shallow merge) |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/codex/*.config.toml` | `~/.codex/*.config.toml` |
 | `templates/codex-rules/` | `~/.codex/rules/` |
 | `templates/skills/` | `~/.agents/skills/` |
+| `templates/skills/` | `~/.qwen/skills/` |
 
 注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の exec policy rules は `templates/codex-rules/` から `~/.codex/rules/` へ配布する。
 
@@ -229,6 +255,11 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
   - Hooks: `https://developers.openai.com/codex/hooks`
   - AGENTS.md: `https://developers.openai.com/codex/guides/agents-md`
   - Skills: `https://developers.openai.com/codex/skills`
+- Qwen Code
+  - Settings: `https://qwenlm.github.io/qwen-code-docs/configuration/settings`
+  - Skills: `https://qwenlm.github.io/qwen-code-docs/features/skills`
+  - Approval Mode: `https://qwenlm.github.io/qwen-code-docs/features/approval-mode`
+  - Extensions: `https://qwenlm.github.io/qwen-code-docs/extension/introduction`
 
 ## Codex 設計メモ
 
