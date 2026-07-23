@@ -1,8 +1,7 @@
 {
-  "fastModel": "",
+  "fastModel": "qwen3.6-flash",
   "tools": {
-    "approvalMode": "auto",
-    "sandbox": true
+    "approvalMode": "auto"
   },
   "permissions": {
     "deny": [

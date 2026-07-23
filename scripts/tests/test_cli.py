@@ -777,7 +777,7 @@ class InstallTests(unittest.TestCase):
         settings = self.home / cli.QWEN_SETTINGS_DEST_REL
         self.assertTrue(settings.is_file())
         data = json.loads(settings.read_text(encoding="utf-8"))
-        self.assertEqual(data["fastModel"], "")
+        self.assertEqual(data["fastModel"], "qwen3.6-flash")
         self.assertEqual(data["tools"]["approvalMode"], "auto")
 
     def test_qwen_settings_user_value_preserved_on_rerun(self) -> None:
@@ -789,7 +789,7 @@ class InstallTests(unittest.TestCase):
         self._run_install()
         merged = json.loads(settings.read_text(encoding="utf-8"))
         self.assertEqual(merged["model"]["name"], "user-model")
-        self.assertEqual(merged["fastModel"], "")
+        self.assertEqual(merged["fastModel"], "qwen3.6-flash")
 
     def test_global_guidelines_installed_as_template_copies(self) -> None:
         self._run_install()

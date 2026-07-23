@@ -150,11 +150,12 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 
 | キー | 値 | 目的 |
 | --- | --- | --- |
-| `fastModel` | `""` | バックグラウンド処理に軽量モデルを使わない (Codex の `fast_mode = false` 相当) |
+| `fastModel` | `"qwen3.6-flash"` | Auto Mode の classifier (stage 1) とバックグラウンド処理に軽量モデルを使う。空欄だと classifier がメインモデルへフォールバックし、重量級モデルでは stage 1 がタイムアウトして手動承認に落ちる |
 | `tools.approvalMode` | `"auto"` | LLM classifier が安全な操作を自動承認する (Claude Code の `defaultMode: "auto"` 相当) |
-| `tools.sandbox` | `true` | サンドボックスを有効化する (Codex の `sandbox_mode` 相当) |
 | `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止 | 機密ファイルへのアクセスを既定で遮断する (Claude Code と同等) |
 | `general.outputLanguage` | `"日本語"` | 応答言語を日本語に固定する |
+
+`tools.sandbox` は配布しない。Linux / WSL では Docker/Podman のコンテナ隔離が使われ、ホストのツールや認証情報にアクセスできず日常的な運用を阻害するため。サンドボックスは公式既定どおり無効とし、信頼できないコードを扱うときだけ `qwen -s` または `QWEN_SANDBOX=true` でセッション単位で有効化する。
 
 ## 検証
 
