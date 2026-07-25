@@ -6,8 +6,8 @@
 # Used by install.sh / clean.sh / scripts/verify-install.sh. Linux and macOS
 # commonly expose `python3`; Windows commonly exposes `python`. Probing both
 # keeps the wrappers platform-neutral while enforcing one runtime contract.
-# The 3.9 floor matches the pre-setup interpreter observed on macOS 26.2
-# (build 25C56): /usr/bin/python3 3.9.6. This avoids a package-manager bootstrap.
+# Python 3.9 matches /usr/bin/python3 3.9.6 on supported macOS 26.2, so
+# bootstrap does not require installing another Python first.
 set -euo pipefail
 
 for candidate in python3 python; do
