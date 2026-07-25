@@ -30,7 +30,7 @@
     ],
     "defaultMode": "auto"
   },
-  "enableWorkflows": false,
+  "disableWorkflows": true,
   "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
