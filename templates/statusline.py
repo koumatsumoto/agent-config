@@ -60,7 +60,7 @@ _CSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _OSC_RE = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)")
 _SGR_REMNANT_RE = re.compile(r"\[[0-9;]*[mGHJKsu]")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
-# Model display names append a context-window note (e.g. "Opus 4.8 (1M
+# Model display names append a context-window note (e.g. "Opus 5 (1M
 # context)") that the bar's used/window readout already shows; strip it.
 _MODEL_CTX_RE = re.compile(r"\s*\([^)]*context[^)]*\)\s*$", re.IGNORECASE)
 
