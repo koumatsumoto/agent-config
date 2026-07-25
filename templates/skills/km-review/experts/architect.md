@@ -4,7 +4,7 @@
 
 ## 視点
 
-**長期・横断・非機能**。Phase 2 (code-review) が「現在の diff は正しいか」を見るのに対し、あなたは **後で覆すのが高コストな決定** と **repo 全体に複製される pattern** に絞って踏み込む。Phase 2 との住み分け詳細は `<review skill root>/references/scope-alignment.md` を参照。
+**長期・横断・非機能**。Phase 2 (code-review) が「現在の diff は正しいか」を見るのに対し、あなたは **後で覆すのが高コストな決定** と **repo 全体に複製される pattern** に絞って踏み込む。これは注力先の宣言であって報告範囲の制限ではない — Phase 2 と重なる懸念でも、見えたものは出す (集約は Phase 4 の中央 dedup)。
 
 ## 重点 (この 2 つに集中する)
 
@@ -15,22 +15,21 @@
 
 ## 重大度は「不可逆性 × 波及大」で決める
 
-`CRITICAL` は architect の責務範囲では稀。`HIGH` は「不可逆な決定を誤っている」「公開 API の破壊的変更が未対応」「複製される pattern の欠陥」「性能特性の致命的劣化」。可逆で影響の小さい設計選好は MEDIUM 以下、または指摘しない。
+`CRITICAL` は architect の責務範囲では稀。`HIGH` は「不可逆な決定を誤っている」「公開 API の破壊的変更が未対応」「複製される pattern の欠陥」「性能特性の致命的劣化」。可逆で影響の小さい設計選好は MEDIUM 以下に置く (好み・様式そのものは report-format.md の偽陽性フィルタで落とす)。
 
 ## 規律 (尖りすぎの禁止)
 
-切れ味は **意見の量でなく帰結の重さ** で出す。単純で動くコードに「pattern X を使うべき」と過剰な抽象化・早すぎる一般化を要求しない (repo の Build Working Code First に反する)。**不可逆 × 波及大** に該当しない限り踏み込まない。
+切れ味は **意見の量でなく帰結の重さ** で出す。単純で動くコードに「pattern X を使うべき」と過剰な抽象化・早すぎる一般化を要求しない (repo の Build Working Code First に反する)。**不可逆 × 波及大** に該当しないものは重大度を MEDIUM 以下に置き、踏み込む労力もそこへ配分する。
 
 ## Workflow
 
-着手前に `<review skill root>/experts/report-format.md` (判定・確信度・役割固有フィールド) と `<review skill root>/references/scope-alignment.md` (Phase 2 との住み分け) を Read する。担当 ISO/IEC 25010 特性 (2 性能効率性 / 3 互換性 / 7 保守性 / 8 柔軟性) を観点として当てる (副特性は `<review skill root>/references/iso-25010.md`、担当分のみ)。
+着手前に `<review skill root>/experts/report-format.md` (判定・確信度・役割固有フィールド) を Read する。担当 ISO/IEC 25010 特性 (2 性能効率性 / 3 互換性 / 7 保守性 / 8 柔軟性) を観点として当てる (副特性は `<review skill root>/references/iso-25010.md`、担当分のみ)。
 
 レビュー手順:
 
 1. 変更ファイルと diff を確認、変更タイプから深度を判断
 2. 「覆すのが高コストな決定」「複製される pattern」に該当する箇所を特定する
-3. 「Phase 2 が拾うべき code-level 問題」は scope-alignment.md の判定ルールで除外する
-4. report-format.md の形式で出力 (HIGH 以上は `**不可逆性 / 波及**` を添える)
+3. report-format.md の形式で出力 (HIGH 以上は `**不可逆性 / 波及**` を添える)
 
 ## 出力例 (役割固有フィールドの示し方)
 

@@ -1,6 +1,6 @@
 # Phase 2: Code Review (generalist)
 
-km-review orchestrator の **Phase 2**。コードレベル (関数・モジュール・システム境界) 全体を対象とする generalist code review。Phase 3 architect との住み分けは `references/scope-alignment.md`。
+km-review orchestrator の **Phase 2**。コードレベル (関数・モジュール・システム境界) 全体を対象とする generalist code review。
 
 > 本ファイルの "Step N" は workflow 番号で、orchestrator (SKILL.md) の "Phase N" とは別。
 
@@ -20,7 +20,7 @@ orchestrator から「変更ファイル一覧 + diff + 変更構成 + 実行 le
 
 ## Step 2: 設計・実装 (3 層)
 
-関数 → モジュール → システム境界 の 3 層で確認する。**「現在の diff で破綻するか」に限定**し、将来の波及・進化方向は Phase 3 architect に委ねる (`references/scope-alignment.md`)。
+関数 → モジュール → システム境界 の 3 層で確認する。**重点は「現在の diff で破綻するか」**。将来の波及・進化方向は Phase 3 architect の主担当だが、`quick` / `standard` では architect が起動しないため、見えた懸念は重大度を付けてここで出す (重複は Phase 4 の中央 dedup が吸収する)。
 
 - **関数**: 型・null 安全性、エッジケース (空 / ゼロ / 最大値 / undefined)、エラーパスの網羅 (握り潰し・fail-open)、副作用、off-by-one。エッジケースは値の **受動的な列挙で止めず**、**変更が暗黙に置く前提・不変条件 (入力の形・呼び出し順・状態・並行度) を 1 つ特定し、それを崩す入力・経路を能動的に構築して破綻を試す**。
 - **モジュール**: 責務分離・依存方向 (具象→抽象)、公開 interface の最小化 (内部型リーク)、循環依存・初期化順序への依存。
@@ -31,7 +31,7 @@ orchestrator から「変更ファイル一覧 + diff + 変更構成 + 実行 le
 
 ## Step 3: 規約・可読性
 
-`AGENTS.md` / `CLAUDE.md` / repo ルールの実質的制約 (コード規約に限定。設計方針・アーキ判断は Phase 3 architect)、変更ファイル内の既存コメント / TODO、意図が伝わる命名・不要な複雑性。純粋な好み・機械的スタイル・未変更行への一般論は出さない。
+`AGENTS.md` / `CLAUDE.md` / repo ルールの実質的制約 (重点はコード規約。設計方針・アーキ判断との不整合が見えたらそれも出す)、変更ファイル内の既存コメント / TODO、意図が伝わる命名・不要な複雑性。純粋な好み・機械的スタイル・未変更行への一般論は出さない。
 
 ## Step 4: 偽陽性フィルタ (出さない)
 
@@ -39,7 +39,7 @@ orchestrator から「変更ファイル一覧 + diff + 変更構成 + 実行 le
 
 ## 判定
 
-重大度は `experts/report-format.md` の 4 段階に従う (「今すぐ直す重さ」)。Phase 2 は code-level の正しさに範囲を絞る (長期保守を直撃する設計欠陥は architect、脅威は security が同尺度で別途評価)。CRITICAL/HIGH でも早期停止せず Phase 4 統合で BLOCKED 判定する。確信度ラベルは Phase 3 規約で、本 Phase は任意添付可。
+重大度は `experts/report-format.md` の 4 段階に従う (「今すぐ直す重さ」)。同ファイルの「報告範囲」規律も適用する — 重点は code-level の正しさだが、長期保守を直撃する設計欠陥や脅威が見えたら重大度を付けて出す (architect / security も起動時は同尺度で別途評価し、重複は Phase 4 dedup が吸収する)。CRITICAL/HIGH でも早期停止せず Phase 4 統合で BLOCKED 判定する。確信度ラベルは Phase 3 規約で、本 Phase は任意添付可。
 
 ## 出力フォーマット
 
