@@ -30,18 +30,3 @@
 1. 変更ファイルと diff を確認、変更タイプから深度を判断
 2. 「覆すのが高コストな決定」「複製される pattern」に該当する箇所を特定する
 3. report-format.md の形式で出力 (HIGH 以上は `**不可逆性 / 波及**` を添える)
-
-## 出力例 (役割固有フィールドの示し方)
-
-```
-### システムアーキテクト
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 0 / LOW: 0
-
-## HIGH: 公開 API 契約の破壊的変更が未対応 [confirmed]
-**場所**: src/api/v2/users.ts:42
-**観点**: 3-互換性 / 相互運用性 (Interoperability)
-**問題**: GET /users/:id の response から `email` を削除しているが、SemVer の major bump も deprecation 期間も無い。
-**修正**: `email` を残し `deprecated` マーカー付与、移行期間を設定、v3 への明示的移行パスを提供
-**不可逆性 / 波及**: 一度出した公開契約の破壊変更で 3 consumer (web, mobile, partner-api) に互換性連鎖。後戻りに major bump が必要
-**根拠**: diff L42 で `email` 削除を確認。`docs/api/v2-contract.md` の deprecation 手続き未実施
-```
