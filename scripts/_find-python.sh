@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
-# Resolve a Python ≥ 3.12 interpreter command name (e.g. python3 / python).
+# Resolve a Python ≥ 3.9 interpreter command name (e.g. python3 / python).
 # Prints the resolved command name to stdout. Exits non-zero on failure with
 # a human-readable error on stderr.
 #
 # Used by install.sh / clean.sh / scripts/verify-install.sh. Linux and macOS
 # commonly expose `python3`; Windows commonly exposes `python`. Probing both
 # keeps the wrappers platform-neutral while enforcing one runtime contract.
+# Python 3.9 matches /usr/bin/python3 3.9.6 on supported macOS 26.2, so
+# bootstrap does not require installing another Python first.
 set -euo pipefail
 
 for candidate in python3 python; do
   if command -v "$candidate" >/dev/null 2>&1 \
-    && "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)' >/dev/null 2>&1; then
+    && "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
     echo "$candidate"
     exit 0
   fi
 done
 
-echo "ERROR: Python 3.12+ not found in PATH (tried: python3, python)" >&2
+echo "ERROR: Python 3.9+ not found in PATH (tried: python3, python)" >&2
 exit 1

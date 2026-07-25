@@ -12,13 +12,17 @@ import re
 import shutil
 import sys
 import tempfile
-import tomllib
 import unittest
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
 import cli
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
 
 
 def _verified_spec() -> cli.FileSpec:
@@ -817,6 +821,7 @@ class InstallTests(unittest.TestCase):
             self.assertTrue(dest.is_file(), f"missing: {dest}")
             self.assertEqual(dest.read_bytes(), src.read_bytes())
 
+    @unittest.skipIf(tomllib is None, "tomllib is available on Python 3.11+")
     def test_codex_model_defaults_and_managed_efforts(self) -> None:
         base = tomllib.loads(
             (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")

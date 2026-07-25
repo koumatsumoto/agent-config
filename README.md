@@ -55,15 +55,17 @@ Windows (PowerShell / cmd):
 python scripts/cli.py install
 ```
 
-要件: Python 3.12+ (stdlib のみで動作。外部依存なし)。bash ラッパーは `python3`、`python` の順に PATH を探索し、要件を満たす interpreter を使う。
+要件: Python 3.9+ (stdlib のみで動作。外部依存なし)。bash ラッパーは `python3`、`python` の順に PATH を探索し、要件を満たす interpreter を使う。特定の OS パッケージマネージャーには依存しない。
 
-> **OS ごとの Python**: Linux / macOS の例は `python3`、Windows の例は `python` と表記する。macOS 12.3 以降は従来の `python` (Python 2.7) が削除されており、素の macOS に Python 3.12+ があるとは限らない。`python3 --version` が要件を満たさない場合は Python 3.12+ を別途インストールする。installer 自体は macOS 固有の system Python に依存しない。
+最低版を Python 3.9 とするのは、サポート対象の macOS 26.2 で初期状態から利用できる `/usr/bin/python3` が Python 3.9.6 だからである。これにより、パッケージマネージャーで別の Python を追加せずに `./install.sh` を実行できる。
+
+> **OS ごとの Python**: Linux / macOS の例は `python3`、Windows の例は `python` と表記する。macOS では `python` が存在しない場合があるため `python3` を先に探索する。installer 自体は macOS 固有の system Python や特定の導入方法に依存しない。
 
 サポート境界は次のとおり。
 
 | OS | 推奨入口 | platform 固有処理 |
 | --- | --- | --- |
-| Linux | `./install.sh` | POSIX permission と `python3` / `python` 探索 |
+| Linux | `./install.sh` | POSIX permission と Python 3.9+ の interpreter 探索 |
 | macOS | `./install.sh` | Linux と同じ POSIX 処理。標準 bash で smoke test |
 | Windows | `python scripts/cli.py install` | NTFS では POSIX mode を扱わず、status line は interpreter の絶対パスで起動 |
 
@@ -184,7 +186,7 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` / `macos-latest` / `windows-latest` の Python 3.12 / 3.13 マトリクスで unittest と bash wrapper の smoke test を実行する。
+GitHub Actions (`.github/workflows/tests.yml`) は `ubuntu-latest` / `macos-latest` / `windows-latest` の Python 3.9 / 3.12 / 3.13 マトリクスで unittest と bash wrapper の smoke test を実行する。
 
 ## クリーンアップ
 
