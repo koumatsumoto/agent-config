@@ -17,4 +17,4 @@ python3 -m unittest discover -s scripts/tests -t scripts
 python -m unittest discover -s scripts/tests -t scripts
 ```
 
-CI (`.github/workflows/tests.yml`) は `ubuntu-latest` / `macos-latest` / `windows-latest` の Python 3.12 / 3.13 マトリクスで、unittest と bash wrapper の smoke test を実行する。
+CI (`.github/workflows/tests.yml`) は `ubuntu-latest` / `macos-latest` / `windows-latest` の Python 3.9 / 3.12 / 3.13 マトリクスで、unittest と bash wrapper の smoke test を実行する。

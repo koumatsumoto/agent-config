@@ -44,7 +44,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # --------------------------------------------------------------------------- #
 # Install manifest: the single source of truth for what is deployed where.
 # --------------------------------------------------------------------------- #
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class FileSpec:
     src_rel: str           # relative to REPO_ROOT
     dest_rel: str          # relative to home
@@ -52,7 +52,7 @@ class FileSpec:
     is_executable: bool = False
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class TreeSpec:
     src_rel: str           # relative to REPO_ROOT
     dest_rel: str          # relative to home
@@ -680,7 +680,7 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
         print(f"removed (obsolete skill data): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
-    # exist and be >= 3.12, and on Windows it is exactly the python that must be
+    # exist and be >= 3.9, and on Windows it is exactly the python that must be
     # named explicitly in the status-line command.
     python = Path(sys.executable).as_posix()
     settings_status = merge_into(
@@ -776,20 +776,18 @@ def main(argv: list[str]) -> int:
         return 2
 
     command, rest = args[0], args[1:]
-    match command:
-        case "install":
-            refuse_root()
-            return install(Path.home())
-        case "clean":
-            return clean(Path.home())
-        case "verify":
-            return _verify_cli(Path.home())
-        case "merge":
-            return _merge_cli(prog, rest)
-        case _:
-            print(f"unknown command: {command}", file=sys.stderr)
-            print(USAGE, file=sys.stderr)
-            return 2
+    if command == "install":
+        refuse_root()
+        return install(Path.home())
+    if command == "clean":
+        return clean(Path.home())
+    if command == "verify":
+        return _verify_cli(Path.home())
+    if command == "merge":
+        return _merge_cli(prog, rest)
+    print(f"unknown command: {command}", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":
