@@ -57,6 +57,8 @@ python scripts/cli.py install
 
 要件: Python 3.9+ (stdlib のみで動作。外部依存なし)。bash ラッパーは `python3`、`python` の順に PATH を探索し、要件を満たす interpreter を使う。特定の OS パッケージマネージャーには依存しない。
 
+最低版を 3.9 とする理由は、検証対象の macOS 26.2 (build 25C56) で、このリポジトリのセットアップ開始時点から `/usr/bin/python3` として Python 3.9.6 を利用できたため。既存 interpreter をそのまま使うことで、`./install.sh` の実行前にパッケージマネージャー経由で別の Python を追加する必要がない。この記述はすべての macOS 26.2 環境への Python 3.9.6 の同梱を保証するものではなく、本リポジトリが検証する bootstrap baseline を示す。
+
 > **OS ごとの Python**: Linux / macOS の例は `python3`、Windows の例は `python` と表記する。macOS では `python` が存在しない場合があるため `python3` を先に探索する。installer 自体は macOS 固有の system Python や特定の導入方法に依存しない。
 
 サポート境界は次のとおり。
