@@ -25,8 +25,6 @@ Context はロード時のスナップショット。gate 判定は Phase 2 / 4 
 - plan 本文が issue 単体で読め、実装 agent が再分解せず最初の作業単位から着手できる
 - 第三者レビューが収束している（未解決 `CRITICAL` / `HIGH` ゼロ。収束しなければ issue 化しない）
 - レビュー往復・採否経緯が本文に残っていない（残るのは最終計画・受け入れ済みリスク・実装時確認事項だけ）
-- 秘密情報が `.plan/` ファイルにも issue 本文にも無い
-- GitHub 管理 repo では issue に全文ミラーし URL を再同期してある。非 GitHub repo / `gh` 不能なら `.plan/` 出力で停止し、原因を区別して報告してある
 
 ## Routing
 
@@ -38,7 +36,7 @@ Context はロード時のスナップショット。gate 判定は Phase 2 / 4 
 | `materialize-existing-plan` | Plan Mode 外で、直近の合意済み計画を会話から復元でき、materialize / issue 化が依頼された | 合意済み内容は再設計せず詳細化する。骨子の未決のみ確認して Phase 2 へ。復元できなければ推測で書き出さず計画内容を再確認する |
 | `full-normal-mode` | Plan Mode 外で、`.plan/` 出力 / 計画 issue 化が明示された | Phase 1 から順に |
 
-境界: PR delivery が主目的なら `km-github-workflow`、変更差分のレビューは `km-review`。「計画を作って PR まで」は km-plan で issue 化まで行い、issue 番号を渡して `km-github-workflow` へ handoff する（issue を作れず停止した場合は handoff せず理由を報告して判断を委ねる）。計画コンテキストの無い ad-hoc issue + PR は km-github-workflow に委ねる。materialize 後の要求差分・外部レビュー反映の依頼は「計画の更新」節へ。
+境界: PR delivery が主目的なら `km-github-workflow`、変更差分のレビューは `km-review`。ブランチ / PR 作成・push は `km-github-workflow` の責務で、本スキルは PR 分割の設計までを扱う。「計画を作って PR まで」は km-plan で issue 化まで行い、issue 番号を渡して `km-github-workflow` へ handoff する（issue を作れず停止した場合は handoff せず理由を報告して判断を委ねる）。計画コンテキストの無い ad-hoc issue + PR は km-github-workflow に委ねる。materialize 後の要求差分・外部レビュー反映の依頼は「計画の更新」節へ。
 
 ## Phase 1: Clarify
 
@@ -123,6 +121,5 @@ plan 本文は issue に全文ミラーされるため、秘密情報の混入�
 - **Plan Mode 中**は `.plan/` / `.gitignore` / GitHub issue を一切変更しない
 - **issue body は全文ミラー**: `.plan/` と同じ markdown を `--body-file` で渡す（要約・抜粋・heredoc 再構成・`--body "..."` は不可）
 - **`.plan/` は一時作業場**: 共有成果物（issue / PR / comment）から `.plan/` 配下の具体ファイルを source of truth として参照させない。正本は issue / PR の URL
-- **Secret Check** は `gh issue create/edit` の全経路（新規・2-step sync・既存更新・更新反映後の再同期）で実行前に通す
+- **Secret Check** は本文が外へ出る全経路の実行前に通す: `.plan/` への書き出し（pre-write）と `gh issue create/edit`（新規・2-step sync・既存更新・更新反映後の再同期）。`.plan/` に秘密情報が入れば後続の全経路がそれを引き継ぐため、issue 経路だけでは足りない
 - **gh 失敗**は成功扱いせず、issue 未作成と「作成済みだが URL 未同期」を区別して報告する
-- **スコープ境界**: ブランチ / PR 作成・push は `km-github-workflow` の責務（本スキルは PR 分割の設計まで）
