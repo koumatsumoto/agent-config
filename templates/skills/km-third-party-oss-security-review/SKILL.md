@@ -63,13 +63,16 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 
 ## Workflow
 
-1. Phase 1: 入力解釈と artifact 解決
-2. **`report-format.md` と `reference/` 配下の全ファイルを Read する**
-3. Phase 2: 一次情報の収集
-4. Phase 3: 共通 8 観点の評価（`reference/review-framework.md`）
-5. Phase 4: ecosystem-specific 評価（`reference/<ecosystem>.md`）
-6. Phase 5: 判定（`reference/decision-rules.md`）
-7. Phase 6: レポート生成（`report-format.md`）
+各 reference は、その内容が必要になる直前に Read する。**解決した ecosystem の adapter 以外は読まない** — 対象外 ecosystem の判断基準を載せると、審査に無関係な観点が判定に混入する。
+
+1. **Phase 1: 入力解釈と artifact 解決** — ecosystem を判別したら `reference/<ecosystem>.md` を Read し、その「artifact 解決」節の要件を満たす形で artifact を確定する
+2. **Phase 2: 一次情報の収集** — 収集を始める前に `reference/review-framework.md` を Read する（8 観点が収集すべき証跡を規定するため、後から読むと再収集になる）
+3. **Phase 3: 共通 8 観点の評価** — `reference/review-framework.md`（Phase 2 で読み込み済み）
+4. **Phase 4: ecosystem-specific 評価** — `reference/<ecosystem>.md`（Phase 1 で読み込み済み）
+5. **Phase 5: 判定** — `reference/decision-rules.md` を Read する
+6. **Phase 6: レポート生成** — `report-format.md` を Read する
+
+ecosystem を判別できない場合は adapter を読まず `NEEDS_HUMAN_REVIEW` に倒す（Phase 1）。
 
 ## Phase 1: 入力解釈と artifact 解決
 
@@ -77,6 +80,7 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 - repo URL 由来の入力は `ecosystem` と `配布 artifact` を解決する
 - 複数候補が残る場合は推測しない。候補を列挙し `NEEDS_HUMAN_REVIEW` に倒す
 - monorepo で `package.json` と `pyproject.toml` が併存する等、ecosystem 判別が曖昧な場合も `NEEDS_HUMAN_REVIEW` に倒す
+- ecosystem を判別できたら `reference/<ecosystem>.md` を Read し、その「artifact 解決」節の要件（version の特定、名前形式の解釈、registry / marketplace entry で確認する項目）を満たしてから特定度を判定する
 - `配布 artifact` の特定度を次で表現し、`Artifact Resolution Status` として summary に出力する
   - `resolved`: version / tag / commit / marketplace version のいずれかが一意に解決済み
   - `candidate`: 複数候補があるが一次ソースで列挙できる
@@ -84,6 +88,8 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 - `unresolved` のときは `ALLOW` も `ALLOW_WITH_CONDITIONS` も出さない。判定は `NEEDS_HUMAN_REVIEW` 固定。レポート冒頭で「採用判定ではなく repository-level の暫定評価」であることを明示する
 
 ## Phase 2: 一次情報の収集
+
+収集した証跡は URL と確認日（`YYYY-MM-DD`）とともに記録する。後から遡れない証跡はレポートの根拠に使えず、`Review Confidence` を下げる。
 
 許可する一次情報源:
 
@@ -132,7 +138,7 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 
 ## Phase 4: ecosystem-specific 評価
 
-解決した ecosystem に対応する reference を適用する:
+Phase 1 で Read した ecosystem adapter を適用する:
 
 - npm → `reference/npm.md`
 - pip → `reference/pip.md`
@@ -142,7 +148,7 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 
 ## Phase 5: 判定
 
-`reference/decision-rules.md` の hard rules と降格表に従う。
+`reference/decision-rules.md` を Read し、hard rules と降格表に従う。
 
 - blocker を先に判定する
 - 未解決の Critical 相当 advisory が対象 artifact に当たる場合は `REJECT`
@@ -151,7 +157,7 @@ GitHub でホストされる third-party OSS を社内採用する前のセキ�
 
 ## Phase 6: レポート生成
 
-`report-format.md` に沿って日本語レポートを出力する。
+`report-format.md` を Read し、それに沿って日本語レポートを出力する。
 
 - 「安全である」と断定せず、「確認できた範囲では」と「未確認事項」を分ける
 - `ALLOW_WITH_CONDITIONS` は対象 artifact が `resolved` の場合にのみ使い、運用可能な条件を書く
