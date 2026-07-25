@@ -55,7 +55,7 @@ Phase 1 のリスク評価で該当した専門家を起動する（`docs-only` 
 | security | 脅威モデル・攻撃面・LLM 統合の脆弱性 |
 | adversary | 変更を「正しくない / 目的を達成しない」と仮定して前提・不変条件を攻撃。境界・異常系・最悪入力・intent 達成 |
 
-Phase 2 との住み分けは `references/scope-alignment.md`、ロール識別子と出力見出しの対応は `experts/report-format.md` を単一ソースとする。
+ロール識別子と出力見出しの対応、および「レーンを理由に抑制しない」規律は `experts/report-format.md` を単一ソースとする。
 
 **起動契約** — 同一メッセージ内で並列起動し、最上位 model + 高 effort で動かす。orchestrator が各 subagent へのプロンプトに以下を必ず含める:
 
