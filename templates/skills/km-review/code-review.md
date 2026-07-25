@@ -43,21 +43,4 @@ orchestrator から「変更ファイル一覧 + diff + 変更構成 + 実行 le
 
 ## 出力フォーマット
 
-```
-### Phase 2: Code Review (generalist)
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
-
-## HIGH: [問題タイトル]
-**場所**: src/api/users.ts:42
-**問題**: 何が問題か (具体的に)
-**修正**: どう直すか (具体的に)
-**根拠**: diff / repo ルール / 設計方針への参照
-```
-
-指摘ゼロ:
-
-```
-### Phase 2: Code Review (generalist)
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
-（指摘なし）
-```
+`experts/report-format.md` の出力規約に従う。本 Phase のレビュア見出しは `### Phase 2: Code Review (generalist)`、その直下に件数行を 1 行置く。指摘ゼロなら件数行 + `（指摘なし）`。

@@ -33,40 +33,15 @@ recheck (SKILL.md「再検証モード」) は統合サマリーと同形式で�
 
 ## 各 Phase の詳細
 
-各 Phase の結果をセクションごとに表示する。スキップした Phase は見出し + `（スキップ）` を出力 (省略しない)。Phase 3 は中央 dedup 後の所見を表示する。
+各 Phase の結果をセクションごとに `---` 区切りで表示する。スキップした Phase は見出し + `（スキップ）` を出力 (省略しない)。所見の書式は各 Phase のファイルと `experts/report-format.md` が定める。
 
-```
----
-### Phase 2: Code Review (generalist)
-CRITICAL: 0 / HIGH: 1 / MEDIUM: 1 / LOW: 0
+構造:
 
-## HIGH: [問題タイトル] [confirmed]
-**場所**: src/api/users.ts:42
-**問題**: ...
-**修正**: ...
----
-### Phase 3: 第三者レビュー
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 0
-
-#### システムアーキテクト
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 0
-
-## MEDIUM: [問題タイトル] [confirmed]
-**場所**: src/api/auth.ts:28
-**問題**: ...
-**修正**: ...
-
-#### セキュリティ専門家
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
-（指摘なし）
-
-#### 敵対レビュア
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
-（指摘なし）
----
-### Phase 5: Doc Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
-```
+- `### Phase 2: Code Review (generalist)` — 件数行 + 所見
+- `### Phase 3: 第三者レビュー` — 3 レビュア合算の件数行を直下に置き、その下に各レビュアを並べる
+  - **レビュアの見出しは `###` から `####` へ降格する** (`#### システムアーキテクト` / `#### セキュリティ専門家` / `#### 敵対レビュア`)。`report-format.md` が定める `###` は単独報告時の見出しで、統合レポートでは Phase 3 セクションの下位になる
+  - 各レビュアは件数行 + 中央 dedup 後の所見 (ゼロなら `（指摘なし）`)
+- `### Phase 5: Doc Review` — 件数行 + 所見
 
 スキップ / defer の表記例: `### Phase 3: 第三者レビュー\n（スキップ - standard レベルのため）`。doc-review は `### Phase 5: Doc Review\n（defer - コード解消後に実施）` / `（スキップ - test/config/chore のため）` 等。
 

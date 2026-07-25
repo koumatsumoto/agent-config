@@ -72,22 +72,4 @@ doc-review は Phase 4 のコード判定が `PASS` の最終状態に対して�
 
 ## 出力フォーマット
 
-機械可読の件数行 + 個別所見。所見の散文は内容が伝われば長さ・構成はレビュアの判断に委ねる。
-
-```
-### Phase 5: Doc Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 1 / LOW: 1
-
-## MEDIUM: [問題タイトル]
-**場所**: docs/architecture.md:42
-**問題**: 何が問題か
-**修正**: どう直すか
-```
-
-指摘ゼロ:
-
-```
-### Phase 5: Doc Review
-CRITICAL: 0 / HIGH: 0 / MEDIUM: 0 / LOW: 0
-（指摘なし）
-```
+`experts/report-format.md` の出力規約に従う。本 Phase のレビュア見出しは `### Phase 5: Doc Review`、その直下に件数行を 1 行置く。指摘ゼロなら件数行 + `（指摘なし）`。所見の散文は内容が伝われば長さ・構成をレビュアの判断に委ねる。

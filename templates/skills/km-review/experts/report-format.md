@@ -25,11 +25,14 @@ CRITICAL: 0 / HIGH: 1 / MEDIUM: 2 / LOW: 0
 
 ## HIGH: [問題タイトル] [confirmed]
 **場所**: src/api/users.ts:42
+**観点**: <番号>-<特性> / <副特性>
 **問題**: 何が問題か
 **修正**: どう直すか
 **根拠**: diff / 担当 reference のどの観点か
 （役割固有の補足があれば続けて書く）
 ```
+
+`**観点**` は担当 ISO/IEC 25010 特性を `<番号>-<特性> / <副特性>` で書く (特性一覧は `<review skill root>/references/iso-25010.md`)。
 
 指摘ゼロのとき:
 
