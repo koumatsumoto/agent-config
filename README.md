@@ -112,7 +112,7 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 | `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`)。OS 別に書き換え (下記) | リポジトリ同梱のリッチ status line を有効化する |
 | `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | サブエージェント行を自前描画する |
 | `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止と `Bash(npx *)` | 機密ファイルへのアクセスを既定で遮断する |
-| `permissions.defaultMode` | `"plan"` | セッションを既定で plan mode で開始する |
+| `permissions.defaultMode` | `"auto"` | セッションを既定で auto mode で開始する（classifier が安全な操作を自動承認する） |
 | `language` | `"日本語"` | 応答言語を日本語に固定する |
 | `effortLevel` | `"xhigh"` | reasoning effort を xhigh で永続化する |
 | `attribution.commit` / `attribution.pr` | 空文字 | コミットおよび PR 説明から Claude の署名を抑止する |
