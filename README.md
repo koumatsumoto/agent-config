@@ -328,7 +328,8 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `km-review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) を指定できる 1 回完結の独立診断レビュー。リスク軸から深さと起動するレビュア (architect / security / adversary) を自ら決め、独立レビュアの並列起動 → 並行して generalist レビュー → 統合と PASS 反証 → ドキュメントレビューの順に進めて `PASS` / `BLOCKED` を判定する |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
-| `km-github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
+| `km-github-workflow` | GitHub 管理 repo で変更を PR として届けるワークフロー (Plan / Develop / Verify / Report) と、branch / commit / PR / issue 連携 / follow-up issue / 完了報告の delivery 契約 |
+| `km-skill-improve` | 挙動資産 (skill / rules / `CLAUDE.md` 等) の変更を実挙動の証拠に変換して採否を決める改善ループ。eval-first で題材を先に固定し、blind A/B・ablation・回帰再走で測り、使った題材を scenario bank に蓄積する |
 | `km-plan` | 実装計画を実装 agent へのゴール契約 (ゴール / 設計方針 / 反証可能な完了条件) として作り込み、`.plan/` への出力、第三者レビュー、GitHub issue への全文ミラーまでを行う |
 
 ## ライセンス
