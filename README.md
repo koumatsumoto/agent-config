@@ -286,7 +286,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | スキル | 説明 |
 | --- | --- |
-| `km-review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) を指定できる 1 回完結の独立診断レビュー。リスク軸から深さと起動するレビュア (architect / security / adversary) を自ら決め、generalist レビュー → 独立レビュアの並列実行 → 統合と PASS 反証 → ドキュメントレビューの順に進めて `PASS` / `BLOCKED` を判定する |
+| `km-review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) を指定できる 1 回完結の独立診断レビュー。リスク軸から深さと起動するレビュア (architect / security / adversary) を自ら決め、独立レビュアの並列起動 → 並行して generalist レビュー → 統合と PASS 反証 → ドキュメントレビューの順に進めて `PASS` / `BLOCKED` を判定する |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
