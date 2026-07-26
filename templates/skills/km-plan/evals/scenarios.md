@@ -5,8 +5,8 @@
 - 対象層: description（トリガー）— 発火境界の健全性ゲート
 - 題材: description 一覧のみを与えて skill を選ばせる。should:「この機能の実装計画を issue にして」「リファクタの計画を作って」/ should-not:「実装終わったので PR にして」（km-github-workflow へ）「この diff をレビューして」（km-review へ）「この bug をさくっと直して」（skill を挟まず直接実装へ）
 - 期待品質: should の 2 件で km-plan が選ばれ、should-not の 3 件では選ばれない。トリガ語を 2 つに絞った description が、隣接 skill（km-github-workflow / km-review）との境界と「計画を作り込む価値が無い小さな依頼」の両方を切り分けられているか
-- 判定: 新設・未走。初回の運用テスト結果をここに記録する
-- トレードオフ / 注記: description を変えるたびに必ず再走する。トリガ語を削ったことで under-trigger（計画すべき依頼で発火しない）に倒れていないかが主リスク
+- 判定: 健全性ゲートとして確立（2026-07-26, #183 後の実走）。should 2 件・should-not 3 件すべて期待どおりに分岐し、トリガ語を 2 つへ絞った description でも under-trigger は起きなかった。description を変えるたびに必ず再走する
+- トレードオフ / 注記: 「issue にして」が計画を伴わない issue 起票まで引き寄せる。km-github-workflow は follow-up issue の起票を自分の delivery 契約に含むため、トリガ語と責務範囲がこの一語で交差する。誤射の実害が観測されたら「計画を issue にして」へ絞ることを検討する
 
 ## goal-contract-quality: ゴール契約の質と設計方針の質問
 

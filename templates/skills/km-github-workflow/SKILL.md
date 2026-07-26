@@ -19,7 +19,7 @@ argument-hint: "[issue-number]"
 
 ## Plan
 
-- **base へ直接コミット・push しない。** 変更は必ずブランチを切って PR で届ける。ブランチは base から切る
+- **base へ直接コミット・push しない。** 変更は必ずブランチを切って PR で届ける。ブランチは base から切り、名前は `<type>/<issue番号>-<slug>`（例: `fix/184-settings-merge-permissions`）。type は commit と同じ Conventional Commits の語（`feat` / `fix` / `refactor` / `docs` など）、slug は英小文字 kebab-case。issue を作らない場合は `<type>/<slug>`
 - issue と PR はセット。ユーザーが「issue 不要・PR だけ」と明示したときだけ issue を作らない
 - 論点が少なくクリアなら本 skill で簡易 issue（目的・完了条件を最小限）を作る。設計判断が多く計画を作り込むべきなら km-plan へ委ねる
 
