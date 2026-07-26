@@ -290,7 +290,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | branch / commit / PR / issue 連携を含む GitHub delivery 運用ルール |
-| `km-plan` | 実装計画を実装 agent へのゴール契約 (Goal / Non-goal / 反証可能な DoD) として作り込み、`.plan/` への出力、第三者レビュー、GitHub issue への全文ミラーまでを行う |
+| `km-plan` | 実装計画を実装 agent へのゴール契約 (ゴール / 設計方針 / 反証可能な完了条件) として作り込み、`.plan/` への出力、第三者レビュー、GitHub issue への全文ミラーまでを行う |
 
 ## ライセンス
 

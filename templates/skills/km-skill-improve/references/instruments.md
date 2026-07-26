@@ -74,7 +74,7 @@ base 版と candidate 版の skill を素の subagent で実際に動かし、�
 - skill root: <base または candidate の絶対パス>/
 - まず SKILL.md を読み、SKILL.md が指示するタイミングで references/ 配下を読むこと
 - 対象 repo: <絶対パス>（read-only で調査してよい）
-- <実行時条件: 今日の日付、Plan Mode 内外など skill の分岐に効く前提>
+- <実行時条件: 今日の日付、GitHub repo かどうか、既存 issue の有無など skill の分岐に効く前提>
 
 ## ユーザ依頼
 「<題材タスク>」
@@ -111,7 +111,7 @@ judge に「どちらがどの版か」を漏らさないための機械的手�
 <タスク本文と実行条件（sandbox・repo）>
 
 ## 対象 skill の目的
-<対象 skill が何のための skill か 1-2 行。期待される正しい挙動（例: この依頼では draft-only 停止が正）があれば書く>
+<対象 skill が何のための skill か 1-2 行。期待される正しい挙動（例: この依頼では確認質問を出して止まるのが正）があれば書く>
 
 ## 成果物
 - 成果物 A: <judge/…-a.md の絶対パス> を Read せよ
