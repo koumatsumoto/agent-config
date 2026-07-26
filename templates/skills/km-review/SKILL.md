@@ -61,7 +61,7 @@ argument-hint: "[target]"
 
 ### 統合して判定する
 
-`references/verdict.md` に従う。main の強み（ツール実行・長コンテキスト・自己反証）を「**誤った `PASS` を出さない**」ことに使い、`PASS` を出す前に必ず自分の `PASS` を反証する。
+`references/verdict.md` に従う。ここでの主眼は「**誤った `PASS` を出さない**」こと。`PASS` を出す前に必ず自分の `PASS` を反証する。
 
 ### ドキュメントを見る
 
