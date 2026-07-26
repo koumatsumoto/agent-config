@@ -296,6 +296,7 @@ class PruneTreeTests(unittest.TestCase):
 class DecommissionedSkillsTests(unittest.TestCase):
     def setUp(self) -> None:
         self.home = Path(tempfile.mkdtemp(prefix="decom-test-"))
+        self.layout = cli.home_layout(self.home)
         self.skills = self.home / ".claude" / "skills"
         self.skills.mkdir(parents=True)
 
@@ -313,7 +314,7 @@ class DecommissionedSkillsTests(unittest.TestCase):
         archive = self.skills.parent / "retired-skills"
         (archive / name).mkdir(parents=True)
         (archive / name / "SKILL.md").write_text("archive", encoding="utf-8")
-        removed = cli.remove_decommissioned_skills(self.home)
+        removed = cli.remove_decommissioned_skills(self.layout)
         self.assertEqual(removed, [old, backup, archive])
         self.assertFalse(old.exists())
         self.assertFalse(backup.exists())
@@ -323,7 +324,7 @@ class DecommissionedSkillsTests(unittest.TestCase):
         keep = self.skills / "my-skill"
         keep.mkdir()
         (keep / "SKILL.md").write_text("mine", encoding="utf-8")
-        self.assertEqual(cli.remove_decommissioned_skills(self.home), [])
+        self.assertEqual(cli.remove_decommissioned_skills(self.layout), [])
         self.assertTrue((keep / "SKILL.md").exists())
 
     def test_removes_from_every_skills_root(self) -> None:
@@ -332,7 +333,7 @@ class DecommissionedSkillsTests(unittest.TestCase):
         agents.mkdir(parents=True)
         (self.skills / name).mkdir()
         (agents / name).mkdir()
-        removed = cli.remove_decommissioned_skills(self.home)
+        removed = cli.remove_decommissioned_skills(self.layout)
         self.assertEqual(
             sorted(removed), sorted([self.skills / name, agents / name])
         )
@@ -346,7 +347,7 @@ class DecommissionedSkillsTests(unittest.TestCase):
         os.symlink(outside, self.skills / name)
         os.symlink(outside, self.skills.parent / "retired-skills")
 
-        cli.remove_decommissioned_skills(self.home)
+        cli.remove_decommissioned_skills(self.layout)
 
         self.assertFalse((self.skills / name).exists())
         self.assertFalse((self.skills.parent / "retired-skills").exists())
@@ -437,29 +438,46 @@ class BackupTests(unittest.TestCase):
 # settings.json: per-platform status-line command
 # --------------------------------------------------------------------------- #
 class StatuslineCommandTests(unittest.TestCase):
+    HOME = Path("/home/user")
+    WINDOWS_HOME = Path("C:/Users/user")
+
     def test_posix_uses_tilde_path(self) -> None:
         cmd = cli.statusline_command(
-            Path("/home/kou"), ".claude/statusline.py", posix=True, python="/usr/bin/python3"
+            self.HOME / ".claude/statusline.py",
+            posix=True,
+            python="/usr/bin/python3",
+            home=self.HOME,
         )
         self.assertEqual(cmd, "~/.claude/statusline.py")
 
+    def test_posix_uses_absolute_path_outside_home(self) -> None:
+        # A configuration directory may live anywhere; `~` cannot address it.
+        cmd = cli.statusline_command(
+            Path("/opt/profiles/sub/statusline.py"),
+            posix=True,
+            python="/usr/bin/python3",
+            home=self.HOME,
+        )
+        self.assertEqual(cmd, "/opt/profiles/sub/statusline.py")
+
     def test_windows_invokes_interpreter_with_absolute_path(self) -> None:
         cmd = cli.statusline_command(
-            Path("C:/Users/kou"),
-            ".claude/statusline.py",
+            self.WINDOWS_HOME / ".claude/statusline.py",
             posix=False,
             python="C:/Python313/python.exe",
+            home=self.WINDOWS_HOME,
         )
         self.assertEqual(
-            cmd, '"C:/Python313/python.exe" "C:/Users/kou/.claude/statusline.py"'
+            cmd, '"C:/Python313/python.exe" "C:/Users/user/.claude/statusline.py"'
         )
 
     def test_windows_quotes_tolerate_spaces(self) -> None:
+        home = Path("C:/Users/First Last")
         cmd = cli.statusline_command(
-            Path("C:/Users/First Last"),
-            ".claude/statusline.py",
+            home / ".claude/statusline.py",
             posix=False,
             python="C:/Program Files/Python/python.exe",
+            home=home,
         )
         self.assertEqual(
             cmd,
@@ -474,15 +492,18 @@ class StatuslineCommandTests(unittest.TestCase):
             "language": "日本語",
         }
         out = cli.apply_statusline_commands(
-            template, Path("C:/Users/kou"), posix=False, python="C:/py.exe"
+            template,
+            cli.home_layout(self.WINDOWS_HOME),
+            posix=False,
+            python="C:/py.exe",
         )
         self.assertEqual(
             out["statusLine"],
-            {"type": "command", "command": '"C:/py.exe" "C:/Users/kou/.claude/statusline.py"'},
+            {"type": "command", "command": '"C:/py.exe" "C:/Users/user/.claude/statusline.py"'},
         )
         self.assertEqual(
             out["subagentStatusLine"],
-            {"command": '"C:/py.exe" "C:/Users/kou/.claude/subagent-statusline.py"'},
+            {"command": '"C:/py.exe" "C:/Users/user/.claude/subagent-statusline.py"'},
         )
         # Unrelated keys are untouched.
         self.assertEqual(out["language"], "日本語")
@@ -492,7 +513,10 @@ class StatuslineCommandTests(unittest.TestCase):
             "statusLine": {"command": "~/.claude/statusline.py"},
         }
         cli.apply_statusline_commands(
-            template, Path("C:/Users/kou"), posix=False, python="C:/py.exe"
+            template,
+            cli.home_layout(self.WINDOWS_HOME),
+            posix=False,
+            python="C:/py.exe",
         )
         self.assertEqual(template["statusLine"], {"command": "~/.claude/statusline.py"})
 
@@ -501,14 +525,32 @@ class StatuslineCommandTests(unittest.TestCase):
             "statusLine": {"command": "~/.claude/statusline.py"},
         }
         out = cli.apply_statusline_commands(
-            template, Path("/home/kou"), posix=True, python="/usr/bin/python3"
+            template, cli.home_layout(self.HOME), posix=True, python="/usr/bin/python3"
         )
         self.assertEqual(out["statusLine"], {"command": "~/.claude/statusline.py"})
+
+    def test_apply_points_at_the_claude_dir_on_posix(self) -> None:
+        template: dict[str, object] = {
+            "statusLine": {"command": "~/.claude/statusline.py"},
+            "subagentStatusLine": {"command": "~/.claude/subagent-statusline.py"},
+        }
+        layout = cli.claude_dir_layout(self.HOME / ".claude-sub", self.HOME)
+        out = cli.apply_statusline_commands(
+            template, layout, posix=True, python="/usr/bin/python3"
+        )
+        self.assertEqual(out["statusLine"], {"command": "~/.claude-sub/statusline.py"})
+        self.assertEqual(
+            out["subagentStatusLine"],
+            {"command": "~/.claude-sub/subagent-statusline.py"},
+        )
 
     def test_apply_skips_section_without_command(self) -> None:
         template: dict[str, object] = {"statusLine": {"type": "command"}}
         out = cli.apply_statusline_commands(
-            template, Path("C:/Users/kou"), posix=False, python="C:/py.exe"
+            template,
+            cli.home_layout(self.WINDOWS_HOME),
+            posix=False,
+            python="C:/py.exe",
         )
         self.assertEqual(out["statusLine"], {"type": "command"})
 
@@ -670,13 +712,14 @@ class MergeCommandTests(unittest.TestCase):
 class InstallTests(unittest.TestCase):
     def setUp(self) -> None:
         self.home = Path(tempfile.mkdtemp(prefix="install-test-"))
+        self.layout = cli.home_layout(self.home)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.home, ignore_errors=True)
 
     def _run_install(self) -> str:
         with patch("sys.stdout", new=StringIO()) as out:
-            rc = cli.install(self.home)
+            rc = cli.install(self.layout)
         self.assertEqual(rc, 0)
         return out.getvalue()
 
@@ -936,15 +979,16 @@ class InstallTests(unittest.TestCase):
 class CleanTests(unittest.TestCase):
     def setUp(self) -> None:
         self.home = Path(tempfile.mkdtemp(prefix="clean-test-"))
+        self.layout = cli.home_layout(self.home)
         with patch("sys.stdout", new=StringIO()):
-            cli.install(self.home)
+            cli.install(self.layout)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.home, ignore_errors=True)
 
     def _run_clean(self) -> str:
         with patch("sys.stdout", new=StringIO()) as out:
-            rc = cli.clean(self.home)
+            rc = cli.clean(self.layout)
         self.assertEqual(rc, 0)
         return out.getvalue()
 
@@ -993,15 +1037,16 @@ class CleanTests(unittest.TestCase):
 class VerifyTests(unittest.TestCase):
     def setUp(self) -> None:
         self.home = Path(tempfile.mkdtemp(prefix="verify-test-"))
+        self.layout = cli.home_layout(self.home)
         with patch("sys.stdout", new=StringIO()):
-            cli.install(self.home)
+            cli.install(self.layout)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.home, ignore_errors=True)
 
     def test_clean_install_verifies(self) -> None:
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
         self.assertGreater(report.checks, 0)
 
@@ -1009,7 +1054,7 @@ class VerifyTests(unittest.TestCase):
         target = self.home / _verified_spec().dest_rel
         target.unlink()
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertGreater(report.fail_count(), 0)
         self.assertTrue(any("missing" in m for m in report.failures))
 
@@ -1017,7 +1062,7 @@ class VerifyTests(unittest.TestCase):
         target = self.home / _verified_spec().dest_rel
         target.write_text("not the template content", encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertTrue(any("drift" in m for m in report.failures))
 
     def test_mode_drift_detected_on_posix(self) -> None:
@@ -1026,7 +1071,7 @@ class VerifyTests(unittest.TestCase):
         target = self.home / _verified_spec().dest_rel
         target.chmod(0o644)
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertTrue(any("mode drift" in m for m in report.failures))
 
     def test_global_guideline_drift_flagged(self) -> None:
@@ -1039,7 +1084,7 @@ class VerifyTests(unittest.TestCase):
                 "my own global guideline", encoding="utf-8"
             )
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         for spec in specs:
             dest = self.home / spec.dest_rel
             self.assertTrue(
@@ -1054,7 +1099,7 @@ class VerifyTests(unittest.TestCase):
         del data[removed_key]
         settings.write_text(json.dumps(data), encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertTrue(
             any("settings missing template key" in m and removed_key in m for m in report.failures),
             report.failures,
@@ -1064,14 +1109,14 @@ class VerifyTests(unittest.TestCase):
         settings = self.home / cli.SETTINGS_DEST_REL
         settings.write_text("{not valid", encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertTrue(any("invalid json" in m for m in report.failures))
 
     def test_settings_non_object_detected(self) -> None:
         settings = self.home / cli.SETTINGS_DEST_REL
         settings.write_text(json.dumps(["not", "object"]), encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertTrue(any("settings.json must be a JSON object" in m for m in report.failures))
 
     def test_settings_existing_key_override_is_allowed(self) -> None:
@@ -1081,7 +1126,7 @@ class VerifyTests(unittest.TestCase):
         data[override_key] = "user override"
         settings.write_text(json.dumps(data), encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertFalse(any(override_key in m for m in report.failures), report.failures)
 
     def test_qwen_settings_missing_template_key_detected(self) -> None:
@@ -1090,11 +1135,338 @@ class VerifyTests(unittest.TestCase):
         del data["fastModel"]
         settings.write_text(json.dumps(data), encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.home)
+            report = cli.verify(self.layout)
         self.assertTrue(
             any("settings missing template key" in m and "fastModel" in m for m in report.failures),
             report.failures,
         )
+
+
+# --------------------------------------------------------------------------- #
+# --claude-dir: argument handling
+# --------------------------------------------------------------------------- #
+class ClaudeDirArgumentTests(unittest.TestCase):
+    def test_absent_flag_returns_none(self) -> None:
+        self.assertIsNone(cli.claude_dir_argument([]))
+
+    def test_separate_value(self) -> None:
+        self.assertEqual(cli.claude_dir_argument(["--claude-dir", "/tmp/x"]), "/tmp/x")
+
+    def test_equals_form(self) -> None:
+        self.assertEqual(cli.claude_dir_argument(["--claude-dir=/tmp/x"]), "/tmp/x")
+
+    def test_missing_value_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            cli.claude_dir_argument(["--claude-dir"])
+
+    def test_unknown_argument_raises(self) -> None:
+        # Silently ignoring it would install into $HOME while the user believes
+        # a different directory was targeted.
+        with self.assertRaises(ValueError):
+            cli.claude_dir_argument(["--claud-dir", "/tmp/x"])
+
+
+class ResolveClaudeDirTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="resolve-test-"))
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_expands_tilde(self) -> None:
+        with patch.dict(os.environ, {"HOME": str(self.home), "USERPROFILE": str(self.home)}):
+            resolved = cli.resolve_claude_dir("~/.claude-sub", self.home)
+        self.assertEqual(resolved, (self.home / ".claude-sub").resolve())
+
+    def test_normalises_dot_segments(self) -> None:
+        resolved = cli.resolve_claude_dir(str(self.home / "sub" / ".." / "sub"), self.home)
+        self.assertTrue(resolved.is_absolute())
+        self.assertEqual(resolved, (self.home / "sub").resolve())
+
+    def test_rejects_empty(self) -> None:
+        with self.assertRaises(ValueError):
+            cli.resolve_claude_dir("   ", self.home)
+
+    def test_rejects_home_itself(self) -> None:
+        with self.assertRaises(ValueError):
+            cli.resolve_claude_dir(str(self.home), self.home)
+
+    def test_rejects_filesystem_root(self) -> None:
+        root = Path(self.home.anchor)
+        with self.assertRaises(ValueError):
+            cli.resolve_claude_dir(str(root), self.home)
+
+    def test_rejects_existing_file(self) -> None:
+        target = self.home / "notes.txt"
+        target.write_text("mine", encoding="utf-8")
+        with self.assertRaises(ValueError):
+            cli.resolve_claude_dir(str(target), self.home)
+
+    def test_layout_for_without_flag_is_home_layout(self) -> None:
+        layout = cli.layout_for([], self.home)
+        self.assertEqual(layout.root, self.home)
+        self.assertEqual(layout.description, cli.HOME_DESCRIPTION)
+
+    def test_layout_for_ignores_claude_config_dir_env(self) -> None:
+        # An `install` run from a shell that exports CLAUDE_CONFIG_DIR must still
+        # target ~/.claude; redirecting the install stays an explicit act.
+        with patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(self.home / ".claude-sub")}):
+            layout = cli.layout_for([], self.home)
+        self.assertEqual(layout.root, self.home)
+
+
+# --------------------------------------------------------------------------- #
+# --claude-dir: layout derivation
+# --------------------------------------------------------------------------- #
+class ClaudeDirLayoutTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path("/home/user")
+        self.target = self.home / ".claude-sub"
+        self.layout = cli.claude_dir_layout(self.target, self.home)
+
+    def test_root_is_the_only_managed_dir(self) -> None:
+        self.assertEqual(self.layout.managed_dirs, (self.target,))
+
+    def test_destinations_sit_directly_under_the_target(self) -> None:
+        dests = [s.dest_rel for s in self.layout.files] + [
+            s.dest_rel for s in self.layout.trees
+        ] + [s.dest_rel for s in self.layout.settings]
+        self.assertTrue(dests)
+        for dest_rel in dests:
+            self.assertFalse(
+                dest_rel.startswith("."), f"still home-relative: {dest_rel}"
+            )
+
+    def test_carries_the_whole_claude_slice_of_the_home_manifest(self) -> None:
+        # A sub-profile must receive exactly what ~/.claude receives.
+        expected_files = {
+            s.src_rel for s in cli.TEMPLATE_FILES if s.dest_rel.startswith(".claude/")
+        }
+        expected_trees = {
+            s.src_rel for s in cli.TEMPLATE_TREES if s.dest_rel.startswith(".claude/")
+        }
+        self.assertEqual({s.src_rel for s in self.layout.files}, expected_files)
+        self.assertEqual({s.src_rel for s in self.layout.trees}, expected_trees)
+        self.assertEqual(
+            [s.dest_rel for s in self.layout.settings], ["settings.json"]
+        )
+
+    def test_excludes_destinations_of_other_tools(self) -> None:
+        # Codex / Qwen / shared-agent files are addressed by their own tools and
+        # are unaffected by CLAUDE_CONFIG_DIR.
+        all_dests = (
+            [s.dest_rel for s in self.layout.files]
+            + [s.dest_rel for s in self.layout.trees]
+            + [s.dest_rel for s in self.layout.settings]
+        )
+        for other in (".codex", ".qwen", ".agents"):
+            self.assertFalse(any(other in dest for dest in all_dests), all_dests)
+
+    def test_modes_are_inherited_from_the_home_manifest(self) -> None:
+        by_src = {s.src_rel: s for s in cli.TEMPLATE_FILES}
+        for spec in self.layout.files:
+            self.assertEqual(spec.mode, by_src[spec.src_rel].mode)
+            self.assertEqual(spec.is_executable, by_src[spec.src_rel].is_executable)
+
+
+# --------------------------------------------------------------------------- #
+# --claude-dir: install / verify / clean
+# --------------------------------------------------------------------------- #
+class ClaudeDirInstallTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="claude-dir-home-"))
+        self.target = self.home / ".claude-sub"
+        self.layout = cli.claude_dir_layout(self.target, self.home)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def _run_install(self) -> str:
+        with patch("sys.stdout", new=StringIO()) as out:
+            rc = cli.install(self.layout)
+        self.assertEqual(rc, 0)
+        return out.getvalue()
+
+    def test_creates_the_target_directory(self) -> None:
+        self._run_install()
+        self.assertTrue(self.target.is_dir())
+        if cli.is_posix():
+            self.assertEqual(self.target.stat().st_mode & 0o777, cli.DIR_MODE)
+
+    def test_deploys_claude_files_at_the_top_level(self) -> None:
+        self._run_install()
+        for name in ("CLAUDE.md", "statusline.py", "subagent-statusline.py"):
+            self.assertTrue((self.target / name).is_file(), f"missing: {name}")
+        for name in ("rules", "skills", "output-styles"):
+            self.assertTrue((self.target / name).is_dir(), f"missing: {name}")
+        self.assertTrue((self.target / "settings.json").is_file())
+
+    def test_content_matches_the_templates(self) -> None:
+        self._run_install()
+        src = cli.REPO_ROOT / "templates" / "CLAUDE.md"
+        self.assertEqual(
+            (self.target / "CLAUDE.md").read_bytes(), src.read_bytes()
+        )
+
+    def test_leaves_the_home_layout_untouched(self) -> None:
+        self._run_install()
+        for sub in cli.INSTALL_HOME_DIRS:
+            self.assertFalse((self.home / sub).exists(), f"unexpected: {sub}")
+        self.assertFalse((self.target / ".claude").exists())
+
+    def test_statusline_command_points_at_the_target(self) -> None:
+        self._run_install()
+        data = json.loads((self.target / "settings.json").read_text(encoding="utf-8"))
+        command = data["statusLine"]["command"]
+        script = self.target / "statusline.py"
+        if cli.is_posix():
+            # The target lives under the home, so the tilde form addresses it.
+            self.assertEqual(command, "~/.claude-sub/statusline.py")
+        else:
+            self.assertIn(script.as_posix(), command)
+            self.assertIn(Path(sys.executable).as_posix(), command)
+
+    def test_statusline_command_is_absolute_for_a_target_outside_home(self) -> None:
+        outside = self.home / "elsewhere" / "profile"
+        layout = cli.claude_dir_layout(outside, Path("/nonexistent-home"))
+        with patch("sys.stdout", new=StringIO()):
+            cli.install(layout)
+        data = json.loads((outside / "settings.json").read_text(encoding="utf-8"))
+        command = data["statusLine"]["command"]
+        script = outside / "statusline.py"
+        if cli.is_posix():
+            self.assertEqual(command, script.as_posix())
+        else:
+            self.assertIn(script.as_posix(), command)
+
+    def test_modes_match_the_manifest_on_posix(self) -> None:
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+        self._run_install()
+        for spec in self.layout.files:
+            dest = self.target / spec.dest_rel
+            self.assertEqual(dest.stat().st_mode & 0o777, spec.mode, str(dest))
+        self.assertEqual(
+            (self.target / "settings.json").stat().st_mode & 0o777, cli.FILE_MODE
+        )
+
+    def test_idempotent(self) -> None:
+        self._run_install()
+        out = self._run_install()
+        changed = [
+            line
+            for line in out.splitlines()
+            if line and not line.startswith("ok:") and not line.startswith("Install ")
+        ]
+        self.assertEqual(changed, [], f"unexpected change lines: {changed}")
+
+    def test_settings_user_value_preserved_on_rerun(self) -> None:
+        self._run_install()
+        settings = self.target / "settings.json"
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        data["theme"] = "user-pick"
+        settings.write_text(json.dumps(data), encoding="utf-8")
+        self._run_install()
+        merged = json.loads(settings.read_text(encoding="utf-8"))
+        self.assertEqual(merged["theme"], "user-pick")
+
+    def test_prunes_orphan_in_managed_skill_on_reinstall(self) -> None:
+        self._run_install()
+        skills_root = cli.REPO_ROOT / "templates" / "skills"
+        nested = next(
+            (
+                path
+                for path in sorted(skills_root.glob("*/*"))
+                if path.is_dir() and any(path.glob("*.md"))
+            ),
+            None,
+        )
+        self.assertIsNotNone(nested, "no managed skill has a nested directory")
+        assert nested is not None
+        orphan = (
+            self.target / "skills" / nested.relative_to(skills_root) / "__orphan__.md"
+        )
+        orphan.write_text("stale", encoding="utf-8")
+        self._run_install()
+        self.assertFalse(orphan.exists())
+        self.assertTrue(orphan.with_name("__orphan__.md.bak").exists())
+
+    def test_preserves_user_added_skill(self) -> None:
+        self._run_install()
+        user_skill = self.target / "skills" / "__my_custom__" / "SKILL.md"
+        user_skill.parent.mkdir(parents=True, exist_ok=True)
+        user_skill.write_text("mine", encoding="utf-8")
+        self._run_install()
+        self.assertTrue(user_skill.exists())
+
+    def test_deletes_decommissioned_skill(self) -> None:
+        legacy = cli.DECOMMISSIONED_SKILLS[0]
+        stale = self.target / "skills" / legacy
+        stale.mkdir(parents=True)
+        (stale / "SKILL.md").write_text("old", encoding="utf-8")
+        self._run_install()
+        self.assertFalse(stale.exists())
+
+    def test_verify_passes_after_install(self) -> None:
+        self._run_install()
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.layout)
+        self.assertEqual(report.fail_count(), 0, f"failures: {report.failures}")
+        self.assertGreater(report.checks, 0)
+
+    def test_verify_detects_drift(self) -> None:
+        self._run_install()
+        (self.target / "CLAUDE.md").write_text("edited", encoding="utf-8")
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.layout)
+        self.assertTrue(any("drift" in m for m in report.failures), report.failures)
+
+    def test_clean_removes_templates_but_keeps_settings(self) -> None:
+        self._run_install()
+        with patch("sys.stdout", new=StringIO()) as out:
+            rc = cli.clean(self.layout)
+        self.assertEqual(rc, 0)
+        self.assertIn(str(self.target), out.getvalue())
+        for name in ("CLAUDE.md", "statusline.py", "rules", "skills", "output-styles"):
+            self.assertFalse((self.target / name).exists(), f"still present: {name}")
+        self.assertTrue(
+            (self.target / "settings.json").exists(),
+            "clean() must keep settings.json (carries user values)",
+        )
+
+
+class ClaudeDirCliTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="claude-dir-cli-"))
+        self.target = self.home / ".claude-sub"
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_install_dispatches_to_the_target(self) -> None:
+        with patch("sys.stdout", new=StringIO()):
+            rc = cli.main(["cli.py", "install", "--claude-dir", str(self.target)])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.target / "CLAUDE.md").is_file())
+
+    def test_verify_dispatches_to_the_target(self) -> None:
+        with patch("sys.stdout", new=StringIO()):
+            cli.main(["cli.py", "install", f"--claude-dir={self.target}"])
+            rc = cli.main(["cli.py", "verify", f"--claude-dir={self.target}"])
+        self.assertEqual(rc, 0)
+
+    def test_unknown_option_returns_2_without_installing(self) -> None:
+        with patch("sys.stdout", new=StringIO()), patch("sys.stderr", new=StringIO()):
+            rc = cli.main(["cli.py", "install", "--claude-dir", str(self.target), "--oops"])
+        self.assertEqual(rc, 2)
+        self.assertFalse(self.target.exists())
+
+    def test_target_that_is_a_file_returns_2(self) -> None:
+        self.target.write_text("mine", encoding="utf-8")
+        with patch("sys.stdout", new=StringIO()), patch("sys.stderr", new=StringIO()):
+            rc = cli.main(["cli.py", "install", "--claude-dir", str(self.target)])
+        self.assertEqual(rc, 2)
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "mine")
 
 
 if __name__ == "__main__":

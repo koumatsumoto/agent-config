@@ -6,6 +6,7 @@ Claude Code / Codex CLI / Qwen Code の共通設定テンプレートを管理�
 
 - 正本は `templates/` 配下
 - `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/`、`~/.qwen/` に反映 (Linux / macOS / Windows 対応)
+- `--claude-dir <dir>` で `CLAUDE_CONFIG_DIR` 用の別プロファイルにも配布できる
 - Linux / macOS / Git Bash では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - リポジトリ内の `README.md` と `docs/` は説明用。runtime contract は `templates/` 側を正とする
 
@@ -97,6 +98,42 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 
 `km-kaizen` の退役時、repo-local の `.kaizen/` は自動収集しない。外部 issue 作成や他 repo の削除を installer の副作用にしないため、残存 entry は利用者が確認し、後続対応の価値を説明できるものだけ follow-up issue へ移して残りを削除する。
 
+### 別の設定ディレクトリへインストールする (`--claude-dir`)
+
+`CLAUDE_CONFIG_DIR` で `~/.claude` 以外の設定ディレクトリを使うプロファイル (サブアカウント用の起動コマンド等) にも、同じテンプレートを配布できる。
+
+```bash
+# Linux / macOS
+./install.sh --claude-dir ~/.claude-sub
+python3 scripts/cli.py install --claude-dir ~/.claude-sub
+```
+
+```powershell
+# Windows
+python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
+```
+
+`CLAUDE_CONFIG_DIR` は `~/.claude` そのものを置き換えるため、指定ディレクトリ**直下**へ配置する。
+
+| Repository Source | Destination (`--claude-dir <dir>`) |
+| --- | --- |
+| `templates/CLAUDE.md` | `<dir>/CLAUDE.md` |
+| `templates/rules/` | `<dir>/rules/` |
+| `templates/skills/` | `<dir>/skills/` |
+| `templates/output-styles/` | `<dir>/output-styles/` |
+| `templates/statusline.py` | `<dir>/statusline.py` |
+| `templates/subagent-statusline.py` | `<dir>/subagent-statusline.py` |
+| `templates/settings.json` | `<dir>/settings.json` (shallow merge) |
+
+配布内容は `~/.claude` 向けの manifest から導出する。`~/.claude` に配るものが増減すれば、指定ディレクトリ側も同じだけ増減する。
+
+- 対象は Claude Code の設定ディレクトリのみ。Codex (`~/.codex`) / Qwen Code (`~/.qwen`) / 共用 skills (`~/.agents/skills`) は各ツールが自前のパスを見るため配布しない
+- `settings.json` の status line は指定ディレクトリのスクリプトを指すよう書き換える (ホーム配下なら `~/.claude-sub/statusline.py`、ホーム外なら絶対パス)
+- 既存ファイルの `*.bak` 退避、prune、退役 skill の削除、POSIX permission (`0700` / `0600`) は既定インストールと同じ規律で動く
+- `clean` / `verify` も同じオプションを受け取る
+- ディレクトリが無ければ `0700` で作成する。ホームディレクトリ自身・ファイルシステムのルート・既存の非ディレクトリは拒否する
+- `CLAUDE_CONFIG_DIR` 環境変数は参照しない。それを export したシェルからの `./install.sh` も `~/.claude` を対象にし、配布先の切り替えは常に明示操作にする
+
 ### `settings.json` の取り扱い
 
 `templates/settings.json` は **完全な上書きではなく shallow merge** で反映する (`scripts/cli.py` の merge ロジック。単体では `python3 scripts/cli.py merge <template> <dest>` で実行できる)。
@@ -174,6 +211,8 @@ python3 scripts/cli.py verify
 python scripts/cli.py verify
 ```
 
+`--claude-dir <dir>` を付けると、そのディレクトリへのインストール結果を検証する。
+
 `scripts/cli.py` の unittest (Linux / macOS / Windows で実行可能):
 
 ```bash
@@ -201,7 +240,7 @@ python3 scripts/cli.py clean
 python scripts/cli.py clean
 ```
 
-このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。
+このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
 
 ## Maintained Docs
 
@@ -236,7 +275,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/skills/` | `~/.agents/skills/` |
 | `templates/skills/` | `~/.qwen/skills/` |
 
-注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の exec policy rules は `templates/codex-rules/` から `~/.codex/rules/` へ配布する。
+注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の exec policy rules は `templates/codex-rules/` から `~/.codex/rules/` へ配布する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
 
 ## 公式仕様
 

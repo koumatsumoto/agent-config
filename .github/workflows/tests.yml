@@ -32,3 +32,14 @@ jobs:
           HOME="$tmp_home" bash install.sh > install.log
           HOME="$tmp_home" bash scripts/verify-install.sh
           HOME="$tmp_home" bash clean.sh > clean.log
+
+      - name: Smoke test --claude-dir pass-through
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_home=$(mktemp -d)
+          target="$tmp_home/.claude-sub"
+          HOME="$tmp_home" bash install.sh --claude-dir "$target" > install-sub.log
+          HOME="$tmp_home" bash scripts/verify-install.sh --claude-dir "$target"
+          HOME="$tmp_home" bash clean.sh --claude-dir "$target" > clean-sub.log
+          test ! -d "$tmp_home/.claude"  # the default destination stays untouched
