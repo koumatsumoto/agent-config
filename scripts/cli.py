@@ -11,10 +11,14 @@ and process semantics, while native Windows gets the small set of adaptations
 required by NTFS and cmd.exe.
 
 Usage:
-    python scripts/cli.py install
-    python scripts/cli.py clean
-    python scripts/cli.py verify
+    python scripts/cli.py install [--claude-dir <dir>]
+    python scripts/cli.py clean [--claude-dir <dir>]
+    python scripts/cli.py verify [--claude-dir <dir>]
     python scripts/cli.py merge <template.json> <destination.json>
+
+`--claude-dir` installs the Claude Code slice of the templates into another
+configuration directory (the one CLAUDE_CONFIG_DIR names), so a second profile
+tracks the same templates as `~/.claude`.
 
 On POSIX, directories / regular files / executables get 0o700 / 0o600 / 0o700
 modes. On Windows the modes are skipped because NTFS does not honour POSIX
@@ -29,7 +33,7 @@ import shutil
 import sys
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 POSIX = os.name == "posix"
@@ -97,6 +101,21 @@ SETTINGS_DEST_REL = ".claude/settings.json"
 QWEN_SETTINGS_TEMPLATE_REL = "templates/qwen-settings.json"
 QWEN_SETTINGS_DEST_REL = ".qwen/settings.json"
 
+
+@dataclass(frozen=True)
+class SettingsSpec:
+    src_rel: str           # relative to REPO_ROOT
+    dest_rel: str          # relative to the layout root
+    # Claude Code launches the status line itself, so its command must name a
+    # path that resolves on this machine; the Qwen template has no such key.
+    rewrite_statusline: bool = False
+
+
+TEMPLATE_SETTINGS: tuple[SettingsSpec, ...] = (
+    SettingsSpec(SETTINGS_TEMPLATE_REL, SETTINGS_DEST_REL, rewrite_statusline=True),
+    SettingsSpec(QWEN_SETTINGS_TEMPLATE_REL, QWEN_SETTINGS_DEST_REL),
+)
+
 # settings.json keys whose `command` launches a deployed status-line script,
 # mapped to that script's path relative to home. The installer rewrites these
 # per-platform so the command is actually runnable on the target OS.
@@ -132,17 +151,104 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
 )
 
 
-def clean_targets(home: Path) -> list[Path]:
+# --------------------------------------------------------------------------- #
+# Layout: one install destination — the root, the dirs owned there, and the
+# subset of the manifest that belongs in it.
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class Layout:
+    root: Path                          # dest_rel values resolve against this
+    home: Path                          # base for `~`-relative status-line commands
+    managed_dirs: tuple[Path, ...]      # dirs the installer owns; every write stays inside one
+    files: tuple[FileSpec, ...]
+    trees: tuple[TreeSpec, ...]
+    settings: tuple[SettingsSpec, ...]
+    statusline_commands: tuple[tuple[str, str], ...]
+    description: str                    # subject of the "Install …" / "Clean …" banner
+
+
+# Prefix of the home-relative destinations that make up a Claude Code
+# configuration directory. It is what CLAUDE_CONFIG_DIR replaces, so it is also
+# exactly the slice a --claude-dir install re-roots elsewhere.
+CLAUDE_HOME_DIR = ".claude"
+
+HOME_DESCRIPTION = "Claude + Codex + Qwen Code configuration"
+
+
+def home_layout(home: Path) -> Layout:
+    """Default destination: `~/.claude`, `~/.codex`, `~/.agents`, `~/.qwen`."""
+    return Layout(
+        root=home,
+        home=home,
+        managed_dirs=tuple(home / sub for sub in INSTALL_HOME_DIRS),
+        files=TEMPLATE_FILES,
+        trees=TEMPLATE_TREES,
+        settings=TEMPLATE_SETTINGS,
+        statusline_commands=STATUSLINE_COMMANDS,
+        description=HOME_DESCRIPTION,
+    )
+
+
+def claude_config_rel(dest_rel: str) -> str | None:
+    """Destination under a Claude configuration directory, or None.
+
+    None means the entry is not part of one: Codex, Qwen and the shared
+    `~/.agents` skills are addressed by their own tools and are unaffected by
+    CLAUDE_CONFIG_DIR.
+    """
+    prefix = f"{CLAUDE_HOME_DIR}/"
+    return dest_rel[len(prefix):] if dest_rel.startswith(prefix) else None
+
+
+def claude_dir_layout(target: Path, home: Path) -> Layout:
+    """Destination for `--claude-dir`: the `~/.claude` slice, re-rooted on `target`.
+
+    Derived from the home manifest rather than listed separately, so a
+    CLAUDE_CONFIG_DIR profile always receives exactly what `~/.claude` receives.
+    """
+    files = tuple(
+        replace(spec, dest_rel=rel)
+        for spec in TEMPLATE_FILES
+        if (rel := claude_config_rel(spec.dest_rel)) is not None
+    )
+    trees = tuple(
+        replace(spec, dest_rel=rel)
+        for spec in TEMPLATE_TREES
+        if (rel := claude_config_rel(spec.dest_rel)) is not None
+    )
+    settings = tuple(
+        replace(spec, dest_rel=rel)
+        for spec in TEMPLATE_SETTINGS
+        if (rel := claude_config_rel(spec.dest_rel)) is not None
+    )
+    statusline = tuple(
+        (key, rel)
+        for key, script_rel in STATUSLINE_COMMANDS
+        if (rel := claude_config_rel(script_rel)) is not None
+    )
+    return Layout(
+        root=target,
+        home=home,
+        managed_dirs=(target,),
+        files=files,
+        trees=trees,
+        settings=settings,
+        statusline_commands=statusline,
+        description=f"Claude configuration in {target}",
+    )
+
+
+def clean_targets(layout: Layout) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
 
     settings.json is intentionally excluded because it is a shallow merge of
     template and user-managed keys, not a pure template copy.
     """
     out: list[Path] = []
-    for spec in TEMPLATE_FILES:
-        out.append(home / spec.dest_rel)
-    for spec in TEMPLATE_TREES:
-        out.append(home / spec.dest_rel)
+    for spec in layout.files:
+        out.append(layout.root / spec.dest_rel)
+    for tspec in layout.trees:
+        out.append(layout.root / tspec.dest_rel)
     return out
 
 
@@ -346,7 +452,7 @@ def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]
     return pruned
 
 
-def remove_decommissioned_skills(home: Path) -> list[Path]:
+def remove_decommissioned_skills(layout: Layout) -> list[Path]:
     """Delete deployed skill names that must no longer be discoverable.
 
     prune_tree preserves top-level entries with no source counterpart (possibly
@@ -355,7 +461,9 @@ def remove_decommissioned_skills(home: Path) -> list[Path]:
     """
     removed: list[Path] = []
     skill_roots = [
-        home / t.dest_rel for t in TEMPLATE_TREES if t.src_rel == "templates/skills"
+        layout.root / t.dest_rel
+        for t in layout.trees
+        if t.src_rel == "templates/skills"
     ]
     for root in skill_roots:
         for name in DECOMMISSIONED_SKILLS:
@@ -405,10 +513,11 @@ def remove_with_backup(path: Path) -> str:
 # --------------------------------------------------------------------------- #
 # settings.json: per-platform status-line command.
 # --------------------------------------------------------------------------- #
-def statusline_command(home: Path, script_rel: str, *, posix: bool, python: str) -> str:
+def statusline_command(script: Path, *, posix: bool, python: str, home: Path) -> str:
     """Build a runnable status-line `command` string for the target platform.
 
-    POSIX: a `~`-relative path. The shebang + executable bit launch the script
+    POSIX: a `~`-relative path when the script lives under `home`, else its
+    absolute path. The shebang + executable bit launch the script
     OS-independently and re-resolve the interpreter via PATH on every run, which
     survives the interpreter moving as long as it stays on PATH.
 
@@ -416,29 +525,31 @@ def statusline_command(home: Path, script_rel: str, *, posix: bool, python: str)
     interpreter must be invoked explicitly with the absolute script path. Both
     tokens are quoted to tolerate spaces (e.g. `C:/Program Files/...`).
     """
-    if posix:
-        return f"~/{script_rel}"
-    script = (home / script_rel).as_posix()
-    return f'"{python}" "{script}"'
+    if not posix:
+        return f'"{python}" "{script.as_posix()}"'
+    try:
+        return f"~/{script.relative_to(home).as_posix()}"
+    except ValueError:
+        return script.as_posix()
 
 
 def apply_statusline_commands(
-    template: dict[str, object], home: Path, *, posix: bool, python: str
+    template: dict[str, object], layout: Layout, *, posix: bool, python: str
 ) -> dict[str, object]:
     """Return a copy of `template` with status-line commands rewritten for the OS.
 
     Only sections that already declare a `command` are touched, so the template
-    stays the single source of truth for which status lines exist. On POSIX the
-    rewritten value equals the template's `~/...` literal, making this a no-op
-    there (and keeping re-runs idempotent).
+    stays the single source of truth for which status lines exist. For a home
+    install on POSIX the rewritten value equals the template's `~/...` literal,
+    making this a no-op there (and keeping re-runs idempotent).
     """
     out = dict(template)
-    for key, script_rel in STATUSLINE_COMMANDS:
+    for key, script_rel in layout.statusline_commands:
         section = out.get(key)
         if isinstance(section, dict) and "command" in section:
             updated = dict(section)
             updated["command"] = statusline_command(
-                home, script_rel, posix=posix, python=python
+                layout.root / script_rel, posix=posix, python=python, home=layout.home
             )
             out[key] = updated
     return out
@@ -592,33 +703,29 @@ def _check_settings_contract(report: VerifyReport, template: Path, dest: Path) -
         report.record(key in dest_data, f"settings missing template key: {dest} ({key})")
 
 
-def verify(home: Path, repo_root: Path = REPO_ROOT) -> VerifyReport:
+def verify(layout: Layout, repo_root: Path = REPO_ROOT) -> VerifyReport:
     report = VerifyReport()
-    print("Verify Claude + Codex + Qwen Code configuration")
+    print(f"Verify {layout.description}")
 
-    for spec in TEMPLATE_FILES:
+    for spec in layout.files:
         src = repo_root / spec.src_rel
-        dest = home / spec.dest_rel
+        dest = layout.root / spec.dest_rel
         _check_file(report, src, dest)
         _check_mode(report, dest, spec.mode)
 
-    for sub in INSTALL_HOME_DIRS:
-        _check_mode(report, home / sub, DIR_MODE)
+    for managed in layout.managed_dirs:
+        _check_mode(report, managed, DIR_MODE)
 
-    for tspec in TEMPLATE_TREES:
+    for tspec in layout.trees:
         src_root = repo_root / tspec.src_rel
-        dest_root = home / tspec.dest_rel
+        dest_root = layout.root / tspec.dest_rel
         _check_tree(report, src_root, dest_root, tspec.dir_mode, tspec.file_mode)
 
-    settings_dest = home / SETTINGS_DEST_REL
-    report.record(settings_dest.exists(), f"missing: {settings_dest}")
-    _check_mode(report, settings_dest, FILE_MODE)
-    _check_settings_contract(report, repo_root / SETTINGS_TEMPLATE_REL, settings_dest)
-
-    qwen_settings_dest = home / QWEN_SETTINGS_DEST_REL
-    report.record(qwen_settings_dest.exists(), f"missing: {qwen_settings_dest}")
-    _check_mode(report, qwen_settings_dest, FILE_MODE)
-    _check_settings_contract(report, repo_root / QWEN_SETTINGS_TEMPLATE_REL, qwen_settings_dest)
+    for sspec in layout.settings:
+        dest = layout.root / sspec.dest_rel
+        report.record(dest.exists(), f"missing: {dest}")
+        _check_mode(report, dest, FILE_MODE)
+        _check_settings_contract(report, repo_root / sspec.src_rel, dest)
 
     return report
 
@@ -636,29 +743,37 @@ def refuse_root() -> None:
         sys.exit(1)
 
 
-def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
-    """Install all templates into `home`. Returns process exit code."""
-    # Pre-create home subdirs that we own, with restrictive perms.
-    boundary_dirs: list[Path] = []
-    for sub in INSTALL_HOME_DIRS:
-        d = home / sub
-        ensure_secure_dir(d, DIR_MODE)
-        boundary_dirs.append(d)
+def _statusline_transform(
+    layout: Layout, *, python: str
+) -> Callable[[dict[str, object]], dict[str, object]]:
+    def transform(template: dict[str, object]) -> dict[str, object]:
+        return apply_statusline_commands(template, layout, posix=POSIX, python=python)
 
-    print("Install Claude + Codex + Qwen Code configuration")
+    return transform
 
-    for spec in TEMPLATE_FILES:
+
+def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
+    """Install the layout's templates into its root. Returns process exit code."""
+    # Pre-create the dirs we own, with restrictive perms. They are also the
+    # boundary: every destination below must resolve inside one of them.
+    boundary_dirs = layout.managed_dirs
+    for managed in boundary_dirs:
+        ensure_secure_dir(managed, DIR_MODE)
+
+    print(f"Install {layout.description}")
+
+    for spec in layout.files:
         src = repo_root / spec.src_rel
-        dest = home / spec.dest_rel
+        dest = layout.root / spec.dest_rel
         # Guard: destination must live inside one of the install dirs.
         if not any(is_within(dest, b) for b in boundary_dirs):
             raise PermissionError(f"refusing to write outside install dirs: {dest}")
         status = install_file(src, dest, mode=spec.mode)
         print(f"{status}: {dest}")
 
-    for tspec in TEMPLATE_TREES:
+    for tspec in layout.trees:
         src_root = repo_root / tspec.src_rel
-        dest_root = home / tspec.dest_rel
+        dest_root = layout.root / tspec.dest_rel
         # Tree boundary is whichever managed dir contains dest_root.
         boundary = next((b for b in boundary_dirs if is_within(dest_root, b)), None)
         if boundary is None:
@@ -676,50 +791,41 @@ def install(home: Path, repo_root: Path = REPO_ROOT) -> int:
             for dest in prune_tree(src_root, dest_root, boundary=boundary):
                 print(f"pruned: {dest}")
 
-    for dest in remove_decommissioned_skills(home):
+    for dest in remove_decommissioned_skills(layout):
         print(f"removed (obsolete skill data): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.9, and on Windows it is exactly the python that must be
     # named explicitly in the status-line command.
     python = Path(sys.executable).as_posix()
-    settings_status = merge_into(
-        repo_root / SETTINGS_TEMPLATE_REL,
-        home / SETTINGS_DEST_REL,
-        transform=lambda tpl: apply_statusline_commands(
-            tpl, home, posix=POSIX, python=python
-        ),
-    )
-    if settings_status == "ok":
-        print(f"ok: {home / SETTINGS_DEST_REL}")
-    elif settings_status == "created":
-        print(f"created: {home / SETTINGS_DEST_REL}")
-    else:
-        print(f"backup: {home / SETTINGS_DEST_REL}.bak")
-        print(f"merged: {home / SETTINGS_DEST_REL}")
-
-    qwen_settings_status = merge_into(
-        repo_root / QWEN_SETTINGS_TEMPLATE_REL,
-        home / QWEN_SETTINGS_DEST_REL,
-    )
-    if qwen_settings_status == "ok":
-        print(f"ok: {home / QWEN_SETTINGS_DEST_REL}")
-    elif qwen_settings_status == "created":
-        print(f"created: {home / QWEN_SETTINGS_DEST_REL}")
-    else:
-        print(f"backup: {home / QWEN_SETTINGS_DEST_REL}.bak")
-        print(f"merged: {home / QWEN_SETTINGS_DEST_REL}")
+    for sspec in layout.settings:
+        dest = layout.root / sspec.dest_rel
+        if not any(is_within(dest, b) for b in boundary_dirs):
+            raise PermissionError(f"refusing to write outside install dirs: {dest}")
+        transform = (
+            _statusline_transform(layout, python=python)
+            if sspec.rewrite_statusline
+            else None
+        )
+        status = merge_into(repo_root / sspec.src_rel, dest, transform=transform)
+        if status == "ok":
+            print(f"ok: {dest}")
+        elif status == "created":
+            print(f"created: {dest}")
+        else:
+            print(f"backup: {dest}.bak")
+            print(f"merged: {dest}")
 
     # Re-apply directory perms (in case rsync-style operations widened them).
-    for sub in INSTALL_HOME_DIRS:
-        chmod_if_posix(home / sub, DIR_MODE)
+    for managed in boundary_dirs:
+        chmod_if_posix(managed, DIR_MODE)
 
     return 0
 
 
-def clean(home: Path) -> int:
-    print("Clean Claude + Codex + Qwen Code configuration")
-    for target in clean_targets(home):
+def clean(layout: Layout) -> int:
+    print(f"Clean {layout.description}")
+    for target in clean_targets(layout):
         result = remove_with_backup(target)
         if result == "skipped":
             print(f"skip: {target}")
@@ -733,11 +839,76 @@ def clean(home: Path) -> int:
 # --------------------------------------------------------------------------- #
 # CLI dispatch.
 # --------------------------------------------------------------------------- #
-USAGE = "usage: cli.py <install|clean|verify|merge> [args]"
+USAGE = (
+    "usage: cli.py <install|clean|verify> [--claude-dir <dir>]\n"
+    "       cli.py merge <template> <destination>"
+)
+
+CLAUDE_DIR_FLAG = "--claude-dir"
+
+# Commands that act on a destination layout rather than on explicit paths.
+LAYOUT_COMMANDS = ("install", "clean", "verify")
 
 
-def _verify_cli(home: Path) -> int:
-    report = verify(home)
+def claude_dir_argument(args: list[str]) -> str | None:
+    """Extract the `--claude-dir` value from layout-command arguments.
+
+    Accepts `--claude-dir DIR` and `--claude-dir=DIR`. Anything else raises, so
+    a mistyped flag cannot be silently ignored and write to `$HOME` instead.
+    """
+    rest = list(args)
+    value: str | None = None
+    while rest:
+        arg = rest.pop(0)
+        if arg == CLAUDE_DIR_FLAG:
+            if not rest:
+                raise ValueError(f"{CLAUDE_DIR_FLAG} requires a directory argument")
+            value = rest.pop(0)
+        elif arg.startswith(f"{CLAUDE_DIR_FLAG}="):
+            value = arg.split("=", 1)[1]
+        else:
+            raise ValueError(f"unexpected argument: {arg}")
+    return value
+
+
+def resolve_claude_dir(raw: str, home: Path) -> Path:
+    """Resolve a `--claude-dir` value to the absolute directory to install into.
+
+    `~` is expanded here as well as by the shell, so `--claude-dir=~/x` works.
+    Rejected targets: an empty value; `$HOME` and filesystem roots, where the
+    template would scatter across a directory the installer does not own; and
+    an existing non-directory, so a typo cannot clobber a file.
+    """
+    if not raw.strip():
+        raise ValueError(f"{CLAUDE_DIR_FLAG} requires a non-empty path")
+    target = Path(raw).expanduser().resolve(strict=False)
+    if target == home.expanduser().resolve(strict=False):
+        raise ValueError(
+            f"{CLAUDE_DIR_FLAG} must name a configuration directory, not the home "
+            f"directory itself: {target}"
+        )
+    if target.parent == target:
+        raise ValueError(f"{CLAUDE_DIR_FLAG} must not be a filesystem root: {target}")
+    if target.exists() and not target.is_dir():
+        raise ValueError(f"{CLAUDE_DIR_FLAG} is not a directory: {target}")
+    return target
+
+
+def layout_for(args: list[str], home: Path) -> Layout:
+    """Destination layout for a layout command's arguments.
+
+    CLAUDE_CONFIG_DIR is deliberately not consulted: a plain `install` run from
+    a shell that exports it must still target `~/.claude`, so redirecting the
+    install stays an explicit act.
+    """
+    raw = claude_dir_argument(args)
+    if raw is None:
+        return home_layout(home)
+    return claude_dir_layout(resolve_claude_dir(raw, home), home)
+
+
+def _verify_cli(layout: Layout) -> int:
+    report = verify(layout)
     if report.failures:
         for msg in report.failures:
             print(msg)
@@ -776,13 +947,19 @@ def main(argv: list[str]) -> int:
         return 2
 
     command, rest = args[0], args[1:]
-    if command == "install":
-        refuse_root()
-        return install(Path.home())
-    if command == "clean":
-        return clean(Path.home())
-    if command == "verify":
-        return _verify_cli(Path.home())
+    if command in LAYOUT_COMMANDS:
+        try:
+            layout = layout_for(rest, Path.home())
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            print(USAGE, file=sys.stderr)
+            return 2
+        if command == "install":
+            refuse_root()
+            return install(layout)
+        if command == "clean":
+            return clean(layout)
+        return _verify_cli(layout)
     if command == "merge":
         return _merge_cli(prog, rest)
     print(f"unknown command: {command}", file=sys.stderr)
