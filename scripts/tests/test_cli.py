@@ -729,7 +729,22 @@ class InstallTests(unittest.TestCase):
 
     def test_prunes_orphan_in_managed_skill_on_reinstall(self) -> None:
         self._run_install()
-        orphan = self.home / ".claude/skills/km-review/experts/__orphan__.md"
+        # Any nested dir of a managed skill exercises the same prune path; pick one
+        # from the templates tree so restructuring a skill cannot silently void this.
+        skills_root = cli.REPO_ROOT / "templates" / "skills"
+        nested = next(
+            (
+                path
+                for path in sorted(skills_root.glob("*/*"))
+                if path.is_dir() and any(path.glob("*.md"))
+            ),
+            None,
+        )
+        self.assertIsNotNone(nested, "no managed skill has a nested directory")
+        assert nested is not None
+        orphan = (
+            self.home / ".claude/skills" / nested.relative_to(skills_root) / "__orphan__.md"
+        )
         orphan.write_text("stale", encoding="utf-8")
         out = self._run_install()
         self.assertFalse(orphan.exists(), "orphan in a managed skill must be pruned")
