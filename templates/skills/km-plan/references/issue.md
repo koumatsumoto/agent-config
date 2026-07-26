@@ -4,10 +4,9 @@
 
 ## 新規に出す
 
-1. **Secret Check**（SKILL.md）を最終本文と issue title に当てる。検出したら issue 化せず止め、masking / 再生成をユーザへ依頼する
-2. `gh` が使えて GitHub 管理 repo であることを確かめる。不能なら原因（未インストール / 未認証 / 非 GitHub repo / ネットワーク）を区別して報告し、`.plan/` 出力で止める
-3. `gh issue create --title "<title>" --body-file <plan-file>` で全文ミラーする。title は計画タイトルから作る（Conventional Commits 互換だと後続 PR と揃う）。title に backtick / `$(...)` を含めない
-4. 返された URL を `.plan/` 本文の placeholder に書き込み、`gh issue edit <number> --body-file <plan-file>` で再同期する
+1. `gh` が使えて GitHub 管理 repo であることを確かめる。不能なら原因（未インストール / 未認証 / 非 GitHub repo / ネットワーク）を区別して報告し、`.plan/` 出力で止める
+2. `gh issue create --title "<title>" --body-file <plan-file>` で全文ミラーする。title は計画タイトルから作る（Conventional Commits 互換だと後続 PR と揃う）。title に backtick / `$(...)` を含めない
+3. 返された URL を `.plan/` 本文の placeholder に書き込み、`gh issue edit <number> --body-file <plan-file>` で再同期する
 
 ## 既存 issue を更新する
 
@@ -17,4 +16,4 @@
 
 ## 反映後の再同期
 
-修正を反映したら `.plan/` を更新し、**Secret Check を通してから** `gh issue edit <number> --body-file <plan-file>` で再同期する（外部レビュー結果には log・認証情報が混じりやすい）。再レビューが未収束のまま公開 issue を更新しない。
+修正を反映したら `.plan/` を更新し、`gh issue edit <number> --body-file <plan-file>` で再同期する。再レビューが未収束のまま公開 issue を更新しない。

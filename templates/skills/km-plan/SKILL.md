@@ -27,7 +27,7 @@ argument-hint: "[title-or-topic | issue-number]"
 `references/goal-contract.md` を読み、本文をメモリ上で組み立ててから `.plan/YYYYMMDD-<slug>.md` へ書き出す。
 
 - 書き出す前に `.plan/` が git に追跡されないことを確かめる。未追跡かつ未 ignore なら `.gitignore` に `.plan/` を足す。すでに追跡済みなら repo 方針と衝突するので、勝手に直さずユーザに確認して止まる
-- 書き出す前に **Secret Check** と goal-contract.md の lint を本文に当てる。修正で本文が変わったら Secret Check を当て直す
+- 書き出す前に goal-contract.md の lint を本文に当てる
 
 ### Review
 
@@ -54,12 +54,6 @@ GitHub 管理 repo でだけ実行する。手順と既存 issue の更新規約
 - **動かない** — 該当する作業単位・検証への局所反映に留める
 
 どちらも変更範囲に Review を当て直す。外部レビューの指摘は 1 件 = 1 判断に分解して個別に採否を決める（まとめて確認すると落ちる）。外部指摘には重大度が付いていないので、可逆性で見て 反映 / 受け入れ済みリスク / 実装時確認事項 へ振り分ける。公開済み issue への再同期は `references/issue.md`。
-
-## Secret Check
-
-計画は issue へ全文ミラーされるため、混入は即公開になる。**本文が外へ出る全経路の直前**で本文と title を走査する — `.plan/` への書き出し、`gh issue create`、`gh issue edit`（URL 同期・既存更新・修正後の再同期）。`.plan/` に入れば後続の全経路がそれを引き継ぐので、issue 経路だけでは足りない。
-
-見るもの: 認証情報・鍵・トークンの値そのもの、`.env*` / `*.pem` / `*.key` / credential ファイルへの参照、貼り付けたログやスタックトレースに紛れ込む社内ホスト名・ユーザー名・内部 URL。**検出が不確かでも止めてユーザに確認する。** `.plan/` の自動削除はしない。
 
 ## 不変条件
 

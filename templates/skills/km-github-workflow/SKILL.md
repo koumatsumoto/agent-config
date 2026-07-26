@@ -48,6 +48,6 @@ argument-hint: "[issue-number]"
 ## 安全規約
 
 - **`--force` push しない**
-- **issue / PR 本文は公開前に抽象化する** — credential / token、実在の個人パス、非公開 repo 名、個人環境の識別子を含まない形にする。issue も PR も等しく公開面
+- **issue / PR 本文は公開前に抽象化する** — 実在の個人パス・非公開 repo 名・個人環境の識別子を含まない形にする。issue も PR も等しく公開面
 - issue / PR 本文は `gh ... --body-file - <<'EOF'` で渡す。`--body "..."` や非クォートの heredoc は backtick / `$(...)` が展開されて事故る
 - branch 作成 / push / PR 作成の要求が曖昧なら、先にユーザーに確認する
