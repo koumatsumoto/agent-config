@@ -19,7 +19,7 @@ argument-hint: "[issue-number]"
 
 ## Plan
 
-- **base へ直接コミット・push しない。** 変更は必ずブランチを切って PR で届ける。ブランチは base から切る
+- **base へ直接コミット・push しない。** 変更は必ずブランチを切って PR で届ける。ブランチは base から切り、名前は `<type>/<issue番号>-<slug>`（例: `fix/184-settings-merge-permissions`）。type は commit と同じ Conventional Commits の語（`feat` / `fix` / `refactor` / `docs` など）、slug は英小文字 kebab-case。issue を作らない場合は `<type>/<slug>`
 - issue と PR はセット。ユーザーが「issue 不要・PR だけ」と明示したときだけ issue を作らない
 - 論点が少なくクリアなら本 skill で簡易 issue（目的・完了条件を最小限）を作る。設計判断が多く計画を作り込むべきなら km-plan へ委ねる
 
@@ -48,6 +48,6 @@ argument-hint: "[issue-number]"
 ## 安全規約
 
 - **`--force` push しない**
-- **issue / PR 本文は公開前に抽象化する** — credential / token、実在の個人パス、非公開 repo 名、個人環境の識別子を含まない形にする。issue も PR も等しく公開面
+- **issue / PR 本文は公開前に抽象化する** — 実在の個人パス・非公開 repo 名・個人環境の識別子を含まない形にする。issue も PR も等しく公開面
 - issue / PR 本文は `gh ... --body-file - <<'EOF'` で渡す。`--body "..."` や非クォートの heredoc は backtick / `$(...)` が展開されて事故る
 - branch 作成 / push / PR 作成の要求が曖昧なら、先にユーザーに確認する
