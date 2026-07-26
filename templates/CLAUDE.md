@@ -24,7 +24,7 @@
 - 計画 issue 化や `.plan/` への materialize が必要な場合は `km-plan` を参照する
 - 独立レビュー・敵対的な深掘りは `km-review` を使う（起動判断はワークフロー 3）。個別 review skill はターゲットが明確な場合だけ使う
 - コミット作成は `km-commit` を参照する
-- skill の改善・変更検証は `km-skill-improve` を使う（改善サイクルと A/B 運用テスト）
+- 挙動資産（skill / rules / `CLAUDE.md` 等）の改善・変更検証は `km-skill-improve` を使う（改善サイクルと A/B 運用テスト）
 - `.plan/` はローカル一時作業場。共有成果物では GitHub issue / PR / comment を正本にし、`.plan/` 配下の具体的なファイルを source of truth として参照しない
 
 ## 成果物への記録方針

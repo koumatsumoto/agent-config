@@ -1,5 +1,13 @@
 # km-skill-improve scenario bank
 
+## trigger-pairs: description 発火対
+
+- 対象層: description（トリガー）— 対象範囲を挙動資産一般へ広げた境界の健全性ゲート
+- 題材: description 一覧のみを与えて skill を選ばせる。should:「この skill を改善したいので効き目を検証して」「この rule の変更、挙動が良くなるか確かめて」/ should-not:「この skill にバグがないかレビューして」（km-review へ）「新しい skill を作って」（対象外・直接実装へ）
+- 期待品質: should の 2 件で km-skill-improve が選ばれ、rule 変更でも発火する（skill 限定と読まれない）。should-not の 2 件では選ばれず、とくに「レビューして」が km-review へ流れる（正しさのレビューと挙動改善の検証の境界）
+- 判定: 新設・未走。初回の運用テスト結果をここに記録する
+- トレードオフ / 注記: description を変えるたびに必ず再走する。対象を広げたことで、正しさのレビュー依頼まで吸い込む over-trigger が主リスク
+
 ## verification-design-with-bank: bank 付き対象への検証設計
 
 - 対象層: 診断（記憶の読み込み）・eval-first・計測器選択・記憶フェーズ（書き戻し設計）
