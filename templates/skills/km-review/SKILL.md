@@ -53,7 +53,7 @@ argument-hint: "[target]"
 | security | 脅威モデル・攻撃面・LLM 統合、および正当な利用者・運用者の事故 |
 | adversary | 「この変更は正しくない / 目的を達成しない」と仮定して前提と不変条件を攻撃する |
 
-**独立性を保って並列起動する** — 他レビュアの所見も暫定判定も渡さない。起動契約と報告の永続化は `references/dispatch.md`。`docs-only` / `test-or-config-or-chore-only` では起動しないが、高リスク（CI 権限・デプロイ・秘密情報など）なら昇格して起動してよい。昇格したときは理由 1 行をレポートに残す。
+**独立性を保って並列起動する**。起動契約と報告の永続化は `references/dispatch.md`。`docs-only` / `test-or-config-or-chore-only` では起動しないが、高リスク（CI 権限・デプロイ・秘密情報など）なら昇格して起動してよい。昇格したときは理由 1 行をレポートに残す。
 
 ### 自分で読む
 
@@ -61,7 +61,7 @@ argument-hint: "[target]"
 
 ### 統合して判定する
 
-`references/verdict.md` に従う。ここでの主眼は「**誤った `PASS` を出さない**」こと。`PASS` を出す前に必ず自分の `PASS` を反証する。
+`references/verdict.md` に従う。
 
 ### ドキュメントを見る
 
