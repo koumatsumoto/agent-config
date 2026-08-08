@@ -114,6 +114,56 @@ class IsWithinTests(unittest.TestCase):
             cli.assert_within(outside, self.dir)
 
 
+class EnsureFileModeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _run(self, path: Path, mode: int) -> tuple[bool, str]:
+        with patch("sys.stdout", new=StringIO()) as out:
+            changed = cli.ensure_file_mode(path, mode)
+        return changed, out.getvalue()
+
+    def test_restores_a_widened_mode_and_reports_it(self) -> None:
+        target = self.dir / "f.txt"
+        target.write_text("x", encoding="utf-8")
+        target.chmod(0o644)
+        changed, out = self._run(target, cli.FILE_MODE)
+        self.assertTrue(changed)
+        self.assertEqual(target.stat().st_mode & 0o777, cli.FILE_MODE)
+        self.assertIn("mode:", out)
+        self.assertIn("0o644", out)
+
+    def test_silent_when_the_mode_already_matches(self) -> None:
+        target = self.dir / "f.txt"
+        target.write_text("x", encoding="utf-8")
+        target.chmod(cli.FILE_MODE)
+        changed, out = self._run(target, cli.FILE_MODE)
+        self.assertFalse(changed)
+        self.assertEqual(out, "")
+
+    def test_never_changes_the_mode_through_a_symlink(self) -> None:
+        # chmod follows the link, so this would change the mode of a file the
+        # installer does not manage — including one outside its boundary.
+        outside = self.dir / "outside.txt"
+        outside.write_text("x", encoding="utf-8")
+        outside.chmod(0o644)
+        link = self.dir / "link.txt"
+        link.symlink_to(outside)
+        changed, out = self._run(link, cli.FILE_MODE)
+        self.assertFalse(changed)
+        self.assertEqual(out, "")
+        self.assertEqual(outside.stat().st_mode & 0o777, 0o644)
+
+    def test_missing_path_is_a_no_op(self) -> None:
+        changed, _ = self._run(self.dir / "absent.txt", cli.FILE_MODE)
+        self.assertFalse(changed)
+
+
 class InstallFileTests(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))
@@ -133,6 +183,18 @@ class InstallFileTests(unittest.TestCase):
         cli.install_file(self.src, self.dest)
         status = cli.install_file(self.src, self.dest)
         self.assertEqual(status, "ok")
+
+    def test_ok_still_restores_a_widened_mode(self) -> None:
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+        cli.install_file(self.src, self.dest)
+        self.dest.chmod(0o644)
+        with patch("sys.stdout", new=StringIO()):
+            status = cli.install_file(self.src, self.dest)
+        self.assertEqual(status, "ok", "content is unchanged, so no rewrite")
+        self.assertEqual(self.dest.stat().st_mode & 0o777, cli.FILE_MODE)
+        self.assertFalse(self.dest.with_name(self.dest.name + ".bak").exists())
+
 
     def test_replaces_when_different_with_backup(self) -> None:
         self.dest.parent.mkdir(parents=True, exist_ok=True)
@@ -981,6 +1043,76 @@ class InstallTests(unittest.TestCase):
             dest = self.home / spec.dest_rel
             mode = dest.stat().st_mode & 0o777
             self.assertEqual(mode, spec.mode, f"{dest} mode={oct(mode)} expected {oct(spec.mode)}")
+
+    def test_converges_mode_drift_so_verify_passes_again(self) -> None:
+        # An external tool rewriting its own config with a wider mode must not
+        # leave drift that install cannot repair: install says "done" while
+        # verify says "drift", and re-running changes nothing.
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+        self._run_install()
+        widened = [
+            self.home / cli.SETTINGS_DEST_REL,
+            self.home / cli.TEMPLATE_FILES[0].dest_rel,
+            self.home / cli.TEMPLATE_TREES[0].dest_rel / "python-coding-style.md",
+        ]
+        for path in widened:
+            self.assertTrue(path.is_file(), f"missing: {path}")
+            path.chmod(0o644)
+
+        out = self._run_install()
+
+        for path in widened:
+            self.assertEqual(
+                path.stat().st_mode & 0o777, cli.FILE_MODE, f"mode not restored: {path}"
+            )
+            self.assertFalse(path.with_name(path.name + ".bak").exists())
+            self.assertIn(f"mode: {path}", out, "a permission change is reported")
+        self.assertNotIn("merged:", out, "a mode fix must not rewrite content")
+        self.assertNotIn("replaced:", out, "a mode fix must not rewrite content")
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.layout)
+        self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
+
+    def test_symlinked_settings_becomes_a_managed_file_keeping_user_keys(self) -> None:
+        # verify checks the mode through the link but the installer refuses to
+        # chmod a link target, so a symlinked destination is one install and
+        # verify would never agree on.
+        if not cli.is_posix():
+            self.skipTest("POSIX-only")
+        self._run_install()
+        settings = self.home / cli.SETTINGS_DEST_REL
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        data["theme"] = "user-pick"
+        real = self.home / ".claude/real-settings.json"
+        real.write_text(cli.render(data), encoding="utf-8")
+        real.chmod(0o644)
+        settings.unlink()
+        settings.symlink_to(real)
+        # A backup of a genuinely older state must survive: the content here is
+        # unchanged, so there is nothing worth spending the single .bak on.
+        bak = settings.with_name(settings.name + ".bak")
+        bak.write_text('{"precious": "earlier state"}', encoding="utf-8")
+
+        out = self._run_install()
+
+        self.assertIn("materialized:", out, "replacing a symlink is named as such")
+        self.assertNotIn(f"merged: {settings}", out)
+        self.assertNotIn(f"backup: {settings}.bak", out)
+        self.assertEqual(
+            json.loads(bak.read_text(encoding="utf-8")), {"precious": "earlier state"}
+        )
+        self.assertFalse(settings.is_symlink(), "a managed destination is a real file")
+        self.assertEqual(settings.stat().st_mode & 0o777, cli.FILE_MODE)
+        merged = json.loads(settings.read_text(encoding="utf-8"))
+        self.assertEqual(merged["theme"], "user-pick", "user keys must survive")
+        self.assertIn("statusLine", merged)
+        self.assertEqual(
+            real.stat().st_mode & 0o777, 0o644, "the link target is not chmod-ed"
+        )
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.layout)
+        self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
 
     def test_runs_to_completion(self) -> None:
         # Lower-level boundary guarantees are covered by InstallTreeTests.
