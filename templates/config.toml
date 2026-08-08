@@ -10,8 +10,9 @@ plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
 # Fully trusted local development baseline. No sandbox and no approval gate:
 # reads, edits, shell network, and external writes all run autonomously.
-# Dangerous operations are not contained by config; the AGENTS.md operating
-# rules and per-repo rules carry the behavioral guard instead.
+# Dangerous operations are not contained by config; the shared agent guideline
+# deployed as ~/.codex/AGENTS.md (canonical source: templates/CLAUDE.md) and
+# per-repo rules carry the behavioral guard instead.
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "cached"

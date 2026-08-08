@@ -30,8 +30,22 @@ jobs:
           set -euo pipefail
           tmp_home=$(mktemp -d)
           HOME="$tmp_home" bash install.sh > install.log
+          test ! -d "$tmp_home/.qwen"  # Qwen Code is opt-in
           HOME="$tmp_home" bash scripts/verify-install.sh
           HOME="$tmp_home" bash clean.sh > clean.log
+
+      - name: Smoke test --qwen pass-through
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_home=$(mktemp -d)
+          HOME="$tmp_home" bash install.sh --qwen > install-qwen.log
+          test -f "$tmp_home/.qwen/QWEN.md"
+          test -d "$tmp_home/.qwen/skills"
+          test -f "$tmp_home/.qwen/settings.json"
+          HOME="$tmp_home" bash scripts/verify-install.sh --qwen
+          HOME="$tmp_home" bash clean.sh --qwen > clean-qwen.log
+          test -f "$tmp_home/.qwen/settings.json"  # user-managed keys survive clean
 
       - name: Smoke test --claude-dir pass-through
         shell: bash
