@@ -1,8 +1,9 @@
 # Codex exec policy rules for high-risk commands.
 #
 # These rules route high-risk commands to explicit prompt approval whenever an
-# approval path is active. The everyday dangerous-command guard lives in
-# AGENTS.md, not here.
+# approval path is active. The everyday dangerous-command guard lives in the
+# shared agent guideline deployed as ~/.codex/AGENTS.md (canonical source:
+# templates/CLAUDE.md), not here.
 
 prefix_rule(
   pattern = ["git", "push", "--force"],

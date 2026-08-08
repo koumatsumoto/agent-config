@@ -5,16 +5,16 @@ Claude Code / Codex CLI / Qwen Code の共通設定テンプレートを管理�
 ## 概要
 
 - 正本は `templates/` 配下
-- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/`、`~/.qwen/` に反映 (Linux / macOS / Windows 対応)
+- `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (Linux / macOS / Windows 対応)
+- 共通 agent guideline の正本は `templates/CLAUDE.md` 1 ファイル。各ツールが要求するファイル名 (`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` / `~/.qwen/QWEN.md`) へ同じ内容を配布する
+- Qwen Code (`~/.qwen/`) は opt-in。`--qwen` を付けたときだけ配布対象に加わる
 - `--claude-dir <dir>` で `CLAUDE_CONFIG_DIR` 用の別プロファイルにも配布できる
 - Linux / macOS / Git Bash では `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - リポジトリ内の `README.md` と `docs/` は説明用。runtime contract は `templates/` 側を正とする
 
 ## Source Of Truth
 
-- `templates/AGENTS.md` - Codex CLI 向け共通方針
-- `templates/CLAUDE.md` - Claude Code 向け共通方針
-- `templates/QWEN.md` - Qwen Code 向け共通方針
+- `templates/CLAUDE.md` - Claude Code / Codex CLI / Qwen Code 共通の agent guideline (唯一の正本)
 - `templates/rules/` - Claude Code 向け markdown rules
 - `templates/skills/` - Claude / Codex / Qwen Code 共用の skills
 - `templates/output-styles/` - Claude Code 向け custom output styles (モデル切替時の行動規範。`fable-like` 同梱)
@@ -24,7 +24,7 @@ Claude Code / Codex CLI / Qwen Code の共通設定テンプレートを管理�
 - `templates/statusline.py` - Claude Code 用 status line (リッチ 2 行レイアウト)
 - `templates/subagent-statusline.py` - Claude Code サブエージェント行の status line
 - `templates/settings.json` - Claude Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
-- `templates/qwen-settings.json` - Qwen Code 推奨 settings.json ベースライン (既存ファイルへは shallow merge)
+- `templates/qwen-settings.json` - Qwen Code 推奨 settings.json ベースライン (`--qwen` 指定時のみ利用。既存ファイルへは shallow merge)
 
 `docs/` は参考資料として残す。履歴メモや検討計画は git で追跡し、作業中の計画メモが必要な場合は repo 直下の `.plan/` に置く。
 
@@ -86,9 +86,8 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 - `~/.codex/*.config.toml` (Codex profile: `readonly`)
 - `~/.codex/rules/`
 - `~/.agents/skills/`
-- `~/.qwen/QWEN.md` (詳細は後述)
-- `~/.qwen/skills/`
-- `~/.qwen/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
+
+`~/.qwen/` は対象外。Qwen Code を配布したい場合は `--qwen` を付ける (後述)。
 
 `settings.json` 以外の既存ファイルは上書き前に `*.bak` へ退避される。バックアップは単一世代。
 
@@ -97,6 +96,39 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 配布を終了した組み込み skill 名と、組み込み skill の rename 前の旧名は明示管理する。skill loader による誤検出を防ぐため、installer は該当する現行ディレクトリと同名バックアップを `skills/` から削除する。既存の sibling `retired-skills/` も削除し、新旧または退役済みの skill を discovery 対象の近傍へ残さない。
 
 `km-kaizen` の退役時、repo-local の `.kaizen/` は自動収集しない。外部 issue 作成や他 repo の削除を installer の副作用にしないため、残存 entry は利用者が確認し、後続対応の価値を説明できるものだけ follow-up issue へ移して残りを削除する。
+
+### Qwen Code も配布する (`--qwen`)
+
+Qwen Code 向けの配布は opt-in。`--qwen` は「Qwen だけを対象にする」selector ではなく、通常の配布対象へ Qwen component を**追加**する additive flag で、`install` / `verify` / `clean` のどれでも同じ意味を持つ。
+
+```bash
+# Linux / macOS
+./install.sh                  # Claude + Codex + 共用 skills
+./install.sh --qwen           # 上記 + Qwen Code
+python3 scripts/cli.py install --qwen
+```
+
+```powershell
+# Windows
+python scripts/cli.py install --qwen
+```
+
+`--qwen` を付けたときだけ追加される配布物:
+
+| Repository Source | Destination (`--qwen`) |
+| --- | --- |
+| `templates/CLAUDE.md` | `~/.qwen/QWEN.md` |
+| `templates/skills/` | `~/.qwen/skills/` |
+| `templates/qwen-settings.json` | `~/.qwen/settings.json` (shallow merge) |
+
+- 対象 component は CLI 引数を解釈した時点で確定し、`install` / `verify` / `clean` は同じ選択結果を使う。コマンド間で対象がずれることはない
+- `--qwen` 無しのコマンドは `~/.qwen` に一切触れない。ディレクトリの作成も、skill tree の prune も、退役 skill の削除も、settings の merge も行わない。`~/.qwen` が既にある場合もその内容を変更しない
+- `verify` は `--qwen` を付けたときだけ Qwen を検証対象にする。`--qwen` 無しで install した状態に `verify --qwen` を実行すると、Qwen 側の managed artifacts の欠落を通常の verify failure として報告する
+- `clean --qwen` は Qwen の managed artifacts を `*.bak` へ退避して撤去するが、`~/.qwen/settings.json` はユーザ固有キーを含み得るため既存の clean contract どおり保持する
+- `--qwen` と `--claude-dir` は併用できない。`--claude-dir` は Claude Code の設定 slice を別 root へ再配置するオプションで、`--qwen` は `$HOME/.qwen` を対象にするため、1 コマンドで無関係な 2 つの root を書き換えることになる。併用時は filesystem を触る前に usage error (exit code `2`) として拒否する
+- Qwen を agent-config の管理下に置き続けたい場合は、以降のコマンドで `--qwen` を指定する。既に `~/.qwen` を持つ環境で `--qwen` 無しのコマンドを実行しても、自動 migration (削除・更新・prune) は行わない
+- `--qwen` を付け忘れると `~/.qwen` は配布時点の内容で固定され、`verify` (`--qwen` 無し) も検証対象に含めないため drift を検出しない。管理下に置くと決めたら 3 コマンドとも `--qwen` を付ける
+- **初回 `--qwen` は `~/.qwen/skills/` を管理下に取り込む**。ツリー直下のユーザ独自 skill は prune されないが、配布を終了した組み込み skill 名 (`plan` / `commit` / `review` など) と一致するディレクトリは `*.bak` を残さず削除される (`~/.claude/skills/` / `~/.agents/skills/` と同じ規律)。同名の自作 skill がある場合は先に退避する
 
 ### 別の設定ディレクトリへインストールする (`--claude-dir`)
 
@@ -127,7 +159,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 配布内容は `~/.claude` 向けの manifest から導出する。`~/.claude` に配るものが増減すれば、指定ディレクトリ側も同じだけ増減する。
 
-- 対象は Claude Code の設定ディレクトリのみ。Codex (`~/.codex`) / Qwen Code (`~/.qwen`) / 共用 skills (`~/.agents/skills`) は各ツールが自前のパスを見るため配布しない
+- 対象は Claude Code の設定ディレクトリのみ。Codex (`~/.codex`) / Qwen Code (`~/.qwen`) / 共用 skills (`~/.agents/skills`) は各ツールが自前のパスを見るため配布しない。`--qwen` との併用は usage error
 - `settings.json` の status line は指定ディレクトリのスクリプトを指すよう書き換える (ホーム配下なら `~/.claude-sub/statusline.py`、ホーム外なら絶対パス)
 - 既存ファイルの `*.bak` 退避、prune、退役 skill の削除、POSIX permission (`0700` / `0600`) は既定インストールと同じ規律で動く
 - `clean` / `verify` も同じオプションを受け取る
@@ -163,9 +195,19 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 > **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、Python CLI がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIX では `~` パスのまま（shebang + 実行ビットで起動）。
 
-### `CLAUDE.md` / `AGENTS.md` / `QWEN.md` の取り扱い
+### 共通 agent guideline の取り扱い
 
-`templates/CLAUDE.md`（Claude 向け）、`templates/AGENTS.md`（Codex 向け）、`templates/QWEN.md`（Qwen Code 向け）は全プロジェクト共通の AI Agent 動作指針で、テンプレートを source of truth として毎回上書きする。repo 側の更新がそのまま各マシンへ伝播する。指針を変えたい場合は `templates/` 側を編集して再 install する。
+`templates/CLAUDE.md` は全プロジェクト共通の AI coding agent 動作指針で、リポジトリ内で唯一の正本。ツールごとに読み込むファイル名が違うだけなので、installer が同じ内容を各ツールのファイル名へ配布する。
+
+| Destination | 配布条件 |
+| --- | --- |
+| `~/.claude/CLAUDE.md` | 常に |
+| `~/.codex/AGENTS.md` | 常に |
+| `~/.qwen/QWEN.md` | `--qwen` 指定時のみ |
+
+配布後の 3 ファイルは `templates/CLAUDE.md` と byte-for-byte 一致する。テンプレートを source of truth として毎回上書きするため、repo 側の更新がそのまま各マシンへ伝播する。指針を変えたい場合は `templates/CLAUDE.md` を編集して再 install する。
+
+内容はツール非依存に保つ。モデル名・reasoning effort・sandbox・承認ポリシーのような実行時設定は各ツール固有の設定ファイル (`templates/settings.json` / `templates/config.toml` / `templates/qwen-settings.json`) 側の責務とし、共通 guideline にツール別の分岐を持たせない。危険操作の抑止 (recursive deletion / hard reset / force push / 権限変更 / 秘密情報の読み取り / 外部サービスへの書き込み) は共通 guideline の安全規約が担う。Codex default profile は `approval_policy = "never"` / `sandbox_mode = "danger-full-access"` で動くため、この行動規範が実質的な安全境界になる。
 
 マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ユーザレベルの `~/.claude/CLAUDE.local.md` は自動読み込みされない。
 
@@ -179,7 +221,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 ### Qwen Code `settings.json` の取り扱い
 
-`templates/qwen-settings.json` は Claude Code 用と同様に **shallow merge** で `~/.qwen/settings.json` へ反映する。
+`templates/qwen-settings.json` は Claude Code 用と同様に **shallow merge** で `~/.qwen/settings.json` へ反映する (`--qwen` 指定時のみ)。
 
 - 初回インストール時: テンプレート全体を `~/.qwen/settings.json` として作成する
 - 2 回目以降: テンプレートが宣言するトップレベルキーはテンプレート値で上書きし、テンプレートが宣言しないキー (`env`, `modelProviders`, `model`, `providerMetadata` 等) はユーザ設定を保持する
@@ -211,7 +253,7 @@ python3 scripts/cli.py verify
 python scripts/cli.py verify
 ```
 
-`--claude-dir <dir>` を付けると、そのディレクトリへのインストール結果を検証する。
+検証対象は install と同じ component selection に従う。`--qwen` 無しなら Claude / Codex / 共用 skills だけを検証し、`~/.qwen` が無くても成功する。`--qwen` を付けると Qwen component も検証対象に加わる。`--claude-dir <dir>` を付けると、そのディレクトリへのインストール結果を検証する。
 
 `scripts/cli.py` の unittest (Linux / macOS / Windows で実行可能):
 
@@ -242,6 +284,8 @@ python scripts/cli.py clean
 
 このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザのカスタマイズが含まれ得るため対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
 
+撤去対象も install / verify と同じ component selection に従う。`--qwen` 無しでは `~/.qwen` に触れない (過去に配布した `.qwen` が残っていても変更しない)。`--qwen` を付けると Qwen の managed artifacts も撤去するが、`~/.qwen/settings.json` は同じ理由で保持する。
+
 ## Maintained Docs
 
 - `docs/claude-code-best-practices-202604.md`
@@ -260,20 +304,25 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | Repository Source | Destination |
 | --- | --- |
 | `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
-| `templates/QWEN.md` | `~/.qwen/QWEN.md` |
+| `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
 | `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/output-styles/` | `~/.claude/output-styles/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (shallow merge) |
-| `templates/qwen-settings.json` | `~/.qwen/settings.json` (shallow merge) |
 | `templates/config.toml` | `~/.codex/config.toml` |
 | `templates/codex/*.config.toml` | `~/.codex/*.config.toml` |
 | `templates/codex-rules/` | `~/.codex/rules/` |
 | `templates/skills/` | `~/.agents/skills/` |
+
+`--qwen` 指定時のみ追加:
+
+| Repository Source | Destination |
+| --- | --- |
+| `templates/CLAUDE.md` | `~/.qwen/QWEN.md` |
 | `templates/skills/` | `~/.qwen/skills/` |
+| `templates/qwen-settings.json` | `~/.qwen/settings.json` (shallow merge) |
 
 注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の exec policy rules は `templates/codex-rules/` から `~/.codex/rules/` へ配布する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
 
@@ -312,9 +361,9 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- default は `danger-full-access + never` を前提にする。sandbox も承認もない完全信頼の自律運用で、`approval_policy = "never"` は常時自動実行扱い。危険操作は設定では止まらず、`AGENTS.md` の行動規範とリポジトリごとのルールで制御する
+- default は `danger-full-access + never` を前提にする。sandbox も承認もない完全信頼の自律運用で、`approval_policy = "never"` は常時自動実行扱い。危険操作は設定では止まらず、共通 guideline (`templates/CLAUDE.md` → `~/.codex/AGENTS.md`) の安全規約とリポジトリごとのルールで制御する
 - Codex profile は `~/.codex/<profile>.config.toml` として配布する。管理対象は `readonly` だけに絞る
-- `~/.codex/rules/` は承認が有効なときに force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt 承認へ寄せる。日常的な危険コマンドの抑止は `AGENTS.md` の行動規範で扱う
+- `~/.codex/rules/` は承認が有効なときに force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt 承認へ寄せる。日常的な危険コマンドの抑止は共通 guideline (`templates/CLAUDE.md`) の安全規約で扱う
 - 読み取り専用で探索したい場合は `readonly` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
