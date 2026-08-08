@@ -387,10 +387,46 @@ def backup(path: Path) -> Path | None:
     return bak
 
 
+def ensure_file_mode(path: Path, mode: int) -> bool:
+    """Re-apply a managed file's mode without rewriting its content.
+
+    install skips writing a destination whose content already matches, and the
+    mode is only set as part of a write. The mode is nevertheless part of what
+    verify checks, so a tool that rewrites its own config with a wider mode
+    would otherwise leave drift that no number of re-runs can repair. Applying
+    it here keeps install convergent.
+
+    Reports the change when there is one, and returns whether it acted. The
+    status line of a file whose content already matches stays `ok:`; changing
+    permission bits is the one thing this does beyond nothing, so the rare run
+    that does it says so on its own line instead of hiding inside that `ok:`.
+
+    The mode is applied through a file descriptor opened with O_NOFOLLOW, so
+    the check and the change cannot be separated by a symlink swapped in
+    between them. A symlinked path is rejected by the same flag: chmod follows
+    links and would change the mode of a file the installer does not manage.
+    """
+    if not POSIX:
+        return False  # NTFS does not honour POSIX modes
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError:
+        return False  # missing, a symlink (ELOOP), or unreadable
+    try:
+        current = os.fstat(fd).st_mode & 0o777
+        if current == mode:
+            return False
+        os.fchmod(fd, mode)
+    finally:
+        os.close(fd)
+    print(f"mode: {path} ({oct(current)} -> {oct(mode)})")
+    return True
+
+
 def install_file(src: Path, dest: Path, mode: int = FILE_MODE) -> str:
     """Install a single file with backup. Return one of: ok | copied | replaced.
 
-    - "ok": dest already matches src; nothing changed.
+    - "ok": dest already matches src; only the mode is re-applied.
     - "copied": dest did not exist; created from src.
     - "replaced": dest existed and was backed up to dest.bak.
     """
@@ -398,6 +434,7 @@ def install_file(src: Path, dest: Path, mode: int = FILE_MODE) -> str:
         raise FileNotFoundError(f"source not found or not a regular file: {src}")
 
     if dest.exists() and not dest.is_symlink() and same_content(src, dest):
+        ensure_file_mode(dest, mode)
         return "ok"
 
     bak = backup(dest)
@@ -663,12 +700,22 @@ def merge_into(
     dest: Path,
     *,
     transform: Callable[[dict[str, object]], dict[str, object]] | None = None,
+    materialize: bool = False,
 ) -> str:
     """Apply a shallow merge from template_path into dest.
 
     `transform`, when given, is applied to the parsed template object before the
     merge. The installer uses it to rewrite status-line commands per-platform;
     the standalone `merge` subcommand passes none (generic merge).
+
+    `materialize` makes a symlinked destination take the write path even when
+    the merged content already matches. A managed destination is a regular
+    file — install_file replaces a symlinked one outright, and verify checks
+    the mode through the link, which the installer refuses to change — so a
+    symlink left in place is a destination that install and verify disagree
+    about and never converge on. The merge still reads through the link first,
+    so user-managed keys survive the change. The standalone `merge` subcommand
+    leaves the caller's own symlink alone.
 
     Returns one of: ok | created | merged.
     """
@@ -681,7 +728,7 @@ def merge_into(
     existing_text, existing = read_existing(dest)
     new_text = render(merge(template_data, existing))
 
-    if existing_text == new_text:
+    if existing_text == new_text and not (materialize and dest.is_symlink()):
         return "ok"
 
     if existing_text is not None:
@@ -879,7 +926,12 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
             if sspec.rewrite_statusline
             else None
         )
-        status = merge_into(repo_root / sspec.src_rel, dest, transform=transform)
+        status = merge_into(
+            repo_root / sspec.src_rel, dest, transform=transform, materialize=True
+        )
+        # merge_into writes only when the merged content differs, so the mode
+        # gets the same explicit re-apply that install_file does.
+        ensure_file_mode(dest, FILE_MODE)
         if status == "ok":
             print(f"ok: {dest}")
         elif status == "created":
