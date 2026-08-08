@@ -1089,9 +1089,19 @@ class InstallTests(unittest.TestCase):
         real.chmod(0o644)
         settings.unlink()
         settings.symlink_to(real)
+        # A backup of a genuinely older state must survive: the content here is
+        # unchanged, so there is nothing worth spending the single .bak on.
+        bak = settings.with_name(settings.name + ".bak")
+        bak.write_text('{"precious": "earlier state"}', encoding="utf-8")
 
-        self._run_install()
+        out = self._run_install()
 
+        self.assertIn("materialized:", out, "replacing a symlink is named as such")
+        self.assertNotIn(f"merged: {settings}", out)
+        self.assertNotIn(f"backup: {settings}.bak", out)
+        self.assertEqual(
+            json.loads(bak.read_text(encoding="utf-8")), {"precious": "earlier state"}
+        )
         self.assertFalse(settings.is_symlink(), "a managed destination is a real file")
         self.assertEqual(settings.stat().st_mode & 0o777, cli.FILE_MODE)
         merged = json.loads(settings.read_text(encoding="utf-8"))

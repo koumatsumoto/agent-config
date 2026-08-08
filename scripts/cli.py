@@ -717,7 +717,7 @@ def merge_into(
     so user-managed keys survive the change. The standalone `merge` subcommand
     leaves the caller's own symlink alone.
 
-    Returns one of: ok | created | merged.
+    Returns one of: ok | created | merged | materialized.
     """
     template_data = json.loads(template_path.read_text(encoding="utf-8"))
     if not isinstance(template_data, dict):
@@ -728,14 +728,20 @@ def merge_into(
     existing_text, existing = read_existing(dest)
     new_text = render(merge(template_data, existing))
 
-    if existing_text == new_text and not (materialize and dest.is_symlink()):
+    unchanged = existing_text == new_text
+    if unchanged and not (materialize and dest.is_symlink()):
         return "ok"
 
-    if existing_text is not None:
+    # Only content that differs from what is about to be written is worth
+    # recovering. Backing up an identical copy would spend the single .bak
+    # generation on nothing and discard a genuinely older state.
+    if existing_text is not None and not unchanged:
         bak = dest.with_name(dest.name + ".bak")
         atomic_write_text(bak, existing_text, mode=FILE_MODE)
 
     atomic_write_text(dest, new_text, mode=FILE_MODE)
+    if unchanged:
+        return "materialized"
     return "created" if existing_text is None else "merged"
 
 
@@ -926,6 +932,9 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
             if sspec.rewrite_statusline
             else None
         )
+        # Read before the merge: materializing replaces the link, and naming
+        # what it pointed at is what lets the user restore the arrangement.
+        link_target = os.readlink(dest) if dest.is_symlink() else None
         status = merge_into(
             repo_root / sspec.src_rel, dest, transform=transform, materialize=True
         )
@@ -936,6 +945,10 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
             print(f"ok: {dest}")
         elif status == "created":
             print(f"created: {dest}")
+        elif status == "materialized":
+            # Replacing a symlink is a bigger change than the content merge it
+            # would otherwise be reported as, so it gets named on its own.
+            print(f"materialized: {dest} (was a symlink to {link_target})")
         else:
             print(f"backup: {dest}.bak")
             print(f"merged: {dest}")
