@@ -1,8 +1,8 @@
-# Codex exec policy rules for approval requests outside the sandbox.
+# Codex exec policy rules for high-risk commands.
 #
-# These rules are evaluated for commands Codex wants to run outside the
-# workspace sandbox. They do not block Bash commands that already run inside the
-# workspace sandbox; AGENTS.md carries the in-sandbox operating rule.
+# These rules route high-risk commands to explicit prompt approval whenever an
+# approval path is active. The everyday dangerous-command guard lives in
+# AGENTS.md, not here.
 
 prefix_rule(
   pattern = ["git", "push", "--force"],
@@ -31,17 +31,17 @@ prefix_rule(
 prefix_rule(
   pattern = ["gh", "pr", "create"],
   decision = "prompt",
-  justification = "Creating a pull request writes to GitHub; require approval or auto_review.",
+  justification = "Creating a pull request writes to GitHub; require explicit user approval.",
 )
 
 prefix_rule(
   pattern = ["gh", "issue", "create"],
   decision = "prompt",
-  justification = "Creating an issue writes to GitHub; require approval or auto_review.",
+  justification = "Creating an issue writes to GitHub; require explicit user approval.",
 )
 
 prefix_rule(
   pattern = ["gh", "release"],
   decision = "prompt",
-  justification = "Release operations write externally; require approval or auto_review.",
+  justification = "Release operations write externally; require explicit user approval.",
 )

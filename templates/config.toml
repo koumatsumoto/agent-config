@@ -8,20 +8,15 @@ model_reasoning_effort = "high"
 model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Autonomous-by-default local development baseline. Routine workspace reads,
-# edits, and safe commands run without blocking the agent. Anything that needs
-# to leave the workspace sandbox, use shell network, or perform a side-effecting
-# app/MCP action is routed through the approval path, where auto_review can deny
-# critical risk fail-closed.
-approval_policy = "on-request"
-approvals_reviewer = "auto_review"
-sandbox_mode = "workspace-write"
+# Fully trusted local development baseline. No sandbox and no approval gate:
+# reads, edits, shell network, and external writes all run autonomously.
+# Dangerous operations are not contained by config; the AGENTS.md operating
+# rules and per-repo rules carry the behavioral guard instead.
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
 web_search = "cached"
 check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]
-
-[sandbox_workspace_write]
-network_access = false
 
 [features]
 enable_request_compression = true

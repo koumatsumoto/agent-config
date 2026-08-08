@@ -16,7 +16,7 @@
 3. Verify: 実装後はメインが主要原則と完了条件・差分を照合して完了確認する。高影響領域（security / 認証・認可 / 秘密情報 / データ移行・削除 / 不可逆操作 / 公開契約・スキーマ / 広範囲な設計変更）に触れるとき・ユーザーが明示的にレビューを依頼したとき・重要な不確実性が残るときは `km-review` で独立レビューする。高影響かは列挙への字面一致でなく影響の性質（不可逆性・攻撃面・信頼境界・波及範囲）で判定し、迷ったら起動する
 4. Report: 確認・レビューが済んだらコミットし、PR にしてユーザへ報告する。PR URL、変更要約、検証結果、記録した改善点を共有する
 
-実行構成の目安: メイン = `gpt-5.6-sol` + high（完全信頼運用の full profile は xhigh）、通常の実装 worker = `gpt-5.6-sol` + medium。Terra は探索・テスト実行など機械的で検証可能な作業に限定する。タスクの難度と失敗コストに応じて上下させる。
+実行構成の目安: メイン = `gpt-5.6-sol` + high、通常の実装 worker = `gpt-5.6-sol` + medium。Terra は探索・テスト実行など機械的で検証可能な作業に限定する。タスクの難度と失敗コストに応じて上下させる。
 
 ## 運用ルールの参照
 
@@ -41,12 +41,11 @@
 
 ### Profile の使い分け
 
-- 通常実装は default を使う。読み取り専用探索は `readonly`、sandbox と承認を外す明示的な完全信頼運用は `full`
+- 通常実装は default（完全信頼の自律運用）を使う。読み取り専用探索は `readonly`
 - profile は `~/.codex/<profile>.config.toml` として管理する。`[profiles.*]` ではなく、`codex --profile readonly` のように起動時に選ぶ
-- default: `gpt-5.6-sol high + pragmatic + low verbosity + workspace-write + on-request + auto_review + cached web + shell network off`。通常の読み取り・編集・安全な workspace 内コマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路に送る
+- default: `gpt-5.6-sol high + pragmatic + low verbosity + danger-full-access + never + cached web`。sandbox も承認待ちもない完全信頼の自律運用で、読み取り・編集・shell network・外部書き込みをすべて自動実行する。危険操作は下記の行動規範で抑止する
 - `readonly`: 読み取り専用で安全にコードベースを探索したいとき
-- `full`: `gpt-5.6-sol xhigh + pragmatic + low verbosity + danger-full-access + never`。sandbox と承認待ちを外す明示的な完全信頼 profile。ユーザが危険性を理解して指定したときだけ使う
-- reasoning effort は default / Plan mode で `high`、full で `xhigh` を使い、`low` / `ultra` は管理設定に使わない
+- reasoning effort は default / Plan mode で `high` を使い、`low` / `ultra` は管理設定に使わない
 
 ### 最新性の確認
 
@@ -57,8 +56,8 @@
 ### 実装ルール
 
 - 独立した調査や読み取りは並列化する
-- `gh`、package manager、外部 API 確認などの shell network は default で sandbox 内実行できない前提で扱う。必要なら目的と影響を説明し、承認経路に送る
+- `gh`、package manager、外部 API 確認などの shell network も default で自動実行される
 - 破壊的操作、権限変更、外部書き込みは必要性・影響・代替手段を確認してから進める。意図が曖昧なまま実行しない
 - `rm -rf`、`git reset --hard`、force push、権限変更、秘密情報の読み取り、外部サービスへの書き込みは危険操作として扱う。ユーザが明示していない場合は実行しない。明示されている場合も対象と影響を具体化してから承認を得る
-- `~/.codex/rules/` は sandbox 外へ出る承認要求を制御する。workspace sandbox 内で実行できる Bash まで強制遮断する仕組みではないため、危険な in-sandbox コマンドはこの AGENTS.md の行動規範で抑止する
+- `~/.codex/rules/` は承認が有効なとき force push や hard reset などの高リスク操作を prompt 承認へ寄せる。日常的な危険コマンドの抑止はこの AGENTS.md の行動規範で扱う
 - 変更前後で確認手段を持つ。可能ならテスト、無理なら差分と静的確認を残す
