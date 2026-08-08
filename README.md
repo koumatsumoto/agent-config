@@ -312,10 +312,10 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- default は `workspace-write + on-request + approvals_reviewer = "auto_review"` を前提にする。通常の workspace 内読み取り・編集・安全なコマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路へ送る
+- default は `workspace-write + never` を前提にする。通常の workspace 内読み取り・編集・安全なコマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路へ送る
 - `sandbox_workspace_write.network_access = false` を明示し、`gh` / package manager / curl などの shell network は default では sandbox 内で直接動かさない。必要な場合は目的と影響を説明して承認経路に送る
 - Codex profile は `~/.codex/<profile>.config.toml` として配布する。管理対象は `readonly` と `full` だけに絞る
-- `approval_policy = "never"` は `full` のみに置く。通常の自律運用は承認待ちを消すのではなく、workspace sandbox と auto review で安全な範囲を自律化する
+- `approval_policy = "never"` は既定値化されているため常時自動実行扱い。高リスク操作は project の規約やルール、サンドボックス境界で制御する
 - `~/.codex/rules/` は sandbox 外へ出る承認要求に対して、force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt へ寄せる。workspace sandbox 内で実行できる Bash を強制遮断するものではないため、危険な in-sandbox コマンドの抑止は `AGENTS.md` の行動規範で扱う
 - 読み取り専用で探索したい場合は `readonly` profile、sandbox も外した完全信頼運用にしたい場合は `full` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている

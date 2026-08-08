@@ -8,12 +8,11 @@ model_reasoning_effort = "high"
 model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Autonomous-by-default local development baseline. Routine workspace reads,
-# edits, and safe commands run without blocking the agent. Anything that needs
-# to leave the workspace sandbox, use shell network, or perform a side-effecting
-# app/MCP action is routed through the approval path, where auto_review can deny
-# critical risk fail-closed.
-approval_policy = "on-request"
+# Fully autonomous local development baseline. Routine workspace reads, edits, and
+# safe commands run without blocking the agent. This is paired with workspace
+# sandboxing for containment; commands that require network, destructive scope, or
+# higher-risk actions should still be handled through explicit allowlists in rules.
+approval_policy = "never"
 approvals_reviewer = "auto_review"
 sandbox_mode = "workspace-write"
 web_search = "cached"
