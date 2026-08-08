@@ -78,7 +78,6 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
     FileSpec("templates/AGENTS.md", ".codex/AGENTS.md", 0o600),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
-    FileSpec("templates/codex/full.config.toml", ".codex/full.config.toml", 0o600),
     FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
     FileSpec("templates/QWEN.md", ".qwen/QWEN.md", 0o600),
 )
@@ -148,6 +147,14 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "review-loop",
     "skill-improve",
     "third-party-oss-security-review",
+)
+
+# Managed file destinations that are no longer maintained. A removed spec
+# leaves its deployed file in place otherwise, so the installer retires each
+# explicit managed path to its single-generation .bak: the retired config
+# stops being loadable while remaining recoverable.
+DECOMMISSIONED_FILES: tuple[str, ...] = (
+    ".codex/full.config.toml",
 )
 
 
@@ -493,6 +500,20 @@ def remove_decommissioned_skills(layout: Layout) -> list[Path]:
     return removed
 
 
+def remove_decommissioned_files(layout: Layout) -> list[Path]:
+    """Retire deployed file destinations the manifest no longer maintains.
+
+    Each retired path is moved to its single-generation .bak (recoverable),
+    mirroring how clean() removes managed files. Absent paths are skipped.
+    """
+    removed: list[Path] = []
+    for rel in DECOMMISSIONED_FILES:
+        target = layout.root / rel
+        if remove_with_backup(target) == "backed_up":
+            removed.append(target)
+    return removed
+
+
 def remove_with_backup(path: Path) -> str:
     """Move path to path.bak (single generation) and delete the original location.
 
@@ -793,6 +814,10 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
 
     for dest in remove_decommissioned_skills(layout):
         print(f"removed (obsolete skill data): {dest}")
+
+    for dest in remove_decommissioned_files(layout):
+        print(f"backup: {dest}.bak")
+        print(f"removed (obsolete config): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.9, and on Windows it is exactly the python that must be

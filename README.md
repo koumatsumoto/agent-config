@@ -83,7 +83,7 @@ Windows の Git Bash では `./install.sh` もサポートし、`python3` が無
 - `~/.claude/settings.json` (推奨ベースラインを shallow merge。詳細は後述)
 - `~/.codex/AGENTS.md` (詳細は後述)
 - `~/.codex/config.toml`
-- `~/.codex/*.config.toml` (Codex profile: `readonly` / `full`)
+- `~/.codex/*.config.toml` (Codex profile: `readonly`)
 - `~/.codex/rules/`
 - `~/.agents/skills/`
 - `~/.qwen/QWEN.md` (詳細は後述)
@@ -306,18 +306,16 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 ## Codex 設計メモ
 
 - default model は `gpt-5.6-sol`、reasoning effort は `high`、personality は `pragmatic`、verbosity は `low` にして、複雑な実装を簡潔に報告する
-- 管理する reasoning effort は default / Plan mode の `high` と full の `xhigh` に絞り、`low` / `ultra` は使わない
+- 管理する reasoning effort は `high` に絞り、`low` / `ultra` は使わない
 - `web_search = "cached"` を明示し、通常調査はキャッシュ検索を使う。最新確認が必要な場合は live web を明示して使う
 - `plan_mode_reasoning_effort = "high"` を明示し、Plan mode でも reasoning effort を `high` に保つ
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
-- default は `workspace-write + never` を前提にする。通常の workspace 内読み取り・編集・安全なコマンドは自律的に進め、sandbox 外実行・shell network・外部書き込みは承認経路へ送る
-- `sandbox_workspace_write.network_access = false` を明示し、`gh` / package manager / curl などの shell network は default では sandbox 内で直接動かさない。必要な場合は目的と影響を説明して承認経路に送る
-- Codex profile は `~/.codex/<profile>.config.toml` として配布する。管理対象は `readonly` と `full` だけに絞る
-- `approval_policy = "never"` は既定値化されているため常時自動実行扱い。高リスク操作は project の規約やルール、サンドボックス境界で制御する
-- `~/.codex/rules/` は sandbox 外へ出る承認要求に対して、force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt へ寄せる。workspace sandbox 内で実行できる Bash を強制遮断するものではないため、危険な in-sandbox コマンドの抑止は `AGENTS.md` の行動規範で扱う
-- 読み取り専用で探索したい場合は `readonly` profile、sandbox も外した完全信頼運用にしたい場合は `full` profile を使う
+- default は `danger-full-access + never` を前提にする。sandbox も承認もない完全信頼の自律運用で、`approval_policy = "never"` は常時自動実行扱い。危険操作は設定では止まらず、`AGENTS.md` の行動規範とリポジトリごとのルールで制御する
+- Codex profile は `~/.codex/<profile>.config.toml` として配布する。管理対象は `readonly` だけに絞る
+- `~/.codex/rules/` は承認が有効なときに force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt 承認へ寄せる。日常的な危険コマンドの抑止は `AGENTS.md` の行動規範で扱う
+- 読み取り専用で探索したい場合は `readonly` profile を使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 

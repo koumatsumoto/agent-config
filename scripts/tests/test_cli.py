@@ -354,6 +354,28 @@ class DecommissionedSkillsTests(unittest.TestCase):
         self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "keep")
 
 
+class DecommissionedFilesTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp(prefix="decom-test-"))
+        self.layout = cli.home_layout(self.home)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_retires_decommissioned_config_to_backup(self) -> None:
+        rel = cli.DECOMMISSIONED_FILES[0]
+        target = self.home / rel
+        target.parent.mkdir(parents=True)
+        target.write_text("stale", encoding="utf-8")
+        removed = cli.remove_decommissioned_files(self.layout)
+        self.assertEqual(removed, [target])
+        self.assertFalse(target.exists())
+        self.assertEqual(target.with_name(target.name + ".bak").read_text(encoding="utf-8"), "stale")
+
+    def test_skips_absent_paths(self) -> None:
+        self.assertEqual(cli.remove_decommissioned_files(self.layout), [])
+
+
 class SkillMetadataTests(unittest.TestCase):
     def test_names_use_standard_format_and_match_directory(self) -> None:
         skills_root = cli.REPO_ROOT / "templates" / "skills"
@@ -814,6 +836,18 @@ class InstallTests(unittest.TestCase):
             self.assertFalse((root / f"{legacy_name}.bak").exists())
             self.assertFalse((root.parent / "retired-skills").exists())
 
+    def test_install_retires_decommissioned_config_with_backup(self) -> None:
+        rel = cli.DECOMMISSIONED_FILES[0]
+        legacy = self.home / rel
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("stale", encoding="utf-8")
+
+        out = self._run_install()
+
+        self.assertFalse(legacy.exists())
+        self.assertTrue(legacy.with_name(legacy.name + ".bak").exists())
+        self.assertIn("removed (obsolete config):", out)
+
     def test_install_preserves_user_added_skill(self) -> None:
         self._run_install()
         user_skill = self.home / ".claude/skills/__my_custom__/SKILL.md"
@@ -868,7 +902,6 @@ class InstallTests(unittest.TestCase):
     def test_codex_profiles_installed_as_top_level_config_files(self) -> None:
         self._run_install()
         expected = {
-            ".codex/full.config.toml",
             ".codex/readonly.config.toml",
         }
         specs = _codex_profile_specs()
@@ -890,19 +923,11 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(base["personality"], "pragmatic")
         self.assertEqual(base["model_verbosity"], "low")
 
-        full = tomllib.loads(
-            (cli.REPO_ROOT / "templates/codex/full.config.toml").read_text(
-                encoding="utf-8"
-            )
-        )
-        self.assertEqual(full["model_reasoning_effort"], "xhigh")
-
         managed_efforts = {
             data[key]
             for path in (
                 cli.REPO_ROOT / "templates/config.toml",
                 cli.REPO_ROOT / "templates/codex/readonly.config.toml",
-                cli.REPO_ROOT / "templates/codex/full.config.toml",
             )
             for data in [tomllib.loads(path.read_text(encoding="utf-8"))]
             for key in ("model_reasoning_effort", "plan_mode_reasoning_effort")
@@ -919,7 +944,10 @@ class InstallTests(unittest.TestCase):
             (cli.REPO_ROOT / "templates/codex-rules/default.rules").read_bytes(),
         )
 
-    def test_codex_never_approval_limited_to_full_profile(self) -> None:
+    def test_codex_default_config_is_the_fully_trusted_baseline(self) -> None:
+        base = (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
+        self.assertIn('approval_policy = "never"', base)
+        self.assertIn('sandbox_mode = "danger-full-access"', base)
         files = [
             cli.REPO_ROOT / spec.src_rel
             for spec in cli.TEMPLATE_FILES
@@ -928,8 +956,8 @@ class InstallTests(unittest.TestCase):
         offenders = [
             path.relative_to(cli.REPO_ROOT).as_posix()
             for path in files
-            if 'approval_policy = "never"' in path.read_text(encoding="utf-8")
-            and path.name != "full.config.toml"
+            if 'approval_policy = "' in path.read_text(encoding="utf-8")
+            and 'approval_policy = "never"' not in path.read_text(encoding="utf-8")
         ]
         self.assertEqual(offenders, [])
 
