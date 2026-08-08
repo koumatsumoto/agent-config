@@ -40,6 +40,16 @@ def _global_guideline_specs() -> list[cli.FileSpec]:
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel in dests]
 
 
+def _skill_docs() -> list[Path]:
+    """Every markdown file in the managed skills tree, skill-root relative.
+
+    Skills are deployed as whole trees, so adding or restructuring reference
+    files must reach every skills root without touching the manifest.
+    """
+    skills_root = cli.REPO_ROOT / "templates" / "skills"
+    return [p.relative_to(skills_root) for p in sorted(skills_root.rglob("*.md"))]
+
+
 def _codex_profile_specs() -> list[cli.FileSpec]:
     """Codex profile files loaded by `codex --profile <name>`."""
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel.startswith(".codex/") and s.dest_rel.endswith(".config.toml")]
@@ -459,6 +469,28 @@ class SkillMetadataTests(unittest.TestCase):
             self.assertTrue(name.startswith("km-"), f"missing km- prefix: {name}")
             self.assertEqual(skill_file.parent.name, name)
 
+    def test_internal_reference_paths_resolve(self) -> None:
+        """A skill's cross-file loads must point at files that exist.
+
+        Skills hand reference files to the agent by path, so a dangling path
+        silently drops whatever rules that file was carrying — invisible in a
+        diff and invisible at runtime.
+        """
+        skills_root = cli.REPO_ROOT / "templates" / "skills"
+        # Backticked, skill-root-relative markdown paths: the form skills use to
+        # name a reference file. `<role>`-style placeholders stand for a set and
+        # are covered by the concrete siblings that resolve.
+        pattern = re.compile(r"`((?:references|reference|reviewers|evals|agents)/[^`]+\.md)`")
+        dangling: list[str] = []
+        for doc in sorted(skills_root.rglob("*.md")):
+            skill_dir = skills_root / doc.relative_to(skills_root).parts[0]
+            for rel in pattern.findall(doc.read_text(encoding="utf-8")):
+                if "<" in rel:
+                    continue
+                if not (skill_dir / rel).is_file():
+                    dangling.append(f"{doc.relative_to(cli.REPO_ROOT)} -> {rel}")
+        self.assertEqual(dangling, [])
+
     def test_colon_tokens_are_stable_protocol_markers_only(self) -> None:
         repo_root = cli.REPO_ROOT
         source_files = [repo_root / "README.md", repo_root / "CLAUDE.md"]
@@ -817,6 +849,14 @@ class InstallTests(unittest.TestCase):
         self._run_install()
         for sub in cli.INSTALL_HOME_DIRS:
             self.assertTrue((self.home / sub).is_dir())
+
+    def test_every_skill_doc_reaches_each_skills_root(self) -> None:
+        self._run_install()
+        docs = _skill_docs()
+        self.assertTrue(docs, "no managed skill docs found")
+        for root_rel in (".claude/skills", ".agents/skills"):
+            for rel in docs:
+                self.assertTrue((self.home / root_rel / rel).is_file(), f"missing: {root_rel}/{rel}")
 
     def test_creates_settings_json(self) -> None:
         self._run_install()
@@ -1736,7 +1776,8 @@ class QwenComponentTests(unittest.TestCase):
     def test_install_deploys_the_managed_artifacts(self) -> None:
         self._install(self.layout)
         self.assertTrue((self.home / ".qwen/QWEN.md").is_file())
-        self.assertTrue((self.home / ".qwen/skills/km-commit/SKILL.md").is_file())
+        for rel in _skill_docs():
+            self.assertTrue((self.home / ".qwen/skills" / rel).is_file(), f"missing: {rel}")
         settings = json.loads(
             (self.home / cli.QWEN_SETTINGS_DEST_REL).read_text(encoding="utf-8")
         )

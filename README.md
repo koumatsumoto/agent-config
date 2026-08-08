@@ -372,7 +372,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | スキル | 説明 |
 | --- | --- |
-| `km-review` | レビュー対象 (未コミット / コミット範囲 / PR / リポジトリ) を指定できる 1 回完結の独立診断レビュー。リスク軸から深さと起動するレビュア (architect / security / adversary) を自ら決め、独立レビュアの並列起動 → 並行して generalist レビュー → 統合と PASS 反証 → ドキュメントレビューの順に進めて `PASS` / `BLOCKED` を判定する |
+| `km-review` | 実装後のレビューが常に通る標準ワークフロー。対象 (未コミット / コミット範囲 / PR / サブツリー) を指定でき、main が反証・修正・再検証したうえで、残る material risk に独立レビュア (architect / product / reliability / security) を 0〜2 名だけ割り当てる。severity (CRITICAL / HIGH / MEDIUM / LOW) は影響度の可視化に使い、収束は未解決 blocker の有無だけで制御して `PASS` / `BLOCKED` を判定する |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub 管理 repo で変更を PR として届けるワークフロー (Plan / Develop / Verify / Report) と、branch / commit / PR / issue 連携 / follow-up issue / 完了報告の delivery 契約 |
