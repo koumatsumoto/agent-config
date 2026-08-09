@@ -373,6 +373,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 | スキル | 説明 |
 | --- | --- |
+| `km-japanese-refine` | 日本語の説明・指示文を、意味・契約・語調を保ったまま自然で明確かつ簡潔に推敲する。ユーザーが推敲、簡潔化、自然化を明示したときだけ起動し、表現上の改善と仕様変更を分ける |
 | `km-review` | 実装後のレビューが常に通る標準ワークフロー。対象 (未コミット / コミット範囲 / PR / サブツリー) を指定でき、main が反証・修正・再検証したうえで、残る material risk に独立レビュア (architect / product / reliability / security) を 0〜2 名だけ割り当てる。severity (CRITICAL / HIGH / MEDIUM / LOW) は影響度の可視化に使い、収束は未解決 blocker の有無だけで制御して `PASS` / `BLOCKED` を判定する |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
