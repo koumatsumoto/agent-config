@@ -87,11 +87,11 @@ pre code { background: none; padding: 0; }
 figure.diagram { position: relative; overflow: hidden; margin: 0 0 24px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); text-align: center; background: var(--bg); }
 figure.diagram .mermaid { display: flex; justify-content: center; cursor: grab; }
 figure.diagram.grabbing .mermaid { cursor: grabbing; }
-figure.diagram svg text { cursor: text; } /* ラベル上はテキスト選択カーソル（余白・ノードは grab で pan） */
-figure.diagram.grabbing { user-select: none; -webkit-user-select: none; } /* pan 中だけ選択を抑止し、通常はテキスト選択可 */
+figure.diagram svg text { cursor: text; } /* ラベル上はテキスト選択カーソル（余白とノードはドラッグで移動） */
+figure.diagram.grabbing { user-select: none; -webkit-user-select: none; } /* 移動中だけ選択を抑止し、通常はテキスト選択可 */
 figure.diagram svg { transition: transform .06s ease-out; flex-shrink: 0; } /* ズームは width/height で行う（ベクタ再描画で鮮明）。flex で縮めない */
 figure.diagram figcaption { margin-top: 10px; color: var(--fg-muted); font-size: 0.875rem; }
-/* 図ごとのツールバー（hover で表示）。JS が動的に挿入する */
+/* 図ごとのツールバー（ホバーで表示）。JavaScriptが動的に挿入する */
 .diagram-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
 figure.diagram:hover .diagram-tools, figure.diagram:focus-within .diagram-tools { opacity: 1; }
 .diagram-tools button { font-family: inherit; font-size: 0.72rem; line-height: 1.7; padding: 1px 8px; color: var(--fg-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }

@@ -1,14 +1,14 @@
 ---
 name: km-open-file
 description: ローカルのファイル / フォルダを Windows 側で開く（Windows / WSL Ubuntu のみ）。"ブラウザで開いて" / "エクスプローラで開いて" のときに使う。
-argument-hint: "[path]"
+argument-hint: "[パス]"
 ---
 
 # Open File
 
 ローカルのファイルやフォルダを Windows 側で開く。対応環境は **Windows (Git Bash)** と **WSL (Ubuntu)** のみ。標準コマンド（`uname` / `wslpath` / `cygpath` / `explorer.exe`）だけで動き、追加パッケージ（`wslview` 等）は前提にしない。
 
-開く手段は `explorer.exe` に統一し、対象の種類で扱いを分ける。これにより、開いたファイルがプログラムとして実行されることはない。
+開く手段は`explorer.exe`に統一し、対象の種類で扱いを分ける。HTML以外のファイルは直接実行しない。HTMLはブラウザ上のスクリプトが動く可能性を確認してから開く。
 
 - **フォルダ**: Explorer で開く
 - **`.html` / `.htm`**: 拡張子の関連付けで既定ブラウザに描画する
@@ -27,10 +27,10 @@ argument-hint: "[path]"
 
 ## 開き方
 
-`<path>` を対象に置き換えて、次の 1 ブロックをそのまま実行する。環境判定・パス正規化・存在確認・種別分岐はスクリプト内で行うため、WSL / Git Bash を呼び分ける必要はない。
+`<パス>` を対象に置き換えて、次の 1 ブロックをそのまま実行する。環境判定・パス正規化・存在確認・種別分岐はスクリプト内で行うため、WSL / Git Bash を呼び分ける必要はない。
 
 ```bash
-target='<path>'
+target='<パス>'
 
 # 実行環境でパス変換ツールを選ぶ（wslpath / cygpath は -u/-w/-- 互換）
 case "$(uname -s)" in
@@ -43,15 +43,15 @@ case "$target" in
   [A-Za-z]:[\\/]* | *\\*) target="$("$tool" -u -- "$target")" ;;
 esac
 
-[ -e "$target" ] || { echo "open-file: not found -> $target" >&2; exit 1; }
-winpath="$("$tool" -w -- "$target")" || { echo "open-file: path 変換に失敗 -> $target" >&2; exit 1; }
+[ -e "$target" ] || { echo "open-file: ファイルが見つかりません: $target" >&2; exit 1; }
+winpath="$("$tool" -w -- "$target")" || { echo "open-file: パス変換に失敗 -> $target" >&2; exit 1; }
 
 if [ -d "$target" ]; then
   explorer.exe "$winpath"                 # フォルダを開く
 elif [[ "${target,,}" == *.html || "${target,,}" == *.htm ]]; then
   explorer.exe "$winpath"                 # .html は関連付けで既定ブラウザに描画
 else
-  # Git Bash では先頭 / の引数が Windows パスへ変換されるのを防ぐ
+  # Git Bashでは先頭 / の引数が Windows パスへ変換されるのを防ぐ
   MSYS2_ARG_CONV_EXCL='*' explorer.exe /select,"$winpath"
 fi
 ```
@@ -61,7 +61,7 @@ fi
 
 ## Safety Rules
 
-- ファイルを実行しない。`.html` / `.htm` だけを関連付け（既定ブラウザ）で開き、それ以外のファイルは Explorer の選択表示にとどめる
-- `.html` / `.htm` を開くとブラウザで JavaScript が実行される。ユーザーが明示的に指定した / このセッションで生成した HTML だけを開く。取得元が不明・未検証の HTML（ダウンロード物・外部由来・第三者作成）や、未検証の外部 URL は開かない
+- HTML以外のファイルは実行せず、Explorerの選択表示にとどめる
+- HTMLを開く前に、作成元、外部資源、埋め込みスクリプト、秘密情報の有無を確認する。ユーザーが明示的に指定したHTMLまたはこのセッションで生成したHTMLだけを開く
 - 開く対象はユーザーが意図したローカルのパス / 既知のパスに限る
 - 対応は Windows (Git Bash) / WSL (Ubuntu) のみ。それ以外の環境は開かず「未対応」と伝えて止まる

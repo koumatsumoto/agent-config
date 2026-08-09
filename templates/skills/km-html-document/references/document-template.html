@@ -6,11 +6,9 @@
   <meta name="referrer" content="no-referrer">
   <!--
     Content Security Policy（meta で有効なディレクティブのみ）。
-    - 図の操作（ホイール拡縮 / WebP 画像化）に inline script を使うため script-src に 'unsafe-inline' を許可。
-      固定 CDN の mermaid と inline script だけを許可し、外部ホストの script は読み込まない。
-    - img-src blob: は SVG を canvas で画像化する時のローカル blob 用（外部画像は読み込まない）。スクショを埋める時は data: を足す。
-    - connect-src 'none' / default-src 'none' が外部 fetch/XHR/beacon を全面遮断し、データ送信を止める（egress の歯止め）。
-    - mermaid を更新する時は <script src> と script-src のバージョンパス、SRI(integrity) を同時に差し替える。
+    - 外部資源は固定版のMermaidだけを許可し、SRIで検証する。
+    - connect-srcとdefault-srcで外部送信を禁止し、img-srcは図の画像化に必要なblob:だけを許可する。
+    - Mermaidを更新するときは、script要素、CSPのバージョンパス、SRIを同時に変更する。
   -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/ 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src blob:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>ドキュメントタイトル</title>
@@ -82,12 +80,12 @@ flowchart TD
     </section>
 
     <footer class="doc-footer">
-      <p>Generated as a single self-contained HTML document.</p>
+      <p>単一の自己完結HTML文書として生成。</p>
     </footer>
 
   </div>
 
-  <!-- Mermaid（UMD all-in-one を バージョン固定 + SRI で読み込む。直後に挿入される document-template.js が初期化と図操作を行う。完全クライアント側で外部送信なし） -->
+  <!-- Mermaid（UMDオールインワン版をバージョン固定とSRI付きで読み込む。直後に挿入されるdocument-template.jsが初期化と図操作を行う。処理はクライアント内で完結し、外部送信は行わない） -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js" integrity="sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF" crossorigin="anonymous"></script>
   <!-- ビルドで document-template.js を <script> へ挿入する。このマーカーは残す -->
   <script>/* BUILD:INLINE document-template.js */</script>

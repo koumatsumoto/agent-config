@@ -6,7 +6,7 @@
 
 - `対象`: 入力として与えられた識別子
 - `種別 / ecosystem`: `npm` / `pip` / `vscode-extension` / `github-repo`
-- `Resolved Artifact`: 解決できた artifact（未解決なら `未特定`）
+- `Resolved Artifact`: 特定できた対象成果物（未解決なら `未特定`）
 - `Artifact Resolution Status`: `resolved` / `candidate` / `unresolved`
 - `Repository`: 解決済み GitHub repository URL（未解決なら `未特定`）
 - `最終判定`: `ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`
@@ -44,7 +44,7 @@
 
 1. `レビュー対象`
 2. `利用文脈`
-3. `artifact 解決結果`
+3. `対象成果物の特定結果`
 4. `最終判定`
 5. `主要な判断理由`
 6. `カテゴリ評価`
@@ -54,7 +54,7 @@
 10. `主要な証跡`
 11. `不確実性 / 未確認事項`
 
-`artifact 解決結果` では `resolved` / `candidate` / `unresolved` を明示し、`candidate` のときは候補と、それぞれが一次ソース上どう区別されているかを書く。
+`対象成果物の特定結果`では `resolved` / `candidate` / `unresolved` を明示し、`candidate` のときは候補と、それぞれが一次ソース上どう区別されているかを書く。
 
 ## Review Confidence
 
@@ -67,22 +67,22 @@
 主要指摘は次の形式に揃える。
 
 ```md
-## HIGH: install script に外部取得の兆候がある
+## HIGH: インストール処理に外部取得の兆候がある
 
-**観点**: execution / privilege surface
-**問題**: install 時に外部取得や shell 実行につながる挙動が疑われる。
-**根拠**: `package.json` の `scripts.postinstall` に外部 URL からの取得が含まれていた。確認日: 2026-04-19
-**推奨対応**: 本番採用は避け、少なくとも install scripts を無効化できる環境に限定して再評価する。
+**観点**: 実行権限と影響範囲
+**問題**: インストール時に外部取得やシェル実行につながる挙動が疑われる。
+**根拠**: `package.json` の `scripts.postinstall` に外部URLからの取得が含まれていた。確認日: 2026-04-19
+**推奨対応**: 本番採用は避け、少なくともインストール用スクリプトを無効化できる環境に限定して再評価する。
 ```
 
 ## 記述ルール
 
 - レポート本文は日本語で書く
-- 判定理由は原則 2-4 点、独立理由が増える場合は主要理由に畳む
+- 判定理由は原則 2〜4点、独立理由が増える場合は主要理由に畳む
 - 証跡には URL と絶対日付（`YYYY-MM-DD`）を付ける
 - 証跡が無いことが論点の場合は「該当なし（確認日: YYYY-MM-DD）」と明記する
 - `ALLOW_WITH_CONDITIONS` の条件は運用可能なものだけを書く。抽象的な注意喚起は避ける
 - `NEEDS_HUMAN_REVIEW` は不足情報と確認主体を書く
 - `REJECT` は拒否理由を `policy` / `vulnerability` / `provenance` / `behavior` / `privilege` に分類する
 - 「安全である」と断定せず、「確認できた範囲では」と「未確認事項」を分ける
-- `Artifact Resolution Status = unresolved` のレポート冒頭には「採用判定ではなく repository-level の暫定評価」と明示する
+- `Artifact Resolution Status = unresolved` のレポート冒頭には「採用判定ではなくリポジトリ単位の暫定評価」と明示する
