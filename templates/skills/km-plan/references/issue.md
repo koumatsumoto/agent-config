@@ -1,7 +1,5 @@
 # GitHub issue へのミラー
 
-同期するのは `READY` と判定した計画だけ。`BLOCKED` のまま新規 issue を作らず、公開済み issue も更新しない。
-
 ## 新規に出す
 
 1. `gh` が使えて GitHub 管理 repo であることを確かめる。不能なら原因（未インストール / 未認証 / 非 GitHub repo / ネットワーク）を区別して報告し、`.plan/` 出力で止める
@@ -16,4 +14,4 @@
 
 ## 反映後の再同期
 
-修正を反映したら `.plan/` を更新し、`gh issue edit <number> --body-file <plan-file>` で再同期する。本文には現在の設計理由と target state だけを残し、レビューの往復や改版の経緯は書かない（共有したいなら issue comment へ）。
+修正を反映したら `.plan/` を更新し、`gh issue edit <number> --body-file <plan-file>` で再同期する。本文には現在の設計理由と変更後の姿だけを残し、レビューの往復や改版の経緯は書かない（共有したいなら issue comment へ）。
