@@ -1,11 +1,6 @@
 ---
 name: km-review
-description: >
-  変更レビューの標準ワークフロー（未コミット差分 / コミット範囲 / PR / サブツリー）。main が対象全体を反証・修正・再検証し、
-  残った material risk にだけ独立レビュア（architect / product / reliability / security から 0〜2 名）を割り当てて
-  `PASS` / `BLOCKED` を判定する。実装後のレビューは軽微な変更でもここを通す（軽微なら独立レビュア 0 名と判定する）。
-  「レビューして」「PR をレビューして」「セキュリティ観点で見て」や、他 skill の Verify から起動する。
-  計画づくりは km-plan、PR delivery は km-github-workflow、挙動資産の変更効果の評価は km-skill-eval。
+description: 実装した変更（未コミット差分 / コミット範囲 / PR / サブツリー）に残る欠陥を洗い出し、完了してよいかを判定する。軽微な変更でもここを通す。「レビューして」「PR をレビューして」「セキュリティ観点で見て」や、他 skill の Verify から起動する。計画づくりは km-plan、PR delivery は km-github-workflow、挙動資産の変更効果の評価は km-skill-eval。
 argument-hint: "[target]"
 ---
 
