@@ -378,7 +378,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub 管理 repo で変更を PR として届けるワークフロー (Plan / Develop / Verify / Report) と、branch / commit / PR / issue 連携 / follow-up issue / 完了報告の delivery 契約 |
 | `km-skill-improve` | 挙動資産 (skill / rules / `CLAUDE.md` 等) の変更を実挙動の証拠に変換して採否を決める改善ループ。eval-first で題材を先に固定し、blind A/B・ablation・回帰再走で測り、使った題材を scenario bank に蓄積する |
-| `km-plan` | 実装計画を実装 agent へのゴール契約 (ゴール / 設計方針 / 反証可能な完了条件) として作り込み、`.plan/` への出力、第三者レビュー、GitHub issue への全文ミラーまでを行う |
+| `km-plan` | 複雑で手戻りのコストが大きい変更のための計画づくり。背景 / 現在地 / 設計判断とその理由 / 変更対象 / 反証可能な完了条件を持つ設計案を `.plan/` に作り、GitHub issue へ全文ミラーする。main が反証・修正したうえで、それでも残るリスクにだけ独立レビュアを 0〜2 名当て、未解決 blocker の有無で `READY` / `BLOCKED` を判定する。可逆な細部は固定せず実装時へ送る |
 
 ## ライセンス
 
