@@ -32,9 +32,9 @@ paths:
 - エラーは用途別のクラス階層で設計する。`instanceof` で判別し、`override readonly name` で識別可能にする
 - 凝集度を優先し、行数は分割を検討する目安にとどめる（おおよそ 300 行、800 行で肥大化を警戒）
 
-## Reactとフックのパターン
+## ReactとHooksのパターン
 
-- 複雑な状態管理（入力検証、遅延実行、楽観的更新）はカスタムフックへ分離する
+- 複雑な状態管理（入力検証、遅延実行、楽観的更新）はcustom Hookへ分離する
 - 完了を待たない処理のPromise には `void` 演算子を使う（`void navigate(...)`, `void queryClient.invalidateQueries(...)`）
 - コールバック内で最新の値を参照する必要がある場合は ref パターンを使う（`ref.current = latestValue` を毎レンダーで更新）
 

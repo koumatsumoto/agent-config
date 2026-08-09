@@ -22,7 +22,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。Qwen C
 - `templates/codex/*.config.toml` - Codex CLI用のプロファイルテンプレート（`~/.codex/<profile>.config.toml`）
 - `templates/codex-rules/` - Codex CLI 用 exec policy rules
 - `templates/statusline.py` - Claude Code 用 status line (リッチ 2 行レイアウト)
-- `templates/subagent-statusline.py` - Claude Code サブエージェント行の status line
+- `templates/subagent-statusline.py` - Claude Codeのsubagent status line
 - `templates/settings.json` - Claude Code向けの推奨`settings.json`（既存ファイルへは浅くマージ）
 - `templates/qwen-settings.json` - Qwen Code向けの推奨`settings.json`（`--qwen`指定時のみ利用。既存ファイルへは浅くマージ）
 
@@ -69,7 +69,7 @@ Python 3.9は、このリポジトリの互換性とCIの最低基準である�
 | --- | --- | --- |
 | Linux | `./install.sh` | POSIX権限の設定とPython 3.9以降の実行環境の探索 |
 | macOS | `./install.sh` | Linuxと同じPOSIX処理。標準bashで簡易動作確認 |
-| Windows | `python scripts/cli.py install` | NTFSではPOSIXモードを扱わず、ステータスラインはPython実行環境の絶対パスで起動 |
+| Windows | `python scripts/cli.py install` | NTFSではPOSIXモードを扱わず、status lineはPython実行環境の絶対パスで起動 |
 
 WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環境では同じ検出処理で`python`を選ぶ。WSLはLinuxとして扱う。
 
@@ -182,7 +182,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 | キー | 値 | 目的 |
 | --- | --- | --- |
 | `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`)。OS 別に書き換え (下記) | リポジトリ同梱のリッチ status line を有効化する |
-| `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | サブエージェント行を自前描画する |
+| `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | subagent行を自前描画する |
 | `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止と `Bash(npx *)` | 機密ファイルへのアクセスを既定で遮断する |
 | `permissions.defaultMode` | `"auto"` | セッションを既定で auto mode で開始する（classifier が安全な操作を自動承認する） |
 | `language` | `"日本語"` | 応答言語を日本語に固定する |
@@ -290,7 +290,7 @@ python scripts/cli.py clean
 ## Maintained Docs
 
 - `docs/claude-code-best-practices-202604.md`
-  - Claude Code の `CLAUDE.md`、rule、skill、サブエージェント、hook、設定を扱う 2026-08 時点のリファレンス
+  - Claude Codeの`CLAUDE.md`、Rules、Skills、Subagents、Hooks、Settingsを扱う2026-08時点のリファレンス
 - `docs/python-best-practices-202604.md`
   - Python 3.14 / Pyright / Ruff を前提にした 2026-08 時点のリファレンス
 - `docs/typescript-best-practices-202604.md`

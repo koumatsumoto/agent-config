@@ -6,7 +6,7 @@
 >
 > 調査範囲: Claude Code公式文書、公式変更履歴、Claude Opus 4.7の公開情報
 
-2026年8月9日にClaude Code公式文書とOpus 4.7の公開情報を再確認し、`CLAUDE.md`、ルール、skill、サブエージェント、フック、設定の設計判断を簡潔に整理した。モデル前提はClaude Opus 4.7である。
+2026年8月9日にClaude Code公式文書とOpus 4.7の公開情報を再確認し、`CLAUDE.md`、Rules、Skills、Subagents、Hooks、Settingsの設計判断を簡潔に整理した。モデル前提はClaude Opus 4.7である。
 
 ## 参照した一次情報
 
@@ -29,7 +29,7 @@
 - ルート `CLAUDE.md` は毎セッション読み込まれる。ネストした `CLAUDE.md` は該当ディレクトリのファイルを触るときに遅延読み込みされる
 - `CLAUDE.local.md` は同階層で `CLAUDE.md` の後に読まれる
 - HTML コメントは注入時に除去されるため、人間向けメモに使える
-- 自動メモリは`CLAUDE.md`の代替ではない。Claudeが発見した学習メモの保存先として使う
+- Auto memoryは`CLAUDE.md`の代替ではない。Claudeが発見した学習メモの保存先として使う
 
 ### Opus 4.7 前提の補足
 
@@ -42,11 +42,11 @@
 - ビルド、テスト、デプロイ、レビューのような反復手順はskill化を優先する
 - モノレポで不要な `CLAUDE.md` が混ざるなら `claudeMdExcludes` を使う
 
-## 2. ルール
+## 2. Rules
 
 - `.claude/rules/*.md`はトピック別、またはパスで適用範囲を限定する指示に向く
 - 基点の`CLAUDE.md`に全ルールを押し込まず、対象ファイルが限定される内容はルールに切り出す
-- `InstructionsLoaded`フックがあるため、どの理由でルールが読まれたか観測できる
+- `InstructionsLoaded` hookがあるため、どの理由でルールが読まれたか観測できる
 - ルールもコンテキスト予算を消費する。1ファイル1責務を守る
 
 ### 実務上の指針
@@ -55,7 +55,7 @@
 - 言語別・領域別・path 条件付きの規約はルール
 - 人間向け補足や背景説明はルールに長く書かず、別の文書へ移す
 
-## 3. Skill
+## 3. Skills
 
 - Claude Codeではカスタムコマンドがskillに統合された
 - skillは「毎回読み込む指示」ではなく、「必要なときだけ読み込む手順書」として使う
@@ -74,34 +74,34 @@
 
 - これは公式仕様ではなく運用上の推論だが、Opus 4.7の指示追従と長時間タスク適性を踏まえると、レビューやコミットのskillでは検証手順を明文化した方が挙動が安定しやすい
 
-## 4. サブエージェント
+## 4. Subagents
 
 - Claude Code には built-in の Explore / Plan などがあり、必要に応じて自動委譲される
-- custom サブエージェントは markdown + frontmatter で定義できる
-- サブエージェントは専用の context window、tool 制限、model、permission mode を持てる
+- custom subagentはmarkdown + frontmatterで定義できる
+- subagentは専用のcontext window、tool制限、model、permission modeを持てる
 - 大量の探索ログを親コンテキストに流したくないときに有効
 - foreground / background 実行を選べる
-- サブエージェントは副次的な作業を分離するためのもの。ネスト前提の複雑なオーケストレーションには向かない
+- subagentは副次的な作業を分離するためのもの。ネスト前提の複雑なオーケストレーションには向かない
 
 ### 実務上の指針
 
-- 読み取り専用探索はサブエージェントへ分離しやすい
-- 定型的な専門レビューは custom サブエージェントの候補になる
-- ただし「毎回必要な project rule」はサブエージェントではなく `CLAUDE.md` / ルール / skill で表現する
+- 読み取り専用探索はsubagentへ分離しやすい
+- 定型的な専門レビューはcustom subagentの候補になる
+- ただし「毎回必要なproject rule」はsubagentではなく`CLAUDE.md` / ルール / skillで表現する
 
 ### Opus 4.7 前提の補足
 
 - 以下は一次情報からの直接記述ではなく、公開されたモデル特性と Claude Code 機能拡張を踏まえた運用上の推論
-- Opus 4.7 は長時間の複数段階作業と役割への忠実性が強く、サブエージェントを使う場合も「役割」「停止条件」「返却形式」を明確にする
-- モデル性能が上がったぶん、曖昧なレビュアや計画担当を作るより、用途を狭めたサブエージェントの方が扱いやすい
+- Opus 4.7は長時間の複数段階作業と役割への忠実性が強く、subagentを使う場合も「役割」「停止条件」「返却形式」を明確にする
+- モデル性能が上がったぶん、曖昧なレビュアや計画担当を作るより、用途を狭めたsubagentの方が扱いやすい
 
-## 5. フック
+## 5. Hooks
 
-- フックは command / http / prompt / agent の4種類がある
+- hookはcommand / http / prompt / agentの4種類がある
 - scope は user / project / local / plugin / session / built-in に分かれる
 - 長時間処理は `async: true` でバックグラウンド化できる
 - `InstructionsLoaded`、`PreToolUse`、`PostToolUse`、`TaskCompleted` など event が多いので、まずは目的を絞る
-- フックは自動化の威力が高い一方、誤設定時の副作用も大きい
+- hookは自動化の威力が高い一方、誤設定時の副作用も大きい
 
 ### 実務上の指針
 
@@ -110,7 +110,7 @@
 - command hookでは PATH 固定、入力サニタイズ、タイムアウト設定を徹底する
 - 非同期 hook は制御を返せないので、blocking validation と background observability を分ける
 
-## 6. 設定とOutput Styles
+## 6. Settings / Output Styles
 
 - `settings.json` と `~/.claude.json` の役割は異なる。global-only 設定を `settings.json` に書くと schema error になる
 - `editorMode`、`outputStyle`、`tui`、`useAutoModeDuringPlan` などは設定側の責務
@@ -132,7 +132,7 @@
 ### 実務上の指針
 
 - ここから先は 2026-04 の一次情報を踏まえた運用上の整理であり、仕様そのものではない
-- Opus 4.7ではレビュー、計画、サブエージェントの指示を以前より短くできる一方、曖昧な裁量指示は減らす
+- Opus 4.7ではレビュー、計画、subagentの指示を以前より短くできる一方、曖昧な裁量指示は減らす
 - 深い review を常設 instruction に埋め込まず、必要時に skill や `/ultrareview` へ切り出す
 - 長時間タスク向けの設定は「無確認で危険操作する」こととは分けて設計する
 
@@ -140,17 +140,17 @@
 
 - Plan Mode は「探索と実装を分離する」ために使う。明確な小変更では過剰になりうる
 - 自動 checkpoint / rewind があるため、危険な試行の前に過度に保守的になる必要はない
-- skillとサブエージェントが役割分担できるようになり、`CLAUDE.md` に長い手順を書く必要はさらに薄くなった
+- skillとsubagentが役割分担できるようになり、`CLAUDE.md`に長い手順を書く必要はさらに薄くなった
 - output styles は coding policyではなく、会話の出力レイヤだと整理する
-- フックとサブエージェントは強力だが、導入コストも高い。まずは短い `CLAUDE.md` と skill の整理から着手するのが安定する
+- hookとsubagentは強力だが、導入コストも高い。まずは短い`CLAUDE.md`とskillの整理から着手するのが安定する
 
 ## 9. 推奨チェックリスト
 
 - `CLAUDE.md` に手順が増えすぎていないか
 - path 条件付きの知識がルールに分離されているか
 - 長い作業手順をskillへ分離しているか
-- サブエージェントには本当にコンテキスト分離の価値があるか
-- フックは最小権限・最小副作用で構成されているか
+- subagentには本当にコンテキスト分離の価値があるか
+- hookは最小権限・最小副作用で構成されているか
 - output style に project rule を混ぜていないか
 
 ## 出典

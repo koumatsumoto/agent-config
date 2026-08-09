@@ -2,7 +2,7 @@
 
 > 任意の参考資料。実行時契約ではない。この文書は導入可能なカスタマイズ例をまとめた参考資料であり、必須設定を定義しない。
 >
-> 確認日: 2026-08-09（Claude Code公式の設定、権限モード、出力形式の文書を確認）
+> 確認日: 2026-08-09（Claude Code公式のSettings、Permission modes、Output Stylesの文書を確認）
 
 
 Claude Codeのターミナル表示をカスタマイズする方法と、安全に運用するための注意点を説明する。
@@ -11,14 +11,14 @@ Claude Codeのターミナル表示をカスタマイズする方法と、安全
 
 |カテゴリ|設定ファイル|概要|
 |---|---|---|
-|ステータスライン|`~/.claude/statusline.py` + `settings.json`|画面下部にモデル・コンテキスト・コスト等を常時表示|
+|Status line|`~/.claude/statusline.py` + `settings.json`|画面下部にモデル・コンテキスト・コスト等を常時表示|
 |`Output Styles`（応答形式）|`~/.claude/output-styles/*.md`または`/config`|応答形式の変更|
-|フック|`settings.json`|イベント駆動の自動処理（フォーマットなど）|
-|Vimモード|`settings.json`|プロンプト入力欄でのVimキーバインド|
+|Hooks|`settings.json`|イベント駆動の自動処理（フォーマットなど）|
+|Vim mode|`settings.json`|プロンプト入力欄でのVimキーバインド|
 
-## 1. ステータスライン
+## 1. Status line
 
-`settings.json` に以下を追加し、スクリプトを配置する。本リポジトリのステータスラインは Python 実装 (`templates/statusline.py`) で、Linux / macOS / Windows で動く。
+`settings.json`に次の設定を追加し、スクリプトを配置する。本リポジトリのstatus lineはPython実装（`templates/statusline.py`）で、Linux / macOS / Windowsで動く。
 
 ```json
 {
@@ -64,7 +64,7 @@ Claude Codeのターミナル表示をカスタマイズする方法と、安全
 - **POSIX はチルダ (`~`) パスで可搬性を確保**: `command` を `~/.claude/statusline.py` とし、shebang (`#!/usr/bin/env python3`) + 実行ビットで起動する。shebang の改行が CRLF になると `env` が `python3\r` を探して `exit 127` で失敗するため、`.gitattributes` で全テキストを LF 固定し、Windows clone（`core.autocrlf=true`）での LF→CRLF 変換を防ぐ。ネイティブ Windows は shebang を解釈できないため `install.sh` が Python を明示した `command` に置換する（前節参照）
 - **git 環境変数をクリアする**: `GIT_DIR` 等を unset し、悪意あるリポジトリからの config / repo 差し替えを防ぐ
 - **外部入力をサニタイズする**: モデル名・ブランチ名等の制御文字・ANSI エスケープを除去してから出力する
-- **高速・低負荷に保つ**: ステータスラインは高頻度（300ms デバウンス）で実行されるため、git 結果は `session_id` キーで数秒キャッシュする
+- **高速・低負荷に保つ**: status lineは高頻度（300msデバウンス）で実行されるため、gitの結果は`session_id`キーで数秒キャッシュする
 
 ## 2. Output Styles
 
@@ -90,7 +90,7 @@ keep-coding-instructions: true
 カスタム指示をここに記述。
 ```
 
-## 3. フック
+## 3. Hooks
 
 `settings.json` の `hooks` セクションでイベント駆動の自動処理を設定する。
 
@@ -102,7 +102,7 @@ keep-coding-instructions: true
 |`PostToolUse`|ツール実行後|コードの自動フォーマット|
 |`Stop`|応答完了時|ログ記録・後処理|
 
-### フックのセキュリティ注意事項
+### hookのセキュリティ注意事項
 
 - **外部コマンドはフルパスで指定する**: 特に Windows 環境（Git Bash / WSL2）の `powershell.exe` は PATH 汚染で偽バイナリが実行される可能性がある
 - **matcher は必要なイベントに絞る**: 空文字列 (`""`) は全イベントにマッチし、高頻度でプロセスが起動される
@@ -118,16 +118,16 @@ chmod 700 ~/.claude/statusline.py
 chmod 700 ~/.claude/subagent-statusline.py
 ```
 
-`~/.claude/`配下にはフックコマンド、権限設定、認証情報などが含まれるため、他のユーザーからの読み取りを防止する。`install.sh`はディレクトリと`statusline.py`、`subagent-statusline.py`の権限を自動設定する。`settings.json`は`install.sh`による浅いマージの対象で、`chmod 600`の権限で書き込まれる。
+`~/.claude/`配下にはhookコマンド、権限設定、認証情報などが含まれるため、他のユーザーからの読み取りを防止する。`install.sh`はディレクトリと`statusline.py`、`subagent-statusline.py`の権限を自動設定する。`settings.json`は`install.sh`による浅いマージの対象で、`chmod 600`の権限で書き込まれる。
 
 ### 多層防御の考え方
 
 Claude Codeのセキュリティには、次の防御を組み合わせる。
 
 1. **サンドボックス** (`sandbox.enabled: true` または `/sandbox` コマンド): OS レベルでファイルシステムとネットワークを隔離。最も強力な防御
-2. **パーミッションモード** (`defaultMode`): ツール実行の承認フロー
+2. **Permission modes**（`defaultMode`）: ツール実行の承認フロー
 3. **許可・拒否リスト**: ベストエフォートのコマンドフィルタ
-4. **フック**（`PreToolUse`）: プログラムによるツール実行制御
+4. **Hooks**（`PreToolUse`）: プログラムによるツール実行制御
 
 **重要**: 拒否リストだけでは安全ではない。制約の詳細は「permissions.denyの注意事項」を参照。強固な隔離が必要な場合はサンドボックス（`sandbox.enabled: true`）を使用すること。
 
@@ -146,7 +146,7 @@ Claude Codeのセキュリティには、次の防御を組み合わせる。
 |`xargs *`|任意コマンドの間接実行（拒否リストの迂回）|
 |`chmod *`（無制限）|`chmod 000` でファイルアクセス除去|
 |`pip install *` / `npm install *`|サプライチェーン攻撃（インストール時の任意コード実行）|
-|`git clone *`|post-checkout フック経由の任意コード実行|
+|`git clone *`|post-checkout hook経由の任意コード実行|
 
 #### 推奨: サブコマンド単位で許可
 
@@ -173,7 +173,7 @@ Claude Codeのセキュリティには、次の防御を組み合わせる。
 - **Bash内のコマンドにはRead/Editの拒否設定が無効**: `cat`、`python -c`などで回避できる
 - **未知のコマンドには無力**: 拒否リストにないコマンド（`shred`、`truncate`など）は通過する
 
-より確実に防ぐには、`PreToolUse`フックでプログラムからブロックするか、サンドボックスを使用する。
+より確実に防ぐには、`PreToolUse` hookでプログラムからブロックするか、サンドボックスを使用する。
 
 次は一般的な危険パターンの拒否例:
 
@@ -219,7 +219,7 @@ Claude Codeのセキュリティには、次の防御を組み合わせる。
 |`auto`|バックグラウンド安全性分類器でリクエストとの整合性を検証し自動承認（試験提供）|信頼度の高い自動ワークフロー|
 |`bypassPermissions`|全承認プロンプトをスキップ（`.git`, `.claude` 等への書き込みは除く）。コンテナ/VM 等の隔離環境専用|完全隔離された CI/CD 環境|
 
-各モードは単純な強弱ではなく、利用可能な操作と承認方法が異なる。選択時は公式の権限モード一覧を確認する。
+各モードは単純な強弱ではなく、利用可能な操作と承認方法が異なる。選択時は公式のPermission modes一覧を確認する。
 
 ### 追加のセキュリティ考慮事項
 
@@ -228,7 +228,7 @@ Claude Codeのセキュリティには、次の防御を組み合わせる。
 悪意のあるリポジトリの CLAUDE.md やファイル内容にプロンプトインジェクションが含まれている場合、Claude に設定ファイルを書き換えさせる攻撃が理論的に可能。対策:
 
 - 信頼できないリポジトリでは `plan` モードで初期探索する
-- `ConfigChange` フックで設定変更を監査・ブロックする
+- `ConfigChange` hookで設定変更を監査・ブロックする
 - `.claude/settings.json` への書き込みは Claude Code が確認プロンプトを表示する（`bypassPermissions` モード以外）
 
 #### Windows 環境の注意（Git Bash / WSL2 共通）
@@ -243,7 +243,7 @@ Windows 上で Claude Code を使用する場合、環境に応じた考慮が�
 
 **WSL2:**
 - `/mnt/c/` 経由で Windows ファイルシステムにアクセス可能。Bash コマンドで Windows 側のファイルを読み書きできる
-- フックで Windows プロセス（powershell.exe 等）を起動すると、Windows 側から `\\wsl$\` 経由で WSL2 ファイルシステムにアクセス可能
+- hookでWindowsプロセス（powershell.exeなど）を起動すると、Windows側から`\\wsl$\`経由でWSL2ファイルシステムにアクセス可能
 - サンドボックスの `allowRead` / `allowWrite` で `/mnt/c/` へのアクセスを制限することを推奨
 - **Python**: 多くの WSL2 ディストリビューションでは `python3` がデフォルトで利用可能。`statusline.py` は標準ライブラリのみで動作する
 
