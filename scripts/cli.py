@@ -170,6 +170,7 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "html-document",
     "intent-review",
     "kaizen",
+    "km-skill-improve",
     "open-file",
     "open-html",
     "plan",
