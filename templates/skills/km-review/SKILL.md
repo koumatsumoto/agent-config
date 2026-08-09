@@ -5,7 +5,7 @@ description: >
   残った material risk にだけ独立レビュア（architect / product / reliability / security から 0〜2 名）を割り当てて
   `PASS` / `BLOCKED` を判定する。実装後のレビューは軽微な変更でもここを通す（軽微なら独立レビュア 0 名と判定する）。
   「レビューして」「PR をレビューして」「セキュリティ観点で見て」や、他 skill の Verify から起動する。
-  計画づくりは km-plan、PR delivery は km-github-workflow、挙動改善の効き目検証は km-skill-improve。
+  計画づくりは km-plan、PR delivery は km-github-workflow、挙動資産の変更効果の評価は km-skill-eval。
 argument-hint: "[target]"
 ---
 

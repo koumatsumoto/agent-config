@@ -34,7 +34,7 @@ Claude Code / Codex CLI / Qwen Code の共通設定テンプレートを管理�
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
 - `scripts/tests/` - `scripts/cli.py` の unittest
-- `evals/` - 挙動資産ごとの scenario bank。配布対象ではなく、`km-skill-improve` で改善を検証するときの材料
+- `evals/` - 挙動資産ごとの scenario bank。配布対象ではなく、`km-skill-eval` で回帰評価するときの任意材料
 - `docs/` - 保守対象の参考ドキュメント
 - `.github/workflows/` - GitHub Actions CI 設定
 - `.claude/` - このリポジトリ自身の Claude Code 設定
@@ -377,7 +377,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub repo の採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub 管理 repo で変更を PR として届けるワークフロー (Plan / Develop / Verify / Report) と、branch / commit / PR / issue 連携 / follow-up issue / 完了報告の delivery 契約 |
-| `km-skill-improve` | 挙動資産 (skill / rules / `CLAUDE.md` 等) の変更を実挙動の証拠に変換して採否を決める改善ループ。eval-first で題材を先に固定し、blind A/B・ablation・回帰再走で測り、使った題材を scenario bank に蓄積する |
+| `km-skill-eval` | 挙動資産 (skill / rules / `CLAUDE.md` 等) の変更効果を実シナリオで評価する。ユーザーの明示指示か評価案への同意があるときだけ起動し、問いに応じてシナリオ評価 / 回帰評価 / 比較評価 / 実走不要を選ぶ。実挙動は分離したコンテキストで生成し、結論は意思決定の材料として返す (対象の自動採用・自動編集はしない) |
 | `km-plan` | 複雑で手戻りのコストが大きい変更のための計画づくり。背景 / 現在地 / 設計判断とその理由 / 変更対象 / 反証可能な完了条件を持つ設計案を `.plan/` に作り、GitHub issue へ全文ミラーする。main が反証・修正したうえで、それでも残るリスクにだけ独立レビュアを 0〜2 名当て、未解決 blocker の有無で `READY` / `BLOCKED` を判定する。可逆な細部は固定せず実装時へ送る |
 
 ## ライセンス
