@@ -4,14 +4,15 @@
 // foreignObject 入り SVG は canvas 描画時に汚染され toBlob が失敗するため、WebP 化を成立させるのに必須。
 mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: false, flowchart: { htmlLabels: false } });
 
-// 図の操作（完全クライアント側・外部送信なし）。各 figure.diagram に付与する:
-// - Ctrl+ホイールまたは ＋ / − ボタンで拡大 / 縮小、ドラッグで移動、ダブルクリック / リセットボタンで初期化
-// - WebP ボタンで SVG を canvas 経由のラスタ画像にして別タブで開く（ポップアップ抑止時はダウンロード）
-// mermaid は load 時に非同期描画するため、ハンドラは figure に張り SVG はイベント時に都度取得する（描画タイミングに依存しない）。
+// 図の操作（クライアント内で完結し、外部送信なし）。各figure.diagramに次の操作を付与する:
+// - Ctrl+ホイールまたは＋ / −ボタンで拡大・縮小する
+// - ドラッグで移動し、ダブルクリックまたはリセットボタンで初期化する
+// - WebPボタンでSVGをラスタ画像に変換して別タブで開く。ポップアップが抑止された場合はダウンロードする
+// mermaidは読み込み時に非同期描画するため、ハンドラはfigureに張り、SVGはイベント時に都度取得する（描画タイミングに依存しない）。
 (() => {
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-  // SVG を指定 MIME のラスタ画像にして別タブで開く。img-src blob: で blob を許可している
+  // SVGを指定MIMEのラスタ画像にして別タブで開く。img-srcのblob:でBlob URLを許可している
   const openAsImage = (svg, mime, ext) => {
     const box = svg.viewBox && svg.viewBox.baseVal;
     const rect = svg.getBoundingClientRect();
@@ -20,7 +21,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     const clone = svg.cloneNode(true);
     clone.setAttribute('width', w);
     clone.setAttribute('height', h);
-    // 画面表示用のズーム/パン（inline の width/height/maxWidth/transform）を画像へ持ち込まない
+    // 画面表示用の拡大縮小と移動（要素内のwidth/height/maxWidth/transform）を画像へ持ち込まない
     clone.style.width = '';
     clone.style.height = '';
     clone.style.maxWidth = '';
@@ -39,7 +40,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         canvas.toBlob((blob) => {
-          if (!blob) { console.error('diagram export: toBlob が null（canvas 上限超過 / 形式未対応の可能性）'); return; }
+          if (!blob) { console.error('図の書き出し: toBlobがnull（canvas上限超過または形式未対応の可能性）'); return; }
           const url = URL.createObjectURL(blob);
           const win = window.open(url, '_blank');
           if (!win) { // ポップアップブロック時はダウンロードにフォールバック
@@ -50,12 +51,12 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
           }
         }, mime);
       } catch (err) {
-        console.error('diagram export に失敗', err); // 例: foreignObject 等で canvas が汚染された場合
+        console.error('図の書き出しに失敗', err); // 例: foreignObjectなどでcanvasが汚染された場合
       } finally {
         URL.revokeObjectURL(svgUrl);
       }
     };
-    img.onerror = () => { URL.revokeObjectURL(svgUrl); console.error('diagram export: SVG 画像の読み込みに失敗'); };
+    img.onerror = () => { URL.revokeObjectURL(svgUrl); console.error('図の書き出し用SVGを読み込めませんでした'); };
     img.src = svgUrl;
   };
 
@@ -92,9 +93,9 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
 
     let drag = null;
     fig.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return; // 主ボタンのみ（右/中クリックで pan を始めない）
+      if (e.button !== 0) return; // 主ボタンのみ（右・中クリックで移動を始めない）
       if (e.target.closest('.diagram-tools')) return;
-      // 図ラベル・キャプションのテキスト上では選択を優先し pan しない。余白・ノード・エッジ上だけ pan する
+      // 図ラベルとキャプションのテキスト上では選択を優先し、移動しない。余白、ノード、エッジ上だけ移動する
       if (e.target.closest('text, tspan, foreignObject, figcaption')) return;
       e.preventDefault(); // 余白からのドラッグでテキスト選択が始まるのを抑止する
       drag = { x: e.clientX - view.x, y: e.clientY - view.y };
@@ -110,7 +111,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     const endDrag = () => { drag = null; fig.classList.remove('grabbing'); };
     fig.addEventListener('pointerup', endDrag);
     fig.addEventListener('pointercancel', endDrag);
-    window.addEventListener('pointerup', endDrag); // capture 失敗時も、図の外で離せば pan を終える保険
+    window.addEventListener('pointerup', endDrag); // captureに失敗しても、図の外で離せば移動を終える
     fig.addEventListener('dblclick', reset);
 
     // 印刷時はズーム/パンを一時解除して自然サイズで刷り、印刷後に画面の表示を復元する
@@ -146,7 +147,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', htmlLabels: fal
     fig.appendChild(tools);
   };
 
-  // mermaid の描画完了は待たない: figure は静的に存在するので load 時にハンドラを張る
+  // mermaidの描画完了は待たない。figureは静的に存在するため、読み込み時にハンドラを張る
   window.addEventListener('load', () => {
     document.querySelectorAll('figure.diagram').forEach(enhance);
   });

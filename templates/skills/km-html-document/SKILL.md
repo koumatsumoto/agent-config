@@ -1,25 +1,23 @@
 ---
 name: km-html-document
-description: Renders already-prepared content as a single security-hardened HTML document (1400px layout, Mermaid diagrams); 内容そのものは決めない。Use when the user says "HTML にして" / "HTML のレポート" / "HTML 文書にして"。
+description: 用意済みの内容を、安全対策済みの単一HTML文書にする。「HTMLレポートにして」などの依頼で使い、内容自体は決めない。
 argument-hint: "[topic | output-path.html]"
 ---
 
 # HTML Document
 
-用意済みの内容を、単一の自己完結 HTML 文書として組む。扱うのは HTML のレイアウト・見た目・図・セキュリティ基盤だけで、**内容（何を書くか・どう構成するか）は決めない**（内容は呼び出し側が決める）。
-
-骨組み HTML に本文を流し込み、最後に `build.js` で CSS/JS を挿入して単一ファイルにする。CSS/JS 本体は読まずビルドに任せるので、本文作成のコンテキストを軽く保てる。
+用意済みの本文をHTMLへ組み、レイアウト、図、安全対策だけを担う。本文の内容と構成は呼び出し側が決める。骨組みHTMLへ本文を流し込み、最後に`build.js`でCSSとJavaScriptを挿入して単一ファイルにする。
 
 ## Context
 
-- Output dir: !`pwd`
-- Today: !`date +%Y-%m-%d`
+- 出力先: !`pwd`
+- 日付: !`date +%Y-%m-%d`
 
 ## Files（`references/`）
 
 | ファイル | 役割 | 本文作成時 |
 | --- | --- | --- |
-| `document-template.html` | 骨組み（CSP・レイアウト・`BUILD:INLINE` マーカー） | 読む / 編集する |
+| `document-template.html` | 骨組み（CSP・レイアウト・`BUILD:INLINE` マーカー） | 読む・編集する |
 | `document-template.css` | スタイル | 読まない（ビルドが挿入） |
 | `document-template.js` | mermaid 初期化・図操作（拡縮・WebP 化） | 読まない（ビルドが挿入） |
 | `build.js` | マーカーを CSS/JS で置換し単一 HTML を生成 | 実行する |
@@ -39,13 +37,13 @@ argument-hint: "[topic | output-path.html]"
 
 - 骨組み HTML に CSS/図操作 script をビルド挿入した単一 HTML を出力する
 - コンテンツ幅 1400px・中央寄せで表示される
-- 受動的な外部送信（fetch/XHR/beacon・外部 img/script）が起きない（`connect-src 'none'` 等、script/img に外部ホストを持たない）
+- 受動的な外部送信（fetch/XHR/beacon・外部 img/script）が起きない（`connect-src 'none'` 等、スクリプトと画像に外部ホストを持たない）
 - 図が自動描画され、Ctrl+ホイール / ＋−ボタンで拡縮・ドラッグ移動でき、WebP で別タブに開ける
-- ブラウザで開いて CSP 違反・SRI mismatch・実行時エラーが出ない
+- ブラウザで開き、CSP違反、SRI不一致、実行時エラーがないことを確認する
 
 ## Safety Rules
 
 - ローカル `file://` 閲覧を前提とする（HTTP 配信のヘッダ防御は対象外）
 - 既存ファイルは上書き前に確認する
 - 本文の内容そのものを作るのは責務外。内容生成は呼び出し側に委ねる
-- CSP の egress 歯止め（`default-src` / `connect-src 'none'` 等）と `BUILD:INLINE` マーカーを壊さない（詳細は `references/authoring-guide.md`）
+- CSPによる外部送信の防止策（`default-src` / `connect-src 'none'`など）と`BUILD:INLINE`マーカーを壊さない（詳細は`references/authoring-guide.md`）

@@ -1,11 +1,11 @@
 # Tests
 
-`scripts/cli.py`（install / clean / verify / merge と fs ヘルパ）の unittest。
+`scripts/cli.py` の `install`、`clean`、`verify`、`merge` と、ファイル操作ヘルパーを対象とする単体テスト。
 サポート対象は Linux / macOS / Windows。
 
 ## 実行
 
-`scripts/` を import のトップレベルに指定して discover する:
+`scripts/` をインポートの基点に指定して、テストを自動検出する。
 
 ```bash
 # Linux / macOS
@@ -17,4 +17,4 @@ python3 -m unittest discover -s scripts/tests -t scripts
 python -m unittest discover -s scripts/tests -t scripts
 ```
 
-CI (`.github/workflows/tests.yml`) は `ubuntu-latest` / `macos-latest` / `windows-latest` の Python 3.9 / 3.12 / 3.13 マトリクスで、unittest と bash wrapper の smoke test を実行する。
+CI（`.github/workflows/tests.yml`）は各 OS と Python 3.9 / 3.12 / 3.13 の組み合わせで、単体テストとシェルラッパーの基本動作を確認する。

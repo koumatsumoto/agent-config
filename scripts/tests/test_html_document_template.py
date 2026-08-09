@@ -43,7 +43,7 @@ JS = REF / "document-template.js"
 BUILD_JS = REF / "build.js"
 
 def _marker(name: str) -> str:
-    # build.js を真実源にしてマーカー定数を抽出する（テスト側に複製して drift させない）。
+    # build.js を正本にしてマーカー定数を抽出する（テスト側に複製して drift させない）。
     src = BUILD_JS.read_text(encoding="utf-8")
     match = re.search(rf"{name} = '([^']*)'", src)
     assert match is not None, f"{name} not found in build.js"
@@ -55,7 +55,7 @@ JS_MARKER = _marker("JS_MARKER")
 
 
 def _assemble(skeleton: str, css: str, js: str) -> str:
-    """build.js と同じく <style>/<script> タグごと置換してアセンブルする（不変条件チェック用）。"""
+    """build.js と同じく <style>/<script> タグごと置換して組み立てる（不変条件チェック用）。"""
     css_tag = f"<style>{CSS_MARKER}</style>"
     js_tag = f"<script>{JS_MARKER}</script>"
     return skeleton.replace(css_tag, f"<style>\n{css}\n</style>").replace(

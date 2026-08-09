@@ -2,24 +2,24 @@
 set -euo pipefail
 
 # pack-md.sh
-# AI に渡す前の Markdown から、意味を持ちにくい空白や装飾を減らす。
+# AIへ渡すMarkdownから、意味に影響しない空白と装飾を減らす。
 #
 # 何をするか:
 # - 連続空行を 1 行に圧縮
 # - コードフェンス外の HTML コメントを削除
 # - テーブルの `| cell |` を `|cell|` に圧縮
 # - 末尾空白を整理（Markdown hard break の 2 スペースは保持）
-# - fenced code block と YAML front matter は保持
+# - コードフェンスと YAML フロントマターは保持
 #
 # 想定用途:
-# - 人間向けの元ファイルはそのままにして、AI 入力用の packed 版だけ作る
+# - 人間向けの元ファイルはそのままにして、AI入力用の圧縮版だけ作る
 # - `./scripts/pack-md.sh input.md > input.llm.md`
 # - `./scripts/pack-md.sh -i README.md`
 #
 # 非対象:
-# - 人間向け formatter の置き換え
+# - 人間向け整形ツールの置き換え
 # - テーブルを箇条書きへ変換するような構造変更
-# - Markdown 仕様を完全保持した厳密な minify
+# - Markdownの全構文を完全に保つ圧縮
 
 usage() {
   cat <<'EOF'
@@ -31,9 +31,9 @@ Usage:
 Reduce low-value Markdown whitespace for AI-oriented input packing.
 
 Behavior:
-  - preserve fenced code blocks and YAML front matter
+  - コードフェンスとYAMLフロントマターを保持する
   - collapse consecutive blank lines to one
-  - remove HTML comments outside fenced code blocks
+  - コードフェンス外のHTMLコメントを削除する
   - compact table padding around pipe separators
   - trim trailing whitespace while preserving Markdown hard breaks
 

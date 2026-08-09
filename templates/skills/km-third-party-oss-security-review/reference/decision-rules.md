@@ -12,16 +12,16 @@
 次をすべて満たす場合のみ許可する。
 
 - `Artifact Resolution Status = resolved`
-- artifact と repository の対応が一次ソースで確認できている
-- advisory source を確認済みで、未解決の Critical / High advisory がない
-- 明確に危険な execution / privilege surface の兆候がない
-- org policy 違反がない
-- artifact が yanked / deprecated / unpublished でない
-- 主要観点（identity/provenance、vulnerabilities、execution surface、release integrity）に unresolved unknown がない
+- 対象成果物とリポジトリの対応が一次ソースで確認できている
+- advisory の情報源を確認済みで、未解決の Critical / High advisory がない
+- 実行権限と影響範囲に明確な危険の兆候がない
+- 組織の方針に違反していない
+- 対象成果物が yanked / deprecated / unpublished でない
+- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）に未確認事項がない
 
 ## ALLOW_WITH_CONDITIONS
 
-`Artifact Resolution Status = resolved` かつ明確な blocker が無いが、運用条件を付けることで採用可能な場合に使う。
+`Artifact Resolution Status = resolved` であり、明確な採用阻害要因はないものの、運用条件を付ければ採用できる場合に使う。
 
 例:
 
@@ -39,8 +39,8 @@
 
 - 証跡不足
 - `Artifact Resolution Status != resolved`（repo-only で tag 未特定等を含む）
-- artifact と repository の対応が曖昧
-- 外部ソース障害で主要信号が欠落
+- 対象成果物とリポジトリの対応が曖昧
+- 外部ソースの障害で主要な判定要素が欠落
 - ecosystem 判別が曖昧（monorepo 等）
 - 利用文脈依存の高トレードオフ
 - 権限やデータ影響が大きく、機械的に止めきれない
@@ -49,61 +49,61 @@
 
 次のいずれかに当てはまる場合に使う。
 
-- org policy 違反
-- 対象 artifact に当たる未解決 Critical advisory
-- 明確に危険な execution / privilege 挙動
-- 信頼できない provenance（typosquatting、impersonation、publisher 整合性欠落）
+- 組織の方針違反
+- 対象成果物に当たる未解決 Critical advisory
+- 明確に危険な実行権限や影響範囲
+- 信頼できない由来（typosquatting、impersonation、publisher の整合性欠落）
 
-## Hard Rules
+## 必須判定規則
 
 次のいずれかに該当する場合は `ALLOW` を出さない。
 
 - `Artifact Resolution Status != resolved`
-- artifact と repository の対応が曖昧
-- 対象 artifact (registry / marketplace の配布物) と repository source の対応が一次ソースで検証できない（例: tag / release / commit の紐付けが取れない、vsix と source の対応が取れない）
-- advisory source 未確認
-- 主要観点（identity/provenance、vulnerabilities、execution surface、release integrity）のいずれかに unresolved unknown が残る
-- 対象 artifact が yanked / deprecated / unpublished
-- supply-chain attestation がある ecosystem で attestation が欠落かつ publisher 整合が取れない
+- 対象成果物とリポジトリの対応が曖昧
+- 対象成果物（registry / marketplace の配布物）とリポジトリのソースとの対応を一次ソースで検証できない（例: tag / release / commit の紐付けが取れない、vsix とソースの対応が取れない）
+- advisory の情報源を確認していない
+- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）のいずれかに未確認事項が残る
+- 対象成果物が yanked / deprecated / unpublished
+- 供給網の証明がある ecosystem で証明が欠落し、publisher の整合も取れない
 
-次に該当する場合は `ALLOW` と `ALLOW_WITH_CONDITIONS` を両方出さず、`NEEDS_HUMAN_REVIEW` 以下に倒す。
+次に該当する場合は `ALLOW` と `ALLOW_WITH_CONDITIONS` のどちらとも判定せず、`NEEDS_HUMAN_REVIEW` または `REJECT` と判定する。
 
-- repo-only 入力かつ artifact 未特定
+- リポジトリだけを入力し、対象成果物を特定できていない
 - 複数 ecosystem 候補を推測で絞り込んだ場合
 
-対象 artifact に当たる未解決の Critical 相当 advisory がある場合は `REJECT` を検討する。
+対象成果物に当たる未解決の Critical 相当 advisory がある場合は `REJECT` を検討する。
 
-## 降格ロジック（usage-context による厳格化）
+## 判定を厳しくする条件
 
-降格 ladder は次の 3 段に固定する。`REJECT` は別系統で、降格では到達しない。
+判定は次の 3 段階で厳しくする。`REJECT` は別の規則で判定し、この条件だけでは到達しない。
 
 ```
 ALLOW → ALLOW_WITH_CONDITIONS → NEEDS_HUMAN_REVIEW
 ```
 
-ベース判定（共通 8 観点と adapter 評価から導いた素の判定）に対し、次の高リスク条件ごとに 1 step の累積降格を適用する。適用する条件の数だけ step を進め、下限は `NEEDS_HUMAN_REVIEW`。
+基本判定（共通 8 観点と対象種別ごとの評価から導いた判定）に対し、次の高リスク条件ごとに 1 段階ずつ厳しい判定を適用する。該当する条件の数だけ段階を進め、下限は `NEEDS_HUMAN_REVIEW` とする。
 
-高リスク条件（各 1 step）:
+高リスク条件（各 1 段階）:
 
 - `production=true`
 - `secrets_access=true`
 - `data_sensitivity=high`
-- `runtime ∈ {editor-extension, ci, cli}`
+- `実行形態 ∈ {editor-extension, ci, cli}`
 
 既定で降格なしとする組合せ:
 
-- `runtime ∈ {library, build-tool, test-tool, node-server, browser}`
+- `実行形態 ∈ {library, build-tool, test-tool, node-server, browser}`
 - `development` scope のみでの利用
 
 例:
 
-- base=`ALLOW`、`production=true` のみ → `ALLOW_WITH_CONDITIONS`
-- base=`ALLOW`、`production=true` + `secrets_access=true` → `NEEDS_HUMAN_REVIEW`
-- base=`ALLOW`、高リスク 3 条件以上 → `NEEDS_HUMAN_REVIEW`（floor）
-- base=`ALLOW_WITH_CONDITIONS`、`production=true` のみ → `NEEDS_HUMAN_REVIEW`
-- base=`NEEDS_HUMAN_REVIEW`、任意 → `NEEDS_HUMAN_REVIEW`（floor）
+- 基本判定=`ALLOW`、`production=true` のみ → `ALLOW_WITH_CONDITIONS`
+- 基本判定=`ALLOW`、`production=true` + `secrets_access=true` → `NEEDS_HUMAN_REVIEW`
+- 基本判定=`ALLOW`、高リスク 3 条件以上 → `NEEDS_HUMAN_REVIEW`（下限）
+- 基本判定=`ALLOW_WITH_CONDITIONS`、`production=true` のみ → `NEEDS_HUMAN_REVIEW`
+- 基本判定=`NEEDS_HUMAN_REVIEW`、任意 → `NEEDS_HUMAN_REVIEW`（下限）
 
 備考:
 
-- 最保守既定値が採用された context も降格対象に含める。既定値を使った旨はレポートの「主要な判断理由」と「不確実性 / 未確認事項」に明記する
-- 降格適用前後の値を「主要な判断理由」に 1 点として書く
+- 最も保守的な既定値を採用した利用条件も対象に含める。既定値を使った旨はレポートの「主要な判断理由」と「不確実性 / 未確認事項」に明記する
+- 条件適用前後の判定値を「主要な判断理由」に 1 点として書く

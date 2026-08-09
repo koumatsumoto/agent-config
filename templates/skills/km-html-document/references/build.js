@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * km-html-document の単一ファイルビルド。
- *
- * 本文だけを書いた HTML（document-template.html ベース、BUILD:INLINE マーカー入り）に、
- * 同ディレクトリの document-template.css / document-template.js を機械的に挿入し、単一の
- * 自己完結 HTML を作る。AI は本文だけを書き、CSS/JS をコンテキストに載せずに済む。
+ * 本文入りHTMLへCSSとJavaScriptを挿入し、単一ファイルにまとめる。
+ * 本文作成時にCSSとJavaScriptを読み込む必要はない。
  *
  * 使い方:
  *     node build.js <html-path> [output-path]
@@ -19,9 +16,8 @@ const HERE = __dirname;
 const CSS_MARKER = '/* BUILD:INLINE document-template.css */';
 const JS_MARKER = '/* BUILD:INLINE document-template.js */';
 
-// マーカーを CSS / JS 本体で置換した単一 HTML を返す。プレースホルダが無ければ失敗させる。
-// <style>/<script> タグごとアンカーするので、本文に同じコメント文字列が現れても巻き込まない。
-// split/join で置換し、$ を含む JS（テンプレートリテラルの ${...}）が特殊置換として解釈されるのを避ける。
+// マーカーをCSSとJavaScriptへ置き換える。タグ単位で照合し、本文中の同じ文字列は変更しない。
+// split/joinを使い、JavaScript内の$を特殊な置換として解釈しない。
 function build(html, css, js) {
   const cssTag = `<style>${CSS_MARKER}</style>`;
   const jsTag = `<script>${JS_MARKER}</script>`;
