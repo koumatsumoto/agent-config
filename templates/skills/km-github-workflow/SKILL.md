@@ -21,7 +21,7 @@ argument-hint: "[issue-number]"
 
 - **base へ直接コミット・push しない。** 変更は必ずブランチを切って PR で届ける。ブランチは base から切り、名前は `<type>/<issue番号>-<slug>`（例: `fix/184-settings-merge-permissions`）。type は commit と同じ Conventional Commits の語（`feat` / `fix` / `refactor` / `docs` など）、slug は英小文字 kebab-case。issue を作らない場合は `<type>/<slug>`
 - issue と PR はセット。ユーザーが「issue 不要・PR だけ」と明示したときだけ issue を作らない
-- 論点が少なくクリアなら本 skill で簡易 issue（目的・完了条件を最小限）を作る。設計判断が多く計画を作り込むべきなら km-plan へ委ねる
+- 論点が少なくクリアなら本 skill で簡易 issue（目的・完了条件を最小限）を作る。ゴール / スコープ / one-way door / feasibility を誤ると高コスト、背景・設計理由・変更範囲を別の実装 agent へ引き渡す、複数 surface・PR・移行の方向を先に揃える、のいずれかなら km-plan へ委ねる。設計判断の数だけでは委ねない
 
 ## Develop
 
@@ -40,7 +40,7 @@ argument-hint: "[issue-number]"
 - km-commit でコミットし、ブランチを push し、PR を作成する（既存があれば更新する）
 - issue には PR 本文の**独立行** `Closes #<num>` で連携する。複数 PR に分けるなら最終だけ `Closes`、中間は `Refs`
 - PR 本文には最終差分を理解するのに必要な背景・判断を書く。**内部タスク ID・逐次の作業ログ・レビュー反映の往復履歴は書かない**
-- 対象 issue が km-plan 管理（本文に `<!-- km:plan:managed -->`）で「実装時確認事項」節を持つなら、各項目の消化結果（検証に紐付く確認結果 / 対応しないなら残す理由）を PR 本文と報告に含め、silent drop させない
+- 対象 issue が km-plan 管理（本文に `<!-- km:plan:managed -->`）で「実装時確認事項」節を持つなら、各項目が指す消化時点と判断根拠に対応づけて消化結果（確認結果 / 対応しないなら残す理由）を PR 本文と報告に含め、silent drop させない
 - CI / checks は見られれば確認して結果を報告に含める
 - follow-up issue を作ったら URL と要旨を報告する。該当する発見が無ければ「改善点なし」のような定型報告はしない
 
