@@ -21,7 +21,10 @@ argument-hint: "[issue-number]"
 
 - **base へ直接コミット・push しない。** 変更は必ずブランチを切って PR で届ける。ブランチは base から切り、名前は `<type>/<issue番号>-<slug>`（例: `fix/184-settings-merge-permissions`）。type は commit と同じ Conventional Commits の語（`feat` / `fix` / `refactor` / `docs` など）、slug は英小文字 kebab-case。issue を作らない場合は `<type>/<slug>`
 - issue と PR はセット。ユーザーが「issue 不要・PR だけ」と明示したときだけ issue を作らない
-- 論点が少なくクリアなら本 skill で簡易 issue（目的・完了条件を最小限）を作る。ゴール / スコープ / 戻せない選択 / 実現可能性を誤ると高くつく、背景・設計理由・変更範囲を別の実装 agent へ引き渡す、複数の変更範囲・PR・移行の方向を先に揃える、のいずれかなら km-plan へ委ねる。設計判断の数だけでは委ねない
+- 論点が少なくクリアなら本 skill で簡易 issue（目的・完了条件を最小限）を作る。次のいずれかなら km-plan へ委ねる。**設計判断の数だけでは委ねない**
+  - 複雑で手戻りのコストが大きい
+  - 背景・設計理由・変更範囲を別の実装 agent へ引き渡す
+  - 複数の変更範囲・PR・移行の方向を先に揃える
 
 ## Develop
 
