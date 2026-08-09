@@ -7,6 +7,7 @@ Claude Code / Codex CLI（および opt-in で Qwen Code）の共通設定テン
 - `templates/` - デプロイ対象テンプレート（install.sh で ~/.claude/ 等に反映）
 - `templates/CLAUDE.md` - Claude Code / Codex CLI / Qwen Code 共通 agent guideline の唯一の正本。`~/.claude/CLAUDE.md`・`~/.codex/AGENTS.md`・`~/.qwen/QWEN.md`（`--qwen` 時のみ）へ同じ内容を配布する
 - `.claude/` - このプロジェクト固有の設定
+- `evals/` - 挙動資産ごとの scenario bank（再走トリガ・題材と合否線・落とし穴）。配布しない検証材料
 - `docs/` - ドキュメント
 
 ## 注意

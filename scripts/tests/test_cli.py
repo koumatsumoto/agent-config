@@ -469,6 +469,21 @@ class SkillMetadataTests(unittest.TestCase):
             self.assertTrue(name.startswith("km-"), f"missing km- prefix: {name}")
             self.assertEqual(skill_file.parent.name, name)
 
+    def test_verification_material_stays_out_of_the_distributed_tree(self) -> None:
+        """scenario bank は配布されない。
+
+        bank は repo のメンテナが改善を検証するための材料で、runtime では
+        読まれない。`templates/skills` 配下に置くと 3 つの skills ツリーへ
+        そのまま配られ、配布先で stale copy になる。
+        """
+        skills_root = cli.REPO_ROOT / "templates" / "skills"
+        strays = sorted(
+            str(path.relative_to(cli.REPO_ROOT))
+            for path in skills_root.rglob("evals")
+            if path.is_dir()
+        )
+        self.assertEqual(strays, [])
+
     def test_internal_reference_paths_resolve(self) -> None:
         """A skill's cross-file loads must point at files that exist.
 
@@ -480,7 +495,7 @@ class SkillMetadataTests(unittest.TestCase):
         # Backticked, skill-root-relative markdown paths: the form skills use to
         # name a reference file. `<role>`-style placeholders stand for a set and
         # are covered by the concrete siblings that resolve.
-        pattern = re.compile(r"`((?:references|reference|reviewers|evals|agents)/[^`]+\.md)`")
+        pattern = re.compile(r"`((?:references|reference|reviewers|agents)/[^`]+\.md)`")
         dangling: list[str] = []
         for doc in sorted(skills_root.rglob("*.md")):
             skill_dir = skills_root / doc.relative_to(skills_root).parts[0]
