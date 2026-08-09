@@ -34,6 +34,7 @@ Claude Code / Codex CLI / Qwen Code の共通設定テンプレートを管理�
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
 - `scripts/tests/` - `scripts/cli.py` の unittest
+- `evals/` - 挙動資産ごとの scenario bank。配布対象ではなく、`km-skill-improve` で改善を検証するときの材料
 - `docs/` - 保守対象の参考ドキュメント
 - `.github/workflows/` - GitHub Actions CI 設定
 - `.claude/` - このリポジトリ自身の Claude Code 設定
