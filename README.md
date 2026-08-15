@@ -15,7 +15,6 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。Qwen C
 ## 正本
 
 - `templates/CLAUDE.md` - Claude Code、Codex CLI、Qwen Codeに共通するAI共通ガイドライン（唯一の正本）
-- `templates/rules/` - Claude Code 向け markdown rules
 - `templates/skills/` - Claude / Codex / Qwen Code 共用の skills
 - `templates/output-styles/` - Claude Code 向け custom output styles (モデル切替時の行動規範。`fable-like` 同梱)
 - `templates/config.toml` - Codex CLI 用設定テンプレート
@@ -76,7 +75,6 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 このコマンドは、次のファイルとディレクトリを配置する。
 
 - `~/.claude/CLAUDE.md` (詳細は後述)
-- `~/.claude/rules/`
 - `~/.claude/skills/`
 - `~/.claude/output-styles/`
 - `~/.claude/statusline.py`
@@ -92,7 +90,7 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 
 `settings.json`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。
 
-`rules/`と`skills/`はテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
+`skills/`はテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
 
 配布を終了した組み込みskillと改名前の旧名は一覧で管理する。skillの読み込み処理による誤検出を防ぐため、インストーラーは該当する現行ディレクトリと同名バックアップを`skills/`から削除する。既存の同階層にある`retired-skills/`も削除し、新旧または退役済みのskillを検出対象の近くに残さない。
 
@@ -151,7 +149,6 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 | Repository Source | Destination (`--claude-dir <dir>`) |
 | --- | --- |
 | `templates/CLAUDE.md` | `<dir>/CLAUDE.md` |
-| `templates/rules/` | `<dir>/rules/` |
 | `templates/skills/` | `<dir>/skills/` |
 | `templates/output-styles/` | `<dir>/output-styles/` |
 | `templates/statusline.py` | `<dir>/statusline.py` |
@@ -306,7 +303,6 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | --- | --- |
 | `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
-| `templates/rules/` | `~/.claude/rules/` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/output-styles/` | `~/.claude/output-styles/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
@@ -325,7 +321,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/skills/` | `~/.qwen/skills/` |
 | `templates/qwen-settings.json` | `~/.qwen/settings.json` (浅いマージ) |
 
-注記: `templates/rules/` は Claude Code 向け markdown rules を指す。Codex CLI の exec policy rules は `templates/codex-rules/` から `~/.codex/rules/` へ配布する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
+注記: `templates/codex-rules/` は Codex CLI の exec policy rules で、`~/.codex/rules/` へ配布する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
 
 ## 公式仕様
 

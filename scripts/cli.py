@@ -93,7 +93,6 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
 
 # Directory trees synced recursively (with per-file .bak backup).
 TEMPLATE_TREES: tuple[TreeSpec, ...] = (
-    TreeSpec("templates/rules", ".claude/rules"),
     TreeSpec("templates/skills", ".claude/skills"),
     TreeSpec("templates/output-styles", ".claude/output-styles"),
     TreeSpec("templates/skills", ".agents/skills"),
@@ -181,12 +180,15 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
     "third-party-oss-security-review",
 )
 
-# Managed file destinations that are no longer maintained. A removed spec
-# leaves its deployed file in place otherwise, so the installer retires each
-# explicit managed path to its single-generation .bak: the retired config
-# stops being loadable while remaining recoverable.
-DECOMMISSIONED_FILES: tuple[str, ...] = (
+# Managed destinations that are no longer maintained. A removed spec leaves
+# its deployed path in place otherwise, so the installer retires each explicit
+# managed path to its single-generation .bak: the retired config stops being
+# loadable while remaining recoverable. Entries under the Claude configuration
+# directory are re-rooted by claude_dir_layout alongside the active specs, so
+# a --claude-dir profile retires the same slice it used to receive.
+DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".codex/full.config.toml",
+    ".claude/rules",
 )
 
 
@@ -203,6 +205,7 @@ class Layout:
     trees: tuple[TreeSpec, ...]
     settings: tuple[SettingsSpec, ...]
     statusline_commands: tuple[tuple[str, str], ...]
+    retired_dests: tuple[str, ...]      # dest_rel values the manifest no longer maintains
     description: str                    # subject of the "Install …" / "Clean …" banner
 
 
@@ -233,6 +236,7 @@ def home_layout(home: Path, *, include_qwen: bool = False) -> Layout:
         trees=TEMPLATE_TREES + (QWEN_TEMPLATE_TREES if include_qwen else ()),
         settings=TEMPLATE_SETTINGS + (QWEN_TEMPLATE_SETTINGS if include_qwen else ()),
         statusline_commands=STATUSLINE_COMMANDS,
+        retired_dests=DECOMMISSIONED_PATHS,
         description=HOME_QWEN_DESCRIPTION if include_qwen else HOME_DESCRIPTION,
     )
 
@@ -274,6 +278,11 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
         for key, script_rel in STATUSLINE_COMMANDS
         if (rel := claude_config_rel(script_rel)) is not None
     )
+    retired = tuple(
+        rel
+        for dest_rel in DECOMMISSIONED_PATHS
+        if (rel := claude_config_rel(dest_rel)) is not None
+    )
     return Layout(
         root=target,
         home=home,
@@ -282,6 +291,7 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
         trees=trees,
         settings=settings,
         statusline_commands=statusline,
+        retired_dests=retired,
         description=f"Claude configuration in {target}",
     )
 
@@ -578,19 +588,20 @@ def remove_decommissioned_skills(layout: Layout) -> list[Path]:
     return removed
 
 
-def remove_decommissioned_files(layout: Layout) -> list[Path]:
-    """Retire deployed file destinations the manifest no longer maintains.
+def remove_decommissioned_paths(layout: Layout) -> list[Path]:
+    """Retire deployed destinations the manifest no longer maintains.
 
-    Each retired path is moved to its single-generation .bak (recoverable),
-    mirroring how clean() removes managed files. Absent paths are skipped.
+    Each retired path (file or directory) is moved to its single-generation
+    .bak (recoverable), mirroring how clean() removes managed paths. Absent
+    paths are skipped.
 
-    Retirements are global constants rather than per-component specs, so they
-    are filtered by the layout's managed dirs like every other write: retiring
-    something under a component this layout does not select must not reach into
-    that component's directory.
+    Retirements are global constants carried by the layout rather than
+    per-component specs, so they are filtered by the layout's managed dirs
+    like every other write: retiring something under a component this layout
+    does not select must not reach into that component's directory.
     """
     removed: list[Path] = []
-    for rel in DECOMMISSIONED_FILES:
+    for rel in layout.retired_dests:
         target = layout.root / rel
         if not any(is_within(target, managed) for managed in layout.managed_dirs):
             continue
@@ -916,7 +927,7 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
     for dest in remove_decommissioned_skills(layout):
         print(f"removed (obsolete skill data): {dest}")
 
-    for dest in remove_decommissioned_files(layout):
+    for dest in remove_decommissioned_paths(layout):
         print(f"backup: {dest}.bak")
         print(f"removed (obsolete config): {dest}")
 
