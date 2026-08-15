@@ -41,13 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           tmp_home=$(mktemp -d)
-          # Seed a legacy rules dir so the retirement migration is exercised.
-          mkdir -p "$tmp_home/.claude/rules"
-          echo "legacy" > "$tmp_home/.claude/rules/legacy.md"
           HOME="$tmp_home" bash install.sh > install.log
           test ! -d "$tmp_home/.qwen"  # Qwen Code is opt-in
-          test ! -d "$tmp_home/.claude/rules"  # rules are decommissioned
-          test -f "$tmp_home/.claude/rules.bak/legacy.md"  # recoverable backup
           HOME="$tmp_home" bash scripts/verify-install.sh
           HOME="$tmp_home" bash clean.sh > clean.log
 

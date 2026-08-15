@@ -90,11 +90,9 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 
 `settings.json`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。
 
-`skills/`などの管理下ディレクトリツリーはテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
+`skills/`はテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
 
 配布を終了した組み込みskillと改名前の旧名は一覧で管理する。skillの読み込み処理による誤検出を防ぐため、インストーラーは該当する現行ディレクトリと同名バックアップを`skills/`から削除する。既存の同階層にある`retired-skills/`も削除し、新旧または退役済みのskillを検出対象の近くに残さない。
-
-Claude Code向け共通rules（旧`templates/rules/`）は配布を終了した。再インストール時に、過去に配布した`~/.claude/rules/`（`--claude-dir`指定時は`<dir>/rules/`）を単一世代の`rules.bak/`へ退避し、読み込み対象から外す。Codex CLIのexec policy rules（`~/.codex/rules/`）は別責務のため引き続き配布する。
 
 `km-kaizen` の退役時、リポジトリ内の `.kaizen/` は自動収集しない。外部 issue の作成や他のリポジトリの削除をインストーラーの副作用にしないため、残存項目は利用者が確認し、後続対応の価値を説明できるものだけ後続 issue へ移して残りを削除する。
 
@@ -323,7 +321,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/skills/` | `~/.qwen/skills/` |
 | `templates/qwen-settings.json` | `~/.qwen/settings.json` (浅いマージ) |
 
-注記: `templates/codex-rules/` は Codex CLI の exec policy rules で、`~/.codex/rules/` へ配布する。Claude Code 向け共通 markdown rules は配布を終了した（上記セットアップ節の退役処理を参照）。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
+注記: `templates/codex-rules/` は Codex CLI の exec policy rules で、`~/.codex/rules/` へ配布する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
 
 ## 公式仕様
 
