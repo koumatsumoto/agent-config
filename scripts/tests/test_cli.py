@@ -426,28 +426,6 @@ class DecommissionedSkillsTests(unittest.TestCase):
         self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "keep")
 
 
-class DecommissionedFilesTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.home = Path(tempfile.mkdtemp(prefix="decom-test-"))
-        self.layout = cli.home_layout(self.home)
-
-    def tearDown(self) -> None:
-        shutil.rmtree(self.home, ignore_errors=True)
-
-    def test_retires_decommissioned_config_to_backup(self) -> None:
-        rel = cli.DECOMMISSIONED_FILES[0]
-        target = self.home / rel
-        target.parent.mkdir(parents=True)
-        target.write_text("stale", encoding="utf-8")
-        removed = cli.remove_decommissioned_files(self.layout)
-        self.assertEqual(removed, [target])
-        self.assertFalse(target.exists())
-        self.assertEqual(target.with_name(target.name + ".bak").read_text(encoding="utf-8"), "stale")
-
-    def test_skips_absent_paths(self) -> None:
-        self.assertEqual(cli.remove_decommissioned_files(self.layout), [])
-
-
 class SkillMetadataTests(unittest.TestCase):
     def test_names_use_standard_format_and_match_directory(self) -> None:
         skills_root = cli.REPO_ROOT / "templates" / "skills"
@@ -953,16 +931,21 @@ class InstallTests(unittest.TestCase):
             self.assertFalse((root / f"{legacy_name}.bak").exists())
             self.assertFalse((root.parent / "retired-skills").exists())
 
-    def test_install_retires_decommissioned_config_with_backup(self) -> None:
-        rel = cli.DECOMMISSIONED_FILES[0]
-        legacy = self.home / rel
-        legacy.parent.mkdir(parents=True)
-        legacy.write_text("stale", encoding="utf-8")
+    def test_install_retires_decommissioned_destinations_with_backup(self) -> None:
+        # Destinations the manifest no longer maintains move to their
+        # single-generation .bak: recoverable, no longer discoverable.
+        legacy = [self.home / rel for rel in cli.DECOMMISSIONED_PATHS]
+        for path in legacy:
+            path.mkdir(parents=True)
+            (path / "marker.md").write_text("stale", encoding="utf-8")
 
         out = self._run_install()
 
-        self.assertFalse(legacy.exists())
-        self.assertTrue(legacy.with_name(legacy.name + ".bak").exists())
+        for path in legacy:
+            self.assertFalse(path.exists(), f"still present: {path}")
+            self.assertTrue(
+                path.with_name(path.name + ".bak").exists(), f"missing bak: {path}"
+            )
         self.assertIn("removed (obsolete config):", out)
 
     def test_install_preserves_user_added_skill(self) -> None:
@@ -1109,7 +1092,7 @@ class InstallTests(unittest.TestCase):
         widened = [
             self.home / cli.SETTINGS_DEST_REL,
             self.home / cli.TEMPLATE_FILES[0].dest_rel,
-            self.home / cli.TEMPLATE_TREES[0].dest_rel / "python-coding-style.md",
+            self.home / ".claude/output-styles/fable-like.md",
         ]
         for path in widened:
             self.assertTrue(path.is_file(), f"missing: {path}")
@@ -1508,8 +1491,9 @@ class ClaudeDirInstallTests(unittest.TestCase):
         self._run_install()
         for name in ("CLAUDE.md", "statusline.py", "subagent-statusline.py"):
             self.assertTrue((self.target / name).is_file(), f"missing: {name}")
-        for name in ("rules", "skills", "output-styles"):
+        for name in ("skills", "output-styles"):
             self.assertTrue((self.target / name).is_dir(), f"missing: {name}")
+        self.assertFalse((self.target / "rules").exists())
         self.assertTrue((self.target / "settings.json").is_file())
 
     def test_content_matches_the_templates(self) -> None:
@@ -1618,6 +1602,16 @@ class ClaudeDirInstallTests(unittest.TestCase):
         self._run_install()
         self.assertFalse(stale.exists())
 
+    def test_install_retires_legacy_rules_with_backup(self) -> None:
+        # A profile installed by an older version carries <dir>/rules/; the
+        # retirement is re-rooted with the rest of the Claude slice.
+        rules = self.target / "rules"
+        rules.mkdir(parents=True)
+        (rules / "legacy.md").write_text("stale", encoding="utf-8")
+        self._run_install()
+        self.assertFalse(rules.exists())
+        self.assertTrue((rules.with_name("rules.bak") / "legacy.md").is_file())
+
     def test_verify_passes_after_install(self) -> None:
         self._run_install()
         with patch("sys.stdout", new=StringIO()):
@@ -1638,7 +1632,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
             rc = cli.clean(self.layout)
         self.assertEqual(rc, 0)
         self.assertIn(str(self.target), out.getvalue())
-        for name in ("CLAUDE.md", "statusline.py", "rules", "skills", "output-styles"):
+        for name in ("CLAUDE.md", "statusline.py", "skills", "output-styles"):
             self.assertFalse((self.target / name).exists(), f"still present: {name}")
         self.assertTrue(
             (self.target / "settings.json").exists(),
@@ -1875,8 +1869,8 @@ class QwenComponentTests(unittest.TestCase):
         target = self.home / ".qwen/QWEN.md"
         target.parent.mkdir(parents=True)
         target.write_text("mine", encoding="utf-8")
-        with patch.object(cli, "DECOMMISSIONED_FILES", (".qwen/QWEN.md",)):
-            self._install(self.base)
+        with patch.object(cli, "DECOMMISSIONED_PATHS", (".qwen/QWEN.md",)):
+            self._install(cli.home_layout(self.home))
         self.assertEqual(target.read_text(encoding="utf-8"), "mine")
         self.assertFalse(target.with_name("QWEN.md.bak").exists())
 

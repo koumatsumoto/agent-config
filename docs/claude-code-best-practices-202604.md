@@ -1,6 +1,6 @@
 # Claude Codeベストプラクティス 2026-08
 
-> 参考資料。実行時契約ではない。実際の運用契約は`templates/CLAUDE.md`、`templates/rules/`、`templates/skills/`を正とする。
+> 参考資料。実行時契約ではない。実際の運用契約は`templates/CLAUDE.md`と`templates/skills/`を正とする。
 >
 > 確認日: 2026-08-09
 >
