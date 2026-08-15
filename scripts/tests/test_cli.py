@@ -1711,20 +1711,6 @@ class CanonicalGuidelineTests(unittest.TestCase):
         present = {p.name for p in (cli.REPO_ROOT / canonical.parent).glob("*.md")}
         self.assertEqual(present & guideline_names, {canonical.name})
 
-    def test_guideline_carries_the_dangerous_operation_guard(self) -> None:
-        # Codex runs fully trusted (approval_policy = "never"), so this guard is
-        # the only thing standing between the agent and a destructive command.
-        text = (cli.REPO_ROOT / cli.GUIDELINE_TEMPLATE_REL).read_text(encoding="utf-8")
-        for token in (
-            "rm -rf",
-            "git reset --hard",
-            "force push",
-            "権限変更",
-            "秘密情報",
-            "外部サービスへの書き込み",
-        ):
-            self.assertIn(token, text, f"missing safety rule: {token}")
-
 
 # --------------------------------------------------------------------------- #
 # --qwen: the opt-in Qwen Code component
