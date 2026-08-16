@@ -37,7 +37,7 @@ severityと完了を妨げるかは別に判定する。
 
 ## レポート
 
-結果はリポジトリ基点の `.km-review/<scope>/integration.md` へ置く。引数なしは `uncommitted` とする。対象パスがgit追跡済みなら上書きせず報告し、未無視なら `.git/info/exclude` で除外する。`.gitignore`は変更しない。
+結果はリポジトリ基点の `.km-review/<scope>/integration.md` へ置く。引数なしは `uncommitted` とする。その出力パスがgit追跡済みなら上書きせず報告し、未無視なら `.git/info/exclude` で除外する。`.gitignore`は変更しない。
 
 - 対象、レビュー基準、変更概要
 - 独立レビュアの構成と選択理由
