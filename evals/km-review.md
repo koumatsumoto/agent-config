@@ -7,23 +7,32 @@
 | 触った箇所 | 再走する題材 |
 | --- | --- |
 | description | trigger-pairs |
-| 割り当て（人数・観点・セキュリティの必須経路） | minor-main-only / reliability-degradation / security-hard-route / dual-role-max-two |
-| 影響度 / 完了を妨げるか / 収束条件 | minor-main-only / blocker-only-recheck |
-| 再確認 | blocker-only-recheck |
-| 観点 file の責務境界 | reliability-degradation / dual-role-max-two |
+| 対象 / `--repo` / `--recheck` | target-modes / blocker-only-recheck |
+| メインレビュー | main-fixes-first / behavior-asset / doc-sync |
+| 人数・観点・security経路 | minor-main-only / one-reviewer / two-reviewers / security-route / lens-routing |
+| severity / blocking / status / 判定 | severity-blocking / blocker-convergence |
+| dispatch / レポート | dispatch-isolation / integration-only |
 
 ## 題材と合否線
 
-- **minor-main-only** — 既存テストが両分岐を直接押さえる軽微差分（文言追加とローカル変数名の変更）。km-reviewを通したうえで0名を選び、根拠を行数や文書だけの変更であることではなく、**局所性・可逆性・重要な変更面が不変であること・直接検証**で説明する。LOWが出ても完了を妨げない指摘として`PASS`とする
-- **reliability-degradation** — 無効化のないキャッシュ導入。運用者の設定編集が反映されず（ドキュメント文字列が示す無停止リロードを壊す）、キャッシュ済み dict を参照で返すので呼び出し元の変更が全体へ波及する。`reliability` 1 名を選び security hard route は不成立と判断し、意図的に含めた回帰を捕捉する
-- **security-hard-route** — 所有者チェックを通る既存経路の隣に、共有トークンを非空判定するだけの新経路を足す。変更の**意味**で hard route を発火させ `security` を選び、認可迂回を捕捉する。メイン担当が直しても severity 件数から消さない
-- **dual-role-max-two** — 秘密を含む payload の新しい永続 sink + 非アトミック書き込み・ロック無し。観点ごとに理由 1 行を付けて 2 名だけ選び、三人目を同一ラウンドへ足さない。**想定した欠陥の観点と選ばれる観点の一致は問わない** — 見るのは修正後に残るリスクで選べているか
-- **blocker-only-recheck** — 直前の実行が`BLOCKED`（未解決のHIGHが1件、完了を妨げないMEDIUMが2件）で、HIGHへの修正差分と`integration.md`を渡す。全面的なレビューへ戻らず、新しいレビュア1名で解消判定と修正起因の回帰だけを確認し、MEDIUMのために次ラウンドへ進まず`PASS`とする
-- **trigger-pairs** — description 一覧のみから skill を選ばせる。should:「独立した視点で深くレビューして」「セキュリティ観点で徹底的に見て」「typo 直した、確認して」/ should-not:「実装終わったので PR にして」（km-github-workflow へ）「skill の変更効果を A/B で検証して」（km-skill-eval へ）
+- **trigger-pairs** — should:「この変更をレビューして」「セキュリティ観点で確認して」「typoを直したのでレビューして」/ should-not:「実装が終わったのでPRにして」（`km-github-workflow`）「skillの変更効果を実シナリオで評価して」（`km-skill-eval`）
+- **target-modes** — 未コミット差分、明示されたPR・commit範囲、`--repo <subtree>`、対象なしを並べる。`--repo`では未変更行と既存問題も対象にし、対象なしは`NOOP`
+- **minor-main-only** — 局所的で容易に戻せ、直接検証できる差分。`km-review`は実行し、メイン担当が反証・検証したうえで独立レビュア0名、`PASS`
+- **main-fixes-first** — 書き込み可能な差分に明確なHIGHを1件含める。メイン担当が独立レビュー前に修正・再検証し、`resolved`として最終報告へ残す。修正後に重要な残存リスクがなければ0名
+- **one-reviewer** — メインレビュー後にも判定を変えうる重要な残存リスクが一つの観点に集約できる。対応する1名だけを選ぶ
+- **two-reviewers** — 異なる二観点に重大な残存リスクが具体化し、片方では代替できない難しい変更。理由を観点ごとに残し、2名だけを並列起動する。大規模・重要というラベルだけで2名にしない
+- **security-route** — (a) securityに関する語を含むが信頼境界・攻撃面を変えない変更ではカテゴリだけでsecurityを選ばない。(b) 信頼境界または攻撃面を実質的に変える場合は、選択する1〜2名にsecurityを含める
+- **lens-routing** — 責務境界・成果・実挙動・攻撃面のいずれかへ主要リスクが明確に寄る題材で、`architect` / `product` / `reliability` / `security`から対応する観点を選ぶ
+- **behavior-asset** — 新しい副経路が本経路のgateを継承せず、referenceや下流skillとの契約もずれる変更。挙動資産を文章校正として扱わずcode-equivalentとして反証し、silent dropと不要なcontext増大を捕捉する
+- **doc-sync** — 公開フラグまたは既定値を変更し、READMEとhelpに旧記述を残す。最終候補で関連文書を同期し、一般的な文章改善へ広げない
+- **severity-blocking** — CRITICAL / HIGH / MEDIUM / LOWを各1件含む。severityを影響度として付け、CRITICAL/HIGHを原則blocker、MEDIUM/LOWを原則non-blockingとする。完了条件を満たせないMEDIUMだけはblockerにできる。真偽未確定はseverityを付けず確認推奨
+- **blocker-convergence** — 未解決blocker1件とnon-blocking2件。blockerだけを修正して関連検証を行い、non-blockingをゼロにするために再レビューせず`PASS`
+- **blocker-only-recheck** — `integration.md`の未解決blockerと修正差分を使い、解消・隣接契約・修正起因の回帰だけを見る。対象を特定できなければ通常レビューへ戻す
+- **dispatch-isolation** — subagentへ最終候補、レビュー基準、共通契約、選択roleだけを渡す。メイン所見、暫定判定、他role・他レビュア結果を渡さない。2名は独立に並列起動する
+- **integration-only** — role別レポートや完了マーカーを作らず、統合結果だけを`.km-review/<scope>/integration.md`へ残す
 
 ## 題材構築の落とし穴
 
-- 対象差分は `git apply --check` を通る patch か、実際の git リポジトリの未コミット差分にする。壊れた patch は「根拠が検証不能」と正しく指摘され、評価対象がレビュー能力なのか差分の妥当性なのか判別できなくなる
-- 意図的に含めた軽微項目の文字列をリポジトリの実在文言と衝突させない。衝突すると値・契約のずれに関する指摘へ変わり、重大度の期待がずれる
-- 評価対象外の差分に本物の欠陥を混ぜない。レビュアはそちらを正しく報告するため、想定した欠陥への期待と観測がずれる
-- subagentを起動できないサンドボックスでは独立レビュア層を実行できないため、安全側の`BLOCKED`と判定する。その条件下で見るのは振り分けの判断と言語化まで
+- 対象差分は適用可能なpatchまたは実在するgit差分にする
+- routing評価では、期待する観点以外の本物のblockerを混ぜない
+- 独立レビュアを利用できず必要なリスクを解消できない場合は`BLOCKED`
