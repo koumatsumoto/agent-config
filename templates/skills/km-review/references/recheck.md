@@ -10,5 +10,7 @@
 4. `references/verdict.md`に従って結果を更新する
 
 独立レビュアには対象blockerと修正内容を渡す。前回通過済みの領域、無関係な既存問題、新しいMEDIUM・LOWの探索へ広げない。
+SKILL.mdのsecurity必須割り当てはrecheckでも維持する。
 
 未解決blockerがなくなれば `PASS`。解消しない場合やユーザー判断が必要な場合は `BLOCKED` のまま、論点と最小の選択肢を示す。
+修正で外部観測面または文書が変わった場合は、PASS前に `references/doc-review.md` を実施する。
