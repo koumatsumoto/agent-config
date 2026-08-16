@@ -23,7 +23,7 @@ severityは次で付ける。
 - `MEDIUM` — 限定的だが意味のある品質・性能・可用性・運用・設計上の問題
 - `LOW` — 具体的な改善価値はあるが主な成果を重大には損なわない
 
-blockingはseverityと別に判定する。CRITICAL / HIGHは原則blocker、MEDIUM / LOWは明示された完了条件または主な成果を満たせない場合だけblockerにする。
+blockingはseverityと別に判定する。CRITICAL / HIGHは`blocking: true`のblocker、MEDIUM / LOWは原則`blocking: false`とする。明示された完了条件または主な成果を満たせない場合は、MEDIUM / LOWもblockerにできる。ユーザーが理由と条件を理解して受け入れた問題は`accepted-risk`とし、severityは変えない。判定を通すためにseverityやblockingを変更しない。
 
 各指摘は次を返す。
 

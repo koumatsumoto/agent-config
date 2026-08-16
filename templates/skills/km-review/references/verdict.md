@@ -14,12 +14,12 @@
 
 severityと完了を妨げるかは別に判定する。
 
-- CRITICAL / HIGHは原則blocker
-- MEDIUM / LOWは原則non-blocking
+- CRITICAL / HIGHは`blocking: true`のblocker
+- MEDIUM / LOWは原則`blocking: false`
 - 明示された完了条件または主な成果を満たせない場合は、MEDIUM / LOWもblockerにできる
 - 真偽を確定できない懸念はseverityを付けず、何を確認すれば決まるかを確認推奨として残す
 - ユーザーが理由と条件を理解して受け入れた問題は`accepted-risk`とし、severityは変えない
-- 判定を通すためにseverityを下げない。
+- 判定を通すためにseverityやblockingを変更しない。
 
 ## status
 
@@ -37,7 +37,7 @@ severityと完了を妨げるかは別に判定する。
 
 ## レポート
 
-結果はリポジトリ基点の `.km-review/<scope>/integration.md` へ置く。引数なしは `uncommitted` とする。その出力パスがgit追跡済みなら上書きせず報告し、未無視なら `.git/info/exclude` で除外する。`.gitignore`は変更しない。
+結果はリポジトリ基点の `.km-review/<scope>/integration.md` へ置く。同じレビュー対象には同じscope名を使う。引数なしは `uncommitted` とする。その出力パスがgit追跡済みなら上書きせず報告し、未無視なら `.git/info/exclude` で除外する。`.gitignore`は変更しない。
 
 - 対象、レビュー基準、変更概要
 - 独立レビュアの構成と選択理由
