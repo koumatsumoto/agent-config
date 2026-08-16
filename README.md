@@ -372,7 +372,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | スキル | 説明 |
 | --- | --- |
 | `km-japanese-refine` | 日本語の説明・指示文を、意味を保って自然で簡潔に推敲する |
-| `km-review` | 実装した変更に残る欠陥を洗い出し、完了可否を判定する |
+| `km-review` | 実装した変更をレビューして欠陥を洗い出す |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub リポジトリの採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub管理リポジトリの変更を、issue・ブランチ・コミット・PRまで一貫して提出する |
