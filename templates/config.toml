@@ -8,14 +8,14 @@ model_reasoning_effort = "medium"
 model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Fully trusted local development baseline. No sandbox and no approval gate:
-# reads, edits, shell network, and external writes all run autonomously.
-# Dangerous operations are not contained by config; the shared agent guideline
-# deployed as ~/.codex/AGENTS.md (canonical source: templates/CLAUDE.md) and
-# per-repo rules carry the behavioral guard instead.
-approval_policy = "never"
+# Fully trusted local development baseline. The sandbox stays disabled, so
+# routine reads, edits, shell network, and external writes run autonomously.
+# Explicit approval requests from rules or tools go to the automatic reviewer;
+# the shared guideline and per-repo rules remain the behavioral guard.
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
 sandbox_mode = "danger-full-access"
-web_search = "cached"
+web_search = "live"
 check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]
 
@@ -30,6 +30,9 @@ use_memories = true
 alternate_screen = "never"
 show_tooltips = false
 animations = false
+notifications = ["agent-turn-complete"]
+notification_method = "auto"
+notification_condition = "unfocused"
 status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "weekly-limit", "branch-changes", "estimated-thread-cost", "task-progress"]
 status_line_use_colors = true
 
