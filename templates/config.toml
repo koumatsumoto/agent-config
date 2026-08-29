@@ -8,13 +8,13 @@ model_reasoning_effort = "medium"
 model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Fully trusted local development baseline. The sandbox stays disabled, so
-# routine reads, edits, shell network, and external writes run autonomously.
-# Explicit approval requests from rules or tools go to the automatic reviewer;
-# the shared guideline and per-repo rules remain the behavioral guard.
+# Default local development baseline. Workspace edits run autonomously, while
+# network access and writes outside the workspace require approval review.
+# Use the explicit `trusted` profile only for already-isolated or fully trusted
+# work that genuinely needs unrestricted host access.
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
-sandbox_mode = "danger-full-access"
+sandbox_mode = "workspace-write"
 web_search = "live"
 check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]

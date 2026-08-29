@@ -55,6 +55,10 @@ def _codex_profile_specs() -> list[cli.FileSpec]:
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel.startswith(".codex/") and s.dest_rel.endswith(".config.toml")]
 
 
+def _codex_config(home: Path) -> Path:
+    return home / cli.MANAGED_TOML_FILES[0].dest_rel
+
+
 # --------------------------------------------------------------------------- #
 # fs helpers
 # --------------------------------------------------------------------------- #
@@ -222,6 +226,96 @@ class InstallFileTests(unittest.TestCase):
         os.symlink(self.src, link)
         with self.assertRaises(FileNotFoundError):
             cli.install_file(link, self.dest)
+
+
+class ManagedTomlTests(unittest.TestCase):
+    TEMPLATE = (
+        'model = "new"\n'
+        'sandbox_mode = "workspace-write"\n'
+        '\n'
+        '[features]\n'
+        'memories = true\n'
+        '\n'
+        '[tui]\n'
+        'animations = false\n'
+    )
+
+    def setUp(self) -> None:
+        self.dir = Path(tempfile.mkdtemp(prefix="toml-test-"))
+        self.template = self.dir / "template.toml"
+        self.dest = self.dir / "config.toml"
+        self.template.write_text(self.TEMPLATE, encoding="utf-8")
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_empty_destination_becomes_template(self) -> None:
+        self.assertEqual(cli.merge_managed_toml_text(self.TEMPLATE, ""), self.TEMPLATE)
+
+    def test_managed_keys_win_and_runtime_state_survives(self) -> None:
+        existing = (
+            'model = "old"\n'
+            'custom_root = "keep"\n'
+            '\n'
+            '[features]\n'
+            'memories = false\n'
+            'future_flag = true\n'
+            '\n'
+            '[tui]\n'
+            'animations = true\n'
+            'theme = "dark"\n'
+            '\n'
+            '[tui.keymap.global]\n'
+            'open_transcript = "ctrl-t"\n'
+            '\n'
+            '[projects."/workspace"]\n'
+            'trust_level = "trusted"\n'
+        )
+        merged = cli.merge_managed_toml_text(self.TEMPLATE, existing)
+        self.assertIn('model = "new"', merged)
+        self.assertNotIn('model = "old"', merged)
+        for text in (
+            'custom_root = "keep"',
+            'future_flag = true',
+            'theme = "dark"',
+            '[tui.keymap.global]',
+            '[projects."/workspace"]',
+        ):
+            self.assertIn(text, merged)
+        self.assertEqual(merged, cli.merge_managed_toml_text(self.TEMPLATE, merged))
+        if tomllib is not None:
+            data = tomllib.loads(merged)
+            self.assertEqual(data["model"], "new")
+            self.assertEqual(data["projects"]["/workspace"]["trust_level"], "trusted")
+
+    def test_destination_only_multiline_value_is_kept_opaque(self) -> None:
+        existing = (
+            '[features]\n'
+            'memories = false\n'
+            'future_list = [\n'
+            '  "a",\n'
+            '  "b",\n'
+            ']\n'
+        )
+        merged = cli.merge_managed_toml_text(self.TEMPLATE, existing)
+        self.assertIn('future_list = [\n  "a",\n  "b",\n]', merged)
+        if tomllib is not None:
+            self.assertEqual(tomllib.loads(merged)["features"]["future_list"], ["a", "b"])
+
+    def test_unsupported_managed_key_fails_closed(self) -> None:
+        with self.assertRaises(ValueError):
+            cli.merge_managed_toml_text('"quoted" = true\n', "")
+
+    def test_merge_into_backs_up_runtime_state_once(self) -> None:
+        self.dest.write_text('model = "old"\ncustom = "keep"\n', encoding="utf-8")
+        status = cli.merge_managed_toml_into(self.template, self.dest)
+        self.assertEqual(status, "merged")
+        self.assertIn('custom = "keep"', self.dest.read_text(encoding="utf-8"))
+        self.assertEqual(
+            self.dest.with_name("config.toml.bak").read_text(encoding="utf-8"),
+            'model = "old"\ncustom = "keep"\n',
+        )
+        self.assertEqual(cli.merge_managed_toml_into(self.template, self.dest), "ok")
 
 
 class InstallTreeTests(unittest.TestCase):
@@ -989,6 +1083,7 @@ class InstallTests(unittest.TestCase):
         self._run_install()
         expected = {
             ".codex/readonly.config.toml",
+            ".codex/trusted.config.toml",
         }
         specs = _codex_profile_specs()
         self.assertEqual({s.dest_rel for s in specs}, expected)
@@ -1054,21 +1149,100 @@ class InstallTests(unittest.TestCase):
 
     def test_codex_rules_installed(self) -> None:
         self._run_install()
-        rules = self.home / ".codex/rules/default.rules"
+        rules = self.home / ".codex/rules/agent-config.rules"
         self.assertTrue(rules.is_file(), f"missing: {rules}")
         self.assertEqual(
             rules.read_bytes(),
-            (cli.REPO_ROOT / "templates/codex-rules/default.rules").read_bytes(),
+            (cli.REPO_ROOT / "templates/codex-rules/agent-config.rules").read_bytes(),
         )
+        if cli.is_posix():
+            self.assertEqual(rules.parent.stat().st_mode & 0o777, cli.DIR_MODE)
 
     @unittest.skipIf(tomllib is None, "tomllib is available on Python 3.11+")
-    def test_codex_default_config_uses_auto_review_with_full_access(self) -> None:
+    def test_codex_profiles_separate_default_trusted_and_readonly_access(self) -> None:
         base = tomllib.loads(
             (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
         )
+        readonly = tomllib.loads(
+            (cli.REPO_ROOT / "templates/codex/readonly.config.toml").read_text(
+                encoding="utf-8"
+            )
+        )
+        trusted = tomllib.loads(
+            (cli.REPO_ROOT / "templates/codex/trusted.config.toml").read_text(
+                encoding="utf-8"
+            )
+        )
         self.assertEqual(base["approval_policy"], "on-request")
         self.assertEqual(base["approvals_reviewer"], "auto_review")
-        self.assertEqual(base["sandbox_mode"], "danger-full-access")
+        self.assertEqual(base["sandbox_mode"], "workspace-write")
+        self.assertEqual(readonly["approval_policy"], "never")
+        self.assertEqual(readonly["sandbox_mode"], "read-only")
+        self.assertEqual(trusted["sandbox_mode"], "danger-full-access")
+
+    def test_codex_config_preserves_runtime_owned_state_and_converges(self) -> None:
+        self._run_install()
+        config = _codex_config(self.home)
+        text = config.read_text(encoding="utf-8")
+        text = text.replace(
+            '[features]\n',
+            'custom_root = "keep"\n\n[features]\nfuture_flag = true\n',
+        ).replace('[tui]\n', '[tui]\ntheme = "dark"\n')
+        text += (
+            '\n[tui.keymap.global]\nopen_transcript = "ctrl-t"\n'
+            '\n[projects."/workspace"]\ntrust_level = "trusted"\n'
+            '\n[mcp_servers.docs]\nurl = "https://example.invalid/mcp"\n'
+        )
+        config.write_text(text, encoding="utf-8")
+
+        out = self._run_install()
+        merged = config.read_text(encoding="utf-8")
+        for expected in (
+            'custom_root = "keep"',
+            'future_flag = true',
+            'theme = "dark"',
+            '[tui.keymap.global]',
+            '[projects."/workspace"]',
+            '[mcp_servers.docs]',
+        ):
+            self.assertIn(expected, merged)
+        self.assertIn(f"merged: {config}", out)
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.layout)
+        self.assertEqual(report.fail_count(), 0, report.failures)
+        self.assertIn(f"ok: {config}", self._run_install())
+
+    def test_codex_config_managed_value_drift_is_restored(self) -> None:
+        self._run_install()
+        config = _codex_config(self.home)
+        config.write_text(
+            config.read_text(encoding="utf-8").replace(
+                'sandbox_mode = "workspace-write"',
+                'sandbox_mode = "danger-full-access"',
+            ),
+            encoding="utf-8",
+        )
+        with patch("sys.stdout", new=StringIO()):
+            report = cli.verify(self.layout)
+        self.assertTrue(any("managed TOML drift" in item for item in report.failures))
+        self._run_install()
+        self.assertIn(
+            'sandbox_mode = "workspace-write"', config.read_text(encoding="utf-8")
+        )
+
+    def test_legacy_managed_default_rules_retired_only_when_unchanged(self) -> None:
+        legacy_source = cli.REPO_ROOT / cli.LEGACY_MANAGED_FILES[0][0]
+        target = self.home / cli.LEGACY_MANAGED_FILES[0][1]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(legacy_source.read_bytes())
+        out = self._run_install()
+        self.assertFalse(target.exists())
+        self.assertTrue(target.with_name("default.rules.bak").exists())
+        self.assertIn("removed (legacy managed file):", out)
+
+        target.write_text("# user-owned\n", encoding="utf-8")
+        self._run_install()
+        self.assertEqual(target.read_text(encoding="utf-8"), "# user-owned\n")
 
     def test_global_guidelines_overwritten_when_present(self) -> None:
         # Machine-local edits belong in a *.local.md; the guideline files
@@ -1222,6 +1396,14 @@ class CleanTests(unittest.TestCase):
         self.assertTrue(
             settings.exists(),
             "clean() must not remove ~/.claude/settings.json (carries user values)",
+        )
+
+    def test_preserves_shared_codex_config(self) -> None:
+        config = _codex_config(self.home)
+        self._run_clean()
+        self.assertTrue(
+            config.exists(),
+            "clean() must not remove shared Codex runtime/user configuration",
         )
 
     def test_skip_when_already_absent(self) -> None:

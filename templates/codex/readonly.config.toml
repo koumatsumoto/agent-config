@@ -1,3 +1,4 @@
 # Codex CLI profile: readonly
 # Explore a repository without granting write access to the workspace.
+approval_policy = "never"
 sandbox_mode = "read-only"

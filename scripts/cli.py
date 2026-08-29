@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -73,6 +74,15 @@ class TreeSpec:
     prune: bool = True
 
 
+@dataclass(frozen=True)
+class ManagedTomlSpec:
+    """A shared TOML file where only template-declared leaf keys are managed."""
+
+    src_rel: str
+    dest_rel: str
+    mode: int = 0o600
+
+
 # The one canonical agent guideline. Every tool reads it under the file name it
 # expects, so the same source is deployed to each of those names and the
 # deployed copies stay byte-for-byte identical.
@@ -87,8 +97,13 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700, is_executable=True),
     FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
     FileSpec(GUIDELINE_TEMPLATE_REL, ".codex/AGENTS.md", 0o600),
-    FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
     FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
+    FileSpec("templates/codex/trusted.config.toml", ".codex/trusted.config.toml", 0o600),
+    FileSpec("templates/codex-rules/agent-config.rules", ".codex/rules/agent-config.rules", 0o600),
+)
+
+MANAGED_TOML_FILES: tuple[ManagedTomlSpec, ...] = (
+    ManagedTomlSpec("templates/config.toml", ".codex/config.toml"),
 )
 
 # Directory trees synced recursively (with per-file .bak backup).
@@ -96,7 +111,6 @@ TEMPLATE_TREES: tuple[TreeSpec, ...] = (
     TreeSpec("templates/skills", ".claude/skills"),
     TreeSpec("templates/output-styles", ".claude/output-styles"),
     TreeSpec("templates/skills", ".agents/skills"),
-    TreeSpec("templates/codex-rules", ".codex/rules"),
 )
 
 # settings.json — special handling: shallow merge instead of overwrite.
@@ -191,6 +205,14 @@ DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".claude/rules",
 )
 
+# Runtime/user state shares ~/.codex/rules. Codex itself writes accepted TUI
+# allow rules to default.rules, so only retire the historical agent-config copy
+# when its bytes still match the last managed version. Any user-modified file is
+# left untouched.
+LEGACY_MANAGED_FILES: tuple[tuple[str, str], ...] = (
+    ("scripts/migrations/codex-default.rules-v1", ".codex/rules/default.rules"),
+)
+
 
 # --------------------------------------------------------------------------- #
 # Layout: one install destination — the root, the dirs owned there, and the
@@ -202,6 +224,7 @@ class Layout:
     home: Path                          # base for `~`-relative status-line commands
     managed_dirs: tuple[Path, ...]      # dirs the installer owns; every write stays inside one
     files: tuple[FileSpec, ...]
+    managed_toml: tuple[ManagedTomlSpec, ...]
     trees: tuple[TreeSpec, ...]
     settings: tuple[SettingsSpec, ...]
     statusline_commands: tuple[tuple[str, str], ...]
@@ -233,6 +256,7 @@ def home_layout(home: Path, *, include_qwen: bool = False) -> Layout:
             for sub in (INSTALL_HOME_DIRS + (QWEN_HOME_DIRS if include_qwen else ()))
         ),
         files=TEMPLATE_FILES + (QWEN_TEMPLATE_FILES if include_qwen else ()),
+        managed_toml=MANAGED_TOML_FILES,
         trees=TEMPLATE_TREES + (QWEN_TEMPLATE_TREES if include_qwen else ()),
         settings=TEMPLATE_SETTINGS + (QWEN_TEMPLATE_SETTINGS if include_qwen else ()),
         statusline_commands=STATUSLINE_COMMANDS,
@@ -263,6 +287,11 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
         for spec in TEMPLATE_FILES
         if (rel := claude_config_rel(spec.dest_rel)) is not None
     )
+    managed_toml = tuple(
+        replace(spec, dest_rel=rel)
+        for spec in MANAGED_TOML_FILES
+        if (rel := claude_config_rel(spec.dest_rel)) is not None
+    )
     trees = tuple(
         replace(spec, dest_rel=rel)
         for spec in TEMPLATE_TREES
@@ -288,6 +317,7 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
         home=home,
         managed_dirs=(target,),
         files=files,
+        managed_toml=managed_toml,
         trees=trees,
         settings=settings,
         statusline_commands=statusline,
@@ -299,8 +329,8 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
 def clean_targets(layout: Layout) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
 
-    settings.json is intentionally excluded because it is a shallow merge of
-    template and user-managed keys, not a pure template copy.
+    settings.json and managed TOML are intentionally excluded because they mix
+    template and user/runtime-owned keys, not pure template copies.
     """
     out: list[Path] = []
     for spec in layout.files:
@@ -448,9 +478,163 @@ def install_file(src: Path, dest: Path, mode: int = FILE_MODE) -> str:
         ensure_file_mode(dest, mode)
         return "ok"
 
+    ensure_secure_dir(dest.parent, DIR_MODE)
     bak = backup(dest)
     atomic_write_bytes(dest, src.read_bytes(), mode=mode)
     return "replaced" if bak is not None else "copied"
+
+
+_TOML_TABLE_RE = re.compile(r"^\s*(\[\[?.*\]\]?)\s*(?:#.*)?$")
+_TOML_ASSIGNMENT_RE = re.compile(r"^\s*([^#=][^=]*?)\s*=")
+_TOML_BARE_KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+@dataclass(frozen=True)
+class _TomlSection:
+    identity: str
+    header: str
+    body: tuple[str, ...]
+
+
+def _split_toml_sections(text: str) -> list[_TomlSection]:
+    """Split TOML by table header without interpreting destination values.
+
+    The managed template deliberately uses ordinary tables and bare, one-line
+    keys. Destination-only tables stay opaque, which lets Codex persist future
+    state without forcing this Python 3.9, stdlib-only installer to become a
+    general TOML parser or rewriter.
+    """
+    sections: list[_TomlSection] = []
+    identity = ""
+    header = ""
+    body: list[str] = []
+    for line in text.splitlines(keepends=True):
+        match = _TOML_TABLE_RE.match(line.rstrip("\r\n"))
+        if match:
+            sections.append(_TomlSection(identity, header, tuple(body)))
+            token = match.group(1).strip()
+            identity = token
+            header = line
+            body = []
+        else:
+            body.append(line)
+    sections.append(_TomlSection(identity, header, tuple(body)))
+    return sections
+
+
+def _toml_assignment_blocks(lines: tuple[str, ...]) -> list[tuple[str, tuple[str, ...]]]:
+    """Return assignment-led blocks; comments before the first key are metadata.
+
+    Continuation lines and trailing comments remain attached to their assignment.
+    This is enough to preserve multiline destination-only values while the
+    managed template itself is restricted to one-line bare-key assignments.
+    """
+    blocks: list[tuple[str, tuple[str, ...]]] = []
+    key: str | None = None
+    block: list[str] = []
+    for line in lines:
+        match = _TOML_ASSIGNMENT_RE.match(line)
+        if match:
+            if key is not None:
+                blocks.append((key, tuple(block)))
+            key = match.group(1).strip()
+            block = [line]
+        elif key is not None:
+            block.append(line)
+    if key is not None:
+        blocks.append((key, tuple(block)))
+    return blocks
+
+
+def merge_managed_toml_text(template_text: str, existing_text: str) -> str:
+    """Overlay template-declared leaf keys while preserving all other TOML state.
+
+    The template owns only the bare assignment keys it declares in each exact
+    table. Unknown assignments in those tables and every destination-only table
+    are retained. Unsupported template syntax fails closed instead of silently
+    corrupting the user's Codex configuration.
+    """
+    template_sections = _split_toml_sections(template_text)
+    existing_sections = _split_toml_sections(existing_text)
+
+    managed: dict[str, set[str]] = {}
+    for section in template_sections:
+        if section.identity in managed:
+            raise ValueError(f"duplicate managed TOML table: {section.identity or '<root>'}")
+        keys = {key for key, _ in _toml_assignment_blocks(section.body)}
+        if not keys:
+            raise ValueError(
+                f"managed TOML table has no assignments: {section.identity or '<root>'}"
+            )
+        unsupported = sorted(key for key in keys if not _TOML_BARE_KEY_RE.fullmatch(key))
+        if unsupported:
+            raise ValueError(
+                f"managed TOML template requires bare keys in {section.identity or '<root>'}: "
+                + ", ".join(unsupported)
+            )
+        managed[section.identity] = keys
+
+    existing_by_identity: dict[str, _TomlSection] = {}
+    destination_only: list[_TomlSection] = []
+    for section in existing_sections:
+        if section.identity in managed:
+            if section.identity in existing_by_identity:
+                raise ValueError(
+                    f"duplicate managed TOML table in destination: "
+                    f"{section.identity or '<root>'}"
+                )
+            existing_by_identity[section.identity] = section
+        elif section.identity or any(line.strip() for line in section.body):
+            destination_only.append(section)
+
+    rendered: list[str] = []
+    for section in template_sections:
+        rendered.append(section.header)
+        rendered.extend(section.body)
+        existing = existing_by_identity.get(section.identity)
+        if existing is None:
+            continue
+        extra_blocks = [
+            block
+            for key, block in _toml_assignment_blocks(existing.body)
+            if key not in managed[section.identity]
+        ]
+        if extra_blocks:
+            if rendered and rendered[-1].strip():
+                rendered.append("\n")
+            for block in extra_blocks:
+                rendered.extend(block)
+
+    for section in destination_only:
+        if rendered and rendered[-1].strip():
+            rendered.append("\n")
+        rendered.append(section.header)
+        rendered.extend(section.body)
+
+    output = "".join(rendered)
+    return output if output.endswith("\n") else output + "\n"
+
+
+def merge_managed_toml_into(template: Path, dest: Path) -> str:
+    """Merge a managed TOML template into a shared destination atomically."""
+    if not template.is_file() or template.is_symlink():
+        raise FileNotFoundError(f"source not found or not a regular file: {template}")
+    template_text = template.read_text(encoding="utf-8")
+    try:
+        existing_text = dest.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        existing_text = ""
+    new_text = merge_managed_toml_text(template_text, existing_text)
+    unchanged = existing_text == new_text
+    if unchanged and not dest.is_symlink():
+        ensure_file_mode(dest, FILE_MODE)
+        return "ok"
+    if existing_text and not unchanged:
+        atomic_write_text(dest.with_name(dest.name + ".bak"), existing_text, mode=FILE_MODE)
+    atomic_write_text(dest, new_text, mode=FILE_MODE)
+    if unchanged:
+        return "materialized"
+    return "created" if not existing_text else "merged"
 
 
 def install_tree(
@@ -608,6 +792,23 @@ def remove_decommissioned_paths(layout: Layout) -> list[Path]:
         if remove_with_backup(target) == "backed_up":
             removed.append(target)
     return removed
+
+
+def retire_legacy_managed_files(
+    layout: Layout, repo_root: Path = REPO_ROOT
+) -> list[Path]:
+    """Retire exact historical managed files without taking user-owned state."""
+    retired: list[Path] = []
+    for src_rel, dest_rel in LEGACY_MANAGED_FILES:
+        source = repo_root / src_rel
+        target = layout.root / dest_rel
+        if not any(is_within(target, managed) for managed in layout.managed_dirs):
+            continue
+        if target.is_symlink() or not target.is_file() or not same_content(source, target):
+            continue
+        backup(target)
+        retired.append(target)
+    return retired
 
 
 def remove_with_backup(path: Path) -> str:
@@ -836,6 +1037,20 @@ def _check_settings_contract(report: VerifyReport, template: Path, dest: Path) -
         report.record(key in dest_data, f"settings missing template key: {dest} ({key})")
 
 
+def _check_managed_toml(report: VerifyReport, template: Path, dest: Path) -> None:
+    try:
+        template_text = template.read_text(encoding="utf-8")
+        dest_text = dest.read_text(encoding="utf-8")
+        expected = merge_managed_toml_text(template_text, dest_text)
+    except FileNotFoundError:
+        report.record(False, f"missing: {dest}")
+        return
+    except (OSError, UnicodeError, ValueError) as exc:
+        report.record(False, f"invalid managed TOML: {dest} ({exc})")
+        return
+    report.record(dest_text == expected, f"managed TOML drift: {dest}")
+
+
 def verify(layout: Layout, repo_root: Path = REPO_ROOT) -> VerifyReport:
     report = VerifyReport()
     print(f"Verify {layout.description}")
@@ -844,6 +1059,11 @@ def verify(layout: Layout, repo_root: Path = REPO_ROOT) -> VerifyReport:
         src = repo_root / spec.src_rel
         dest = layout.root / spec.dest_rel
         _check_file(report, src, dest)
+        _check_mode(report, dest, spec.mode)
+
+    for spec in layout.managed_toml:
+        dest = layout.root / spec.dest_rel
+        _check_managed_toml(report, repo_root / spec.src_rel, dest)
         _check_mode(report, dest, spec.mode)
 
     for managed in layout.managed_dirs:
@@ -904,6 +1124,16 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
         status = install_file(src, dest, mode=spec.mode)
         print(f"{status}: {dest}")
 
+    for spec in layout.managed_toml:
+        src = repo_root / spec.src_rel
+        dest = layout.root / spec.dest_rel
+        if not any(is_within(dest, b) for b in boundary_dirs):
+            raise PermissionError(f"refusing to write outside install dirs: {dest}")
+        status = merge_managed_toml_into(src, dest)
+        if status == "merged":
+            print(f"backup: {dest}.bak")
+        print(f"{status}: {dest}")
+
     for tspec in layout.trees:
         src_root = repo_root / tspec.src_rel
         dest_root = layout.root / tspec.dest_rel
@@ -930,6 +1160,10 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
     for dest in remove_decommissioned_paths(layout):
         print(f"backup: {dest}.bak")
         print(f"removed (obsolete config): {dest}")
+
+    for dest in retire_legacy_managed_files(layout, repo_root):
+        print(f"backup: {dest}.bak")
+        print(f"removed (legacy managed file): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.9, and on Windows it is exactly the python that must be

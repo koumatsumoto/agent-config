@@ -1,0 +1,3 @@
+# Codex CLI profile: trusted
+# Unrestricted host access for work whose repository and inputs are fully trusted.
+sandbox_mode = "danger-full-access"

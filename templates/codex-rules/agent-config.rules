@@ -1,0 +1,89 @@
+# Agent-config exec policy rules for representative high-risk commands.
+#
+# The workspace sandbox is the primary boundary. These exact argv-prefix rules
+# add approval review for common destructive and external-write command forms;
+# they are not a semantic allow/deny policy for every shell spelling.
+
+prefix_rule(
+  pattern = ["git", "push"],
+  decision = "prompt",
+  justification = "Pushing writes to a remote repository; require approval review.",
+  match = [
+    "git push origin main",
+    "git push origin main --force-with-lease",
+  ],
+  not_match = ["git status"],
+)
+
+prefix_rule(
+  pattern = ["git", "reset"],
+  decision = "prompt",
+  justification = "Reset can discard index or working-tree state; require approval review.",
+  match = [
+    "git reset --hard HEAD",
+    "git reset --mixed HEAD~1",
+  ],
+  not_match = ["git restore --staged file.txt"],
+)
+
+prefix_rule(
+  pattern = ["rm"],
+  decision = "prompt",
+  justification = "Removal can destroy local data; require approval review.",
+  match = [
+    "rm -rf build",
+    "rm -fr build",
+    "rm --recursive --force build",
+  ],
+  not_match = ["rmdir empty-dir"],
+)
+
+prefix_rule(
+  pattern = ["gh", "pr", ["create", "merge", "close", "reopen", "edit"]],
+  decision = "prompt",
+  justification = "This pull-request command writes to GitHub; require approval review.",
+  match = [
+    "gh pr create --fill",
+    "gh pr merge 123 --squash",
+    "gh pr edit 123 --add-label bug",
+  ],
+  not_match = ["gh pr view 123"],
+)
+
+prefix_rule(
+  pattern = ["gh", "issue", ["create", "close", "reopen", "edit", "delete"]],
+  decision = "prompt",
+  justification = "This issue command writes to GitHub; require approval review.",
+  match = [
+    "gh issue create --title bug",
+    "gh issue close 123",
+    "gh issue edit 123 --add-label bug",
+  ],
+  not_match = ["gh issue view 123"],
+)
+
+prefix_rule(
+  pattern = ["gh", "api"],
+  decision = "prompt",
+  justification = "The generic GitHub API command may write externally; require approval review.",
+  match = [
+    "gh api --method POST repos/owner/repo/issues -f title=bug",
+    "gh api repos/owner/repo/issues -f title=bug",
+  ],
+)
+
+prefix_rule(
+  pattern = ["gh", "release"],
+  decision = "prompt",
+  justification = "Release operations write externally; require approval review.",
+  match = ["gh release create v1.0.0"],
+  not_match = ["gh repo view"],
+)
+
+prefix_rule(
+  pattern = ["gh", "workflow", "run"],
+  decision = "prompt",
+  justification = "Dispatching a workflow changes external state; require approval review.",
+  match = ["gh workflow run deploy.yml"],
+  not_match = ["gh workflow view deploy.yml"],
+)
