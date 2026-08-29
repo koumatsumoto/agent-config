@@ -6,9 +6,9 @@
 
 | 変更箇所 | 再走する題材 |
 | --- | --- |
-| Prepare / GitHub Contract | worktree-isolation-and-pr-only / worktreeinclude-bootstrap |
-| Merge / Report | merge-and-cleanup |
-| Verify（km-reviewの起動契約） | low-risk-main-only / permissions-hard-gate |
+| Setup / GitHub Contract | worktree-isolation-and-pr-only / worktreeinclude-bootstrap |
+| Submit / Merge | merge-and-cleanup |
+| Review（km-reviewの起動契約） | low-risk-main-only / permissions-hard-gate |
 | 委譲の記述 | delegation-judgment |
 | `description` | 隣接skill（km-review / km-plan）の起動判定と併せて再走 |
 

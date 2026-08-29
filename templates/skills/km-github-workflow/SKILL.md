@@ -10,34 +10,36 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 
 ## Workflow
 
-`Define` → `Prepare` → `Verify` → `Deliver` → `Merge`（依頼された場合のみ）→ `Report`
+`Plan` → `Setup` → `Implement` → `Review` → `Submit` → `Merge`（依頼された場合のみ）
 
-### Define
+### Plan
 
 原則として変更ごとにissueを作り、PRと対応させる。論点が少ない場合は、目的と完了条件だけを記載する。複雑で、誤方向へ進んだ場合の手戻りが大きい場合は`km-plan`を使う。ユーザーがissueは不要だと明示した場合は省略する。
 
-### Prepare
+### Setup
 
-- 変更に着手する前に、基点branchから作業branchと専用worktreeを作る。編集、検証、commitは、そのworktree内で行う。基点branch側や別の作業用worktreeを作業場所にしない。
+- 変更に着手する前に、基点branchから作業branchと専用worktreeを作る。以降の作業は、そのworktree内で行う。基点branch側や別の作業用worktreeを作業場所にしない。
 - branch名は`<type>/<issue番号>-<slug>`とする。issueがない場合は`<type>/<slug>`とする。
 - 既存PRを更新する場合は、そのbranch専用のworktreeを使う。専用worktreeがなければ作成する。
 - worktreeの作成直後、新しいworktreeのリポジトリルートに、Gitが追跡する`.worktreeinclude`があるか確認する。存在する場合は、作成元worktreeにある無視対象ファイルのうち、記載されたパスまたは`.gitignore`形式のパターンに一致するものを同じ相対パスへコピーする。存在しない場合は何もしない。
 
-### Verify
+### Implement
+
+依頼された変更を専用worktreeで実装する。
+
+### Review
 
 完了条件、差分、テスト結果を確認した後、`km-review`を実行する。
 
-### Deliver
+### Submit
 
-`km-commit`で変更をcommitし、作業branchをpushして、PRを作成または更新する。
+`km-commit`で変更をcommitし、作業branchをpushして、PRを作成または更新する。マージまで依頼されていない場合は、ここでPR URL、変更の要約、検証結果を報告する。
 
 ### Merge
 
 ユーザーが現在の依頼でマージを求めた場合、または元の作業指示にマージまで含まれていた場合に限り、レビューを完了したPRをマージする。マージ完了を確認したら基点branch側のworktreeへ戻り、今回の作業に使った専用worktreeを削除する。
 
-### Report
-
-PR URL、変更の要約、検証結果を報告する。
+最後に、PR URL、変更の要約、検証結果、マージ結果を報告する。
 
 ## GitHub Contract
 
