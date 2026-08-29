@@ -1008,6 +1008,7 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(base["plan_mode_reasoning_effort"], "high")
         self.assertEqual(base["personality"], "pragmatic")
         self.assertEqual(base["model_verbosity"], "low")
+        self.assertEqual(base["web_search"], "live")
         self.assertEqual(base["features"], {"memories": True})
         self.assertEqual(
             base["memories"],
@@ -1047,6 +1048,9 @@ class InstallTests(unittest.TestCase):
             ],
         )
         self.assertIs(base["tui"]["status_line_use_colors"], True)
+        self.assertEqual(base["tui"]["notifications"], ["agent-turn-complete"])
+        self.assertEqual(base["tui"]["notification_method"], "auto")
+        self.assertEqual(base["tui"]["notification_condition"], "unfocused")
 
     def test_codex_rules_installed(self) -> None:
         self._run_install()
@@ -1057,22 +1061,14 @@ class InstallTests(unittest.TestCase):
             (cli.REPO_ROOT / "templates/codex-rules/default.rules").read_bytes(),
         )
 
-    def test_codex_default_config_is_the_fully_trusted_baseline(self) -> None:
-        base = (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
-        self.assertIn('approval_policy = "never"', base)
-        self.assertIn('sandbox_mode = "danger-full-access"', base)
-        files = [
-            cli.REPO_ROOT / spec.src_rel
-            for spec in cli.TEMPLATE_FILES
-            if spec.dest_rel.startswith(".codex/") and spec.dest_rel.endswith(".toml")
-        ]
-        offenders = [
-            path.relative_to(cli.REPO_ROOT).as_posix()
-            for path in files
-            if 'approval_policy = "' in path.read_text(encoding="utf-8")
-            and 'approval_policy = "never"' not in path.read_text(encoding="utf-8")
-        ]
-        self.assertEqual(offenders, [])
+    @unittest.skipIf(tomllib is None, "tomllib is available on Python 3.11+")
+    def test_codex_default_config_uses_auto_review_with_full_access(self) -> None:
+        base = tomllib.loads(
+            (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(base["approval_policy"], "on-request")
+        self.assertEqual(base["approvals_reviewer"], "auto_review")
+        self.assertEqual(base["sandbox_mode"], "danger-full-access")
 
     def test_global_guidelines_overwritten_when_present(self) -> None:
         # Machine-local edits belong in a *.local.md; the guideline files

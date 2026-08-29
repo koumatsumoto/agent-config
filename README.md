@@ -205,7 +205,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 配布後の 3 ファイルは `templates/CLAUDE.md` とバイト単位で一致する。テンプレートを唯一の正本として毎回上書きするため、リポジトリ側の更新がそのまま各マシンへ反映される。指針を変える場合は `templates/CLAUDE.md` を編集し、再インストールする。
 
-内容はツール非依存に保つ。モデル名、推論強度、サンドボックス、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml` / `templates/qwen-settings.json`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約で抑止する。Codexの既定プロファイルは`approval_policy = "never"` / `sandbox_mode = "danger-full-access"`で動くため、この行動規範が実質的な安全境界になる。
+内容はツール非依存に保つ。モデル名、推論強度、サンドボックス、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml` / `templates/qwen-settings.json`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約で抑止する。Codexの既定プロファイルは`approval_policy = "on-request"` / `approvals_reviewer = "auto_review"` / `sandbox_mode = "danger-full-access"`で動く。通常操作にサンドボックス境界はなく、rulesやtoolが明示的に要求した承認だけを自動レビューへ回すため、この行動規範が引き続き主要な安全境界になる。
 
 マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ユーザーレベルの `~/.claude/CLAUDE.local.md` は自動読み込みされない。
 
@@ -356,14 +356,14 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 - default model は `gpt-5.6-sol`、reasoning effort は `medium`、personality は `pragmatic`、verbosity は `low` にして、品質と応答速度を両立しながら簡潔に報告する
 - `plan_mode_reasoning_effort = "high"` を明示し、実装前の判断には通常の作業より多くの推論を使う。`low` / `ultra` は管理対象にしない
-- `web_search = "cached"` を明示し、通常調査はキャッシュ検索を使う。最新確認が必要な場合は live web を明示して使う
+- `web_search = "live"` を明示し、web検索は常に最新データを取得する
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - `[features]` には既定値と異なる項目だけを置き、Codex CLI の標準機能改善を取り込む。ローカルメモリは明示的に有効化する
 - ローカルメモリは生成と利用の両方を有効にする。生成物は既定で `~/.codex/memories/` に保存され、チャット単位の制御には `/memories` を使う。必須の指示はメモリだけに依存せず `AGENTS.md` に置く
-- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を色付きで表示する
-- default は `danger-full-access + never` を前提にする。sandbox も承認もない完全信頼の自律運用で、`approval_policy = "never"` は常時自動実行扱い。危険操作は設定では止まらず、共通 guideline (`templates/CLAUDE.md` → `~/.codex/AGENTS.md`) の安全規約とリポジトリごとのルールで制御する
+- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。端末が非フォーカスのときにターン完了を通知し、status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を色付きで表示する
+- default は `danger-full-access + on-request + auto_review` を前提にする。通常操作はsandboxなしで自動実行し、rulesやtoolが明示的に要求した承認だけを自動レビュアへ回す。危険操作は共通 guideline (`templates/CLAUDE.md` → `~/.codex/AGENTS.md`) の安全規約とリポジトリごとのルールでも制御する
 - Codexのプロファイルは`~/.codex/<profile>.config.toml`として配布する。管理対象は`readonly`だけに絞る
-- `~/.codex/rules/` は承認が有効なときに force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt 承認へ寄せる。日常的な危険コマンドの抑止は共通 guideline (`templates/CLAUDE.md`) の安全規約で扱う
+- `~/.codex/rules/` は force push、hard reset、外部 recursive delete、GitHub 書き込みなどを自動レビューへ回す。日常的な危険コマンドの抑止は共通 guideline (`templates/CLAUDE.md`) の安全規約でも扱う
 - 読み取り専用で探索したい場合は`readonly`プロファイルを使う
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
