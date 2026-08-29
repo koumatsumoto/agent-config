@@ -82,13 +82,13 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 - `~/.claude/settings.json`（推奨設定を浅くマージ。詳細は後述）
 - `~/.codex/AGENTS.md` (詳細は後述)
 - `~/.codex/config.toml`
-- `~/.codex/*.config.toml` (Codex プロファイル: `readonly`)
+- `~/.codex/*.config.toml` (Codex プロファイル: `readonly` / `trusted`)
 - `~/.codex/rules/`
 - `~/.agents/skills/`
 
 `~/.qwen/` は対象外。Qwen Code を配布したい場合は `--qwen` を付ける (後述)。
 
-`settings.json`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。
+`settings.json`と`~/.codex/config.toml`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。両設定ファイルは利用者・runtime固有の値を保持しながらテンプレート管理値をマージする。
 
 `skills/`はテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
 
@@ -193,6 +193,17 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 > **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、Python CLI がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIXでは `~` パスのまま（shebang + 実行ビットで起動）。
 
+### Codex `config.toml` の取り扱い
+
+`~/.codex/config.toml`はagent-configとCodex runtime・利用者の共同所有ファイルとして扱う。`templates/config.toml`が宣言するsection/keyはテンプレート値へ更新し、それ以外のkeyとtableは保持する。Codexが保存するproject trust、MCP、apps/plugins、keymap、将来追加される未知の設定をinstallで削除しない。
+
+- 初回installはテンプレートから`~/.codex/config.toml`を作成する
+- 2回目以降はmanaged keyだけを更新し、既知section内の未知keyとdestinationだけにあるsubtable/tableを保持する
+- managed keyがずれた場合だけ`verify`を失敗させる。runtime固有設定が追加されただけではdriftにしない
+- マージで内容が変わる場合は既存ファイルを`config.toml.bak`へ退避する
+- `clean`はruntime・利用者固有設定を失わないよう`~/.codex/config.toml`を保持する
+- Python 3.9 / stdlib-onlyを維持するため、テンプレート側のmanaged構文は通常tableとbare keyの単一行assignmentに限定する。対応外のmanaged構文は書き込まずエラーにする
+
 ### 共通 AI エージェント指針の取り扱い
 
 `templates/CLAUDE.md` は全プロジェクト共通の AI coding agent 動作指針で、リポジトリ内で唯一の正本。ツールごとに読み込むファイル名が違うだけなので、installer が同じ内容を各ツールのファイル名へ配布する。
@@ -205,9 +216,9 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 配布後の 3 ファイルは `templates/CLAUDE.md` とバイト単位で一致する。テンプレートを唯一の正本として毎回上書きするため、リポジトリ側の更新がそのまま各マシンへ反映される。指針を変える場合は `templates/CLAUDE.md` を編集し、再インストールする。
 
-内容はツール非依存に保つ。モデル名、推論強度、サンドボックス、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml` / `templates/qwen-settings.json`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約で抑止する。Codexの既定プロファイルは`approval_policy = "on-request"` / `approvals_reviewer = "auto_review"` / `sandbox_mode = "danger-full-access"`で動く。通常操作にサンドボックス境界はなく、rulesやtoolが明示的に要求した承認だけを自動レビューへ回すため、この行動規範が引き続き主要な安全境界になる。
+内容はツール非依存に保つ。モデル名、推論強度、サンドボックス、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml` / `templates/qwen-settings.json`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約でも抑止する。Codexの既定は`workspace-write + on-request + auto_review`で、workspace外とcommand networkへの昇格をapproval reviewへ送る。host全体を開く場合だけ`trusted` profileを明示選択する。
 
-マシン固有・個人ローカルなルールはこれらのファイルに書かない（次の install で失われる）。プロジェクト単位のローカル上書きは各リポジトリ直下の `CLAUDE.local.md`（git 管理外）に置く。ユーザーレベルの `~/.claude/CLAUDE.local.md` は自動読み込みされない。
+マシン固有・個人ローカルな指示は配布対象の正本へ書かない。Claude Codeでは各リポジトリの`CLAUDE.local.md`（git管理外）へ置く。Codexでは`AGENTS.override.md`が同じdirectoryの`AGENTS.md` / fallbackを置き換えるため、必要な通常指示も含めたlocal overrideとして使う。ユーザーレベルの`~/.claude/CLAUDE.local.md`は自動読み込みされない。
 
 ### Output Styles の取り扱い
 
@@ -280,7 +291,7 @@ python3 scripts/cli.py clean
 python scripts/cli.py clean
 ```
 
-このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json` はユーザーのカスタマイズが含まれ得るため対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
+このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json`と`~/.codex/config.toml`はユーザー・runtime固有値が含まれ得るため対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
 
 撤去対象もインストール・検証時と同じ構成要素の選択規則に従う。`--qwen` を指定しなければ `~/.qwen` に触れず、以前に配布したファイルが残っていても変更しない。`--qwen` を指定すると Qwen の管理対象ファイルも撤去するが、`~/.qwen/settings.json` は同じ理由で保持する。
 
@@ -308,9 +319,9 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (浅いマージ) |
-| `templates/config.toml` | `~/.codex/config.toml` |
+| `templates/config.toml` | `~/.codex/config.toml` (managed keyをマージ) |
 | `templates/codex/*.config.toml` | `~/.codex/*.config.toml` |
-| `templates/codex-rules/` | `~/.codex/rules/` |
+| `templates/codex-rules/agent-config.rules` | `~/.codex/rules/agent-config.rules` |
 | `templates/skills/` | `~/.agents/skills/` |
 
 `--qwen` 指定時のみ追加:
@@ -321,7 +332,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 | `templates/skills/` | `~/.qwen/skills/` |
 | `templates/qwen-settings.json` | `~/.qwen/settings.json` (浅いマージ) |
 
-注記: `templates/codex-rules/` は Codex CLI の exec policy rules で、`~/.codex/rules/` へ配布する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
+注記: `~/.codex/rules/default.rules`はCodex runtime・利用者側の所有とし、agent-configは変更しない。旧版が配布した内容とbyte一致する場合だけ、初回migrationで`default.rules.bak`へ退役する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
 
 ## 公式仕様
 
@@ -338,7 +349,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
   - CLI Overview: `https://developers.openai.com/codex/cli`
   - Config Basics: `https://developers.openai.com/codex/config-basic`
   - Config Reference: `https://developers.openai.com/codex/config-reference`
-  - Advanced Config: `https://developers.openai.com/codex/config`
+  - Advanced Config: `https://learn.chatgpt.com/docs/config-file/config-advanced`
   - Memories: `https://learn.chatgpt.com/docs/customization/memories`
   - Rules: `https://developers.openai.com/codex/rules`
   - Hooks: `https://developers.openai.com/codex/hooks`
@@ -361,10 +372,11 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `[features]` には既定値と異なる項目だけを置き、Codex CLI の標準機能改善を取り込む。ローカルメモリは明示的に有効化する
 - ローカルメモリは生成と利用の両方を有効にする。生成物は既定で `~/.codex/memories/` に保存され、チャット単位の制御には `/memories` を使う。必須の指示はメモリだけに依存せず `AGENTS.md` に置く
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。端末が非フォーカスのときにターン完了を通知し、status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を色付きで表示する
-- default は `danger-full-access + on-request + auto_review` を前提にする。通常操作はsandboxなしで自動実行し、rulesやtoolが明示的に要求した承認だけを自動レビュアへ回す。危険操作は共通 guideline (`templates/CLAUDE.md` → `~/.codex/AGENTS.md`) の安全規約とリポジトリごとのルールでも制御する
-- Codexのプロファイルは`~/.codex/<profile>.config.toml`として配布する。管理対象は`readonly`だけに絞る
-- `~/.codex/rules/` は force push、hard reset、外部 recursive delete、GitHub 書き込みなどを自動レビューへ回す。日常的な危険コマンドの抑止は共通 guideline (`templates/CLAUDE.md`) の安全規約でも扱う
-- 読み取り専用で探索したい場合は`readonly`プロファイルを使う
+- default は `workspace-write + on-request + auto_review` とし、workspace内の通常操作だけを自動実行する。command networkとworkspace外への昇格はapproval reviewへ送る
+- `trusted` profileは`danger-full-access`を明示選択し、repoと入力を完全に信頼できる作業または外部隔離済み環境だけで使う
+- `readonly` profileは`read-only + approval_policy = "never"`とし、昇格なしで探索する
+- `agent-config.rules`は`git push`、`git reset`、`rm`、主要な`gh` write commandの代表的なargv prefixをapproval reviewへ送る補助境界である。global optionや別ツールを含む全同義表現の意味解析は保証せず、workspace sandboxと共通 guidelineを本境界にする
+- `~/.codex/rules/default.rules`はCodex runtime・利用者の所有とし、agent-configは別ファイルを配布する
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
 - 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
 
