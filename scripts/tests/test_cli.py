@@ -1026,6 +1026,28 @@ class InstallTests(unittest.TestCase):
         }
         self.assertTrue(managed_efforts.isdisjoint({"low", "ultra"}))
 
+    @unittest.skipIf(tomllib is None, "tomllib is available on Python 3.11+")
+    def test_codex_tui_status_line_contract(self) -> None:
+        base = tomllib.loads(
+            (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            base["tui"]["status_line"],
+            [
+                "model-with-reasoning",
+                "git-branch",
+                "current-dir",
+                "context-used",
+                "five-hour-limit",
+                "used-tokens",
+                "weekly-limit",
+                "branch-changes",
+                "estimated-thread-cost",
+                "task-progress",
+            ],
+        )
+        self.assertIs(base["tui"]["status_line_use_colors"], True)
+
     def test_codex_rules_installed(self) -> None:
         self._run_install()
         rules = self.home / ".codex/rules/default.rules"
