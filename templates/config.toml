@@ -4,7 +4,7 @@
 # Copy this file to ~/.codex/config.toml via install.sh.
 
 model = "gpt-5.6-sol"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
@@ -20,21 +20,16 @@ check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]
 
 [features]
-enable_request_compression = true
-fast_mode = false
-multi_agent = true
-personality = true
-shell_snapshot = true
-shell_tool = true
-skill_mcp_dependency_install = true
-unified_exec = true
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
 
 [tui]
 alternate_screen = "never"
 show_tooltips = false
 animations = false
-# Built-in TUI items only. As of codex-cli 0.128.0, the status line does not
-# expose a dedicated item for the five-hour limit reset timestamp.
 status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "weekly-limit"]
 
 [history]
