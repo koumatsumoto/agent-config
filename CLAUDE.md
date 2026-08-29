@@ -8,7 +8,6 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。Qwen C
 - `templates/CLAUDE.md` - Claude Code、Codex CLI、Qwen Codeに共通するAI共通ガイドラインの唯一の正本。`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、`~/.qwen/QWEN.md`（`--qwen`指定時のみ）へ同じ内容を配布する
 - `.claude/` - このプロジェクト固有の設定
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
-- `docs/` - ドキュメント
 
 ## 注意
 
