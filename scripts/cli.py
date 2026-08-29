@@ -10,20 +10,14 @@ and process semantics, while native Windows gets the small set of adaptations
 required by NTFS and cmd.exe.
 
 Usage:
-    python scripts/cli.py install [--claude-dir <dir>] [--qwen]
-    python scripts/cli.py clean [--claude-dir <dir>] [--qwen]
-    python scripts/cli.py verify [--claude-dir <dir>] [--qwen]
+    python scripts/cli.py install [--claude-dir <dir>]
+    python scripts/cli.py clean [--claude-dir <dir>]
+    python scripts/cli.py verify [--claude-dir <dir>]
     python scripts/cli.py merge <template.json> <destination.json>
 
 `--claude-dir` installs the Claude Code slice of the templates into another
 configuration directory (the one CLAUDE_CONFIG_DIR names), so a second profile
 tracks the same templates as `~/.claude`.
-
-`--qwen` is additive: it adds the Qwen Code component (`~/.qwen`) to the usual
-destinations, with the same meaning in install / clean / verify. Without it
-nothing under `~/.qwen` is read or written. It cannot be combined with
-`--claude-dir`, which re-roots a single Claude configuration slice: one command
-must not mutate two unrelated roots.
 
 On POSIX, directories / regular files / executables get 0o700 / 0o600 / 0o700
 modes. On Windows the modes are skipped because NTFS does not honour POSIX
@@ -124,40 +118,17 @@ TEMPLATE_TREES: tuple[TreeSpec, ...] = (
 SETTINGS_TEMPLATE_REL = "templates/settings.json"
 SETTINGS_DEST_REL = ".claude/settings.json"
 
-# Qwen Code settings.json — shallow merge, no statusline transform.
-QWEN_SETTINGS_TEMPLATE_REL = "templates/qwen-settings.json"
-QWEN_SETTINGS_DEST_REL = ".qwen/settings.json"
-
-
 @dataclass(frozen=True)
 class SettingsSpec:
     src_rel: str           # relative to REPO_ROOT
     dest_rel: str          # relative to the layout root
     # Claude Code launches the status line itself, so its command must name a
-    # path that resolves on this machine; the Qwen template has no such key.
+    # path that resolves on this machine.
     rewrite_statusline: bool = False
 
 
 TEMPLATE_SETTINGS: tuple[SettingsSpec, ...] = (
     SettingsSpec(SETTINGS_TEMPLATE_REL, SETTINGS_DEST_REL, rewrite_statusline=True),
-)
-
-# Qwen Code component: everything agent-config manages under `~/.qwen`. It is
-# opt-in, so these specs are kept out of the manifests above and only joined
-# into a layout when `--qwen` is given. Keeping the whole component — files,
-# trees, settings and the managed directory itself — in one place is what makes
-# "a plain command never touches ~/.qwen" a structural property rather than a
-# set of per-operation conditionals.
-QWEN_TEMPLATE_FILES: tuple[FileSpec, ...] = (
-    FileSpec(GUIDELINE_TEMPLATE_REL, ".qwen/QWEN.md", 0o600),
-)
-
-QWEN_TEMPLATE_TREES: tuple[TreeSpec, ...] = (
-    TreeSpec("templates/skills", ".qwen/skills"),
-)
-
-QWEN_TEMPLATE_SETTINGS: tuple[SettingsSpec, ...] = (
-    SettingsSpec(QWEN_SETTINGS_TEMPLATE_REL, QWEN_SETTINGS_DEST_REL),
 )
 
 # settings.json keys whose `command` launches a deployed status-line script,
@@ -170,12 +141,6 @@ STATUSLINE_COMMANDS: tuple[tuple[str, str], ...] = (
 
 # Top-level home subdirectories that the installer may write into.
 INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
-
-# Home subdirectory of the opt-in Qwen Code component. Excluding it from
-# managed_dirs — not just its specs from the manifests — keeps `~/.qwen`
-# outside the filesystem-mutation boundary, so a plain install cannot even
-# create it empty.
-QWEN_HOME_DIRS: tuple[str, ...] = (".qwen",)
 
 # Top-level skill directory names that are no longer maintained. prune_tree keeps
 # entries with no source counterpart because they may be user-added, so obsolete
@@ -245,30 +210,21 @@ class Layout:
 CLAUDE_HOME_DIR = ".claude"
 
 HOME_DESCRIPTION = "Claude + Codex configuration"
-HOME_QWEN_DESCRIPTION = "Claude + Codex + Qwen Code configuration"
 
 
-def home_layout(home: Path, *, include_qwen: bool = False) -> Layout:
-    """Default destination: `~/.claude`, `~/.codex`, `~/.agents` (+ `~/.qwen`).
-
-    `include_qwen` joins the opt-in Qwen Code component into the layout. The
-    selection happens here, once, so install / clean / verify all act on the
-    same set of destinations and cannot drift apart.
-    """
+def home_layout(home: Path) -> Layout:
+    """Default destination: `~/.claude`, `~/.codex`, `~/.agents`."""
     return Layout(
         root=home,
         home=home,
-        managed_dirs=tuple(
-            home / sub
-            for sub in (INSTALL_HOME_DIRS + (QWEN_HOME_DIRS if include_qwen else ()))
-        ),
-        files=TEMPLATE_FILES + (QWEN_TEMPLATE_FILES if include_qwen else ()),
+        managed_dirs=tuple(home / sub for sub in INSTALL_HOME_DIRS),
+        files=TEMPLATE_FILES,
         managed_toml=MANAGED_TOML_FILES,
-        trees=TEMPLATE_TREES + (QWEN_TEMPLATE_TREES if include_qwen else ()),
-        settings=TEMPLATE_SETTINGS + (QWEN_TEMPLATE_SETTINGS if include_qwen else ()),
+        trees=TEMPLATE_TREES,
+        settings=TEMPLATE_SETTINGS,
         statusline_commands=STATUSLINE_COMMANDS,
         retired_dests=DECOMMISSIONED_PATHS,
-        description=HOME_QWEN_DESCRIPTION if include_qwen else HOME_DESCRIPTION,
+        description=HOME_DESCRIPTION,
     )
 
 
@@ -1306,15 +1262,11 @@ def clean(layout: Layout) -> int:
 # CLI dispatch.
 # --------------------------------------------------------------------------- #
 USAGE = (
-    "usage: cli.py <install|clean|verify> [--claude-dir <dir>] [--qwen]\n"
+    "usage: cli.py <install|clean|verify> [--claude-dir <dir>]\n"
     "       cli.py merge <template> <destination>\n"
-    "\n"
-    "--qwen is additive (usual destinations + the Qwen Code component) and\n"
-    "cannot be combined with --claude-dir."
 )
 
 CLAUDE_DIR_FLAG = "--claude-dir"
-QWEN_FLAG = "--qwen"
 
 # Commands that act on a destination layout rather than on explicit paths.
 LAYOUT_COMMANDS = ("install", "clean", "verify")
@@ -1323,16 +1275,13 @@ LAYOUT_COMMANDS = ("install", "clean", "verify")
 @dataclass(frozen=True)
 class LayoutArgs:
     claude_dir: str | None      # raw --claude-dir value, unresolved
-    include_qwen: bool
 
 
 def _directory_value(raw: str) -> str:
     """Reject a directory argument that is really a mistyped option.
 
-    `--claude-dir --qwen` would otherwise consume the next option as the
-    directory name and install into a literal `./--qwen`, silently bypassing
-    the flag-conflict check below. A directory whose name really starts with
-    `-` can still be named as `./-name`.
+    A directory whose name really starts with `-` can still be named as
+    `./-name`.
     """
     if raw.startswith("-"):
         raise ValueError(
@@ -1345,16 +1294,11 @@ def _directory_value(raw: str) -> str:
 def parse_layout_args(args: list[str]) -> LayoutArgs:
     """Parse the options a layout command accepts.
 
-    Accepts `--claude-dir DIR`, `--claude-dir=DIR` and `--qwen`. Anything else
-    raises, so a mistyped flag cannot be silently ignored and write to `$HOME`
-    instead. `--claude-dir` re-roots one Claude configuration slice while
-    `--qwen` targets `$HOME/.qwen`: combining them would make a single command
-    mutate two unrelated roots, so the combination is rejected here — before
-    any filesystem work starts — rather than given a new meaning.
+    Accepts `--claude-dir DIR` and `--claude-dir=DIR`. Anything else raises, so
+    a mistyped flag cannot be silently ignored and write to `$HOME` instead.
     """
     rest = list(args)
     claude_dir: str | None = None
-    include_qwen = False
     while rest:
         arg = rest.pop(0)
         if arg == CLAUDE_DIR_FLAG:
@@ -1363,17 +1307,9 @@ def parse_layout_args(args: list[str]) -> LayoutArgs:
             claude_dir = _directory_value(rest.pop(0))
         elif arg.startswith(f"{CLAUDE_DIR_FLAG}="):
             claude_dir = _directory_value(arg.split("=", 1)[1])
-        elif arg == QWEN_FLAG:
-            include_qwen = True
         else:
             raise ValueError(f"unexpected argument: {arg}")
-    if claude_dir is not None and include_qwen:
-        raise ValueError(
-            f"{CLAUDE_DIR_FLAG} and {QWEN_FLAG} cannot be combined: "
-            f"{CLAUDE_DIR_FLAG} re-roots the Claude configuration slice, while "
-            f"{QWEN_FLAG} targets $HOME/.qwen"
-        )
-    return LayoutArgs(claude_dir=claude_dir, include_qwen=include_qwen)
+    return LayoutArgs(claude_dir=claude_dir)
 
 
 def resolve_claude_dir(raw: str, home: Path) -> Path:
@@ -1408,7 +1344,7 @@ def layout_for(args: list[str], home: Path) -> Layout:
     """
     parsed = parse_layout_args(args)
     if parsed.claude_dir is None:
-        return home_layout(home, include_qwen=parsed.include_qwen)
+        return home_layout(home)
     return claude_dir_layout(resolve_claude_dir(parsed.claude_dir, home), home)
 
 
