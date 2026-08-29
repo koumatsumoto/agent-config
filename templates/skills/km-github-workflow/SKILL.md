@@ -1,38 +1,57 @@
 ---
 name: km-github-workflow
-description: GitHubリポジトリの変更をissue・worktree・commit・PRまで届ける。「PRにして」などの依頼で使う
+description: GitHubリポジトリの変更をissue・PRとして提出し、明示された場合はマージまで完了する。「PRにして」「マージまで」などの依頼で使う
 argument-hint: "[issue-number]"
 ---
 
 # GitHub Workflow
 
-GitHubリポジトリの変更をissueからPRまで届ける。計画は`km-plan`、レビューは`km-review`、コミットは`km-commit`へ委ねる。
+GitHubリポジトリの変更について、issueの作成からPRの提出までを担う。ユーザーが明示した場合は、PRのマージと作業用worktreeの削除まで完了する。計画は`km-plan`、レビューは`km-review`、commitは`km-commit`へ委ねる。
 
-## Workflow
+## 手順
 
-1. **Issue**: 原則としてissueとPRを対応させる。論点が少なければ目的と完了条件だけのissueを作り、複雑で誤方向の手戻りが大きい場合は`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する
-2. **Worktree**: 変更前に基点ブランチから作業ブランチと専用worktreeを作り、編集・検証・コミットはそのworktree内で行う。既存PRの更新では、そのブランチ専用のworktreeを使い、なければ作成する。基点ブランチ側や別作業のworktreeを作業場所にしない。ブランチ名は`<type>/<issue番号>-<slug>`、issueがなければ`<type>/<slug>`とする
-3. **Bootstrap**: 専用worktreeの作成直後、新しいworktreeのrepository rootにtracked `.worktreeinclude`があれば、記載されたignored pathまたは`.gitignore`形式のpatternに一致する作成元worktreeのignored fileを、同じ相対pathへコピーする。`.worktreeinclude`がなければ何もしない
-4. **Verify**: 完了条件・差分・テストを確認し、`km-review`を通す
-5. **Deliver**: `km-commit`でコミットし、pushしてPRを作成または更新する
-6. **Merge**: ユーザーがその時点でマージを依頼した場合、または元の作業指示にマージまで含まれていた場合だけ、レビューを完了したPRをマージする。マージ完了後は基点ブランチ側のworktreeへ戻り、作業に使った専用worktreeを削除する
-7. **Report**: PR URL、変更要約、検証結果を報告する
+1. **課題を記録する**
 
-## GitHub Contract
+   原則として変更ごとにissueを作り、PRと対応させる。論点が少ない場合は、目的と完了条件だけを記載する。複雑で、誤方向へ進んだ場合の手戻りが大きい場合は`km-plan`を使う。ユーザーがissueは不要だと明示した場合は省略する。
 
-- すべての変更はPR経由で基点ブランチへ取り込む。基点ブランチへ直接コミット・push・mergeしない
-- PR本文には最終差分を理解するために必要な背景・主要な判断・検証結果だけを書き、内部タスク情報、逐次の作業ログ、レビュー反映の往復履歴など不要な経緯を残さない
-- `km-plan`管理issueに実装時確認事項がある場合は、各項目の確認結果または対応しない理由をPR本文に残す
-- issueを完了するPRには独立行で`Closes #N`を書く。複数PRに分ける場合、中間PRは`Refs #N`とする
-- CIを確認し、未確認または失敗があればその状態を報告する
+2. **作業環境を準備する**
 
-## Safety
+   - 変更に着手する前に、基点ブランチから作業ブランチと専用worktreeを作る。編集、検証、commitは、そのworktree内で行う。基点ブランチ側や別の作業用worktreeを作業場所にしない。
+   - ブランチ名は`<type>/<issue番号>-<slug>`とする。issueがない場合は`<type>/<slug>`とする。
+   - 既存PRを更新する場合は、そのブランチ専用のworktreeを使う。専用worktreeがなければ作成する。
+   - worktreeの作成直後、新しいworktreeのリポジトリルートに、Gitが追跡する`.worktreeinclude`があるか確認する。存在する場合は、作成元worktreeにある無視対象ファイルのうち、記載されたパスまたは`.gitignore`形式のパターンに一致するものを同じ相対パスへコピーする。存在しない場合は何もしない。
 
-- force pushしない
-- worktree作成前に既存のworktree・ブランチ・配置先を確認し、既存worktreeの削除や別作業のブランチの再利用をしない
-- PRのマージ完了を確認するまで作業worktreeを削除しない。削除前に対象pathと未コミット変更がないことを確認し、削除に失敗してもforceで続行しない
-- `.worktreeinclude`からコピーするのはGitにignoredされたfileだけとし、tracked file、repository外を指すpath、source symlink、既存destinationは対象にしない。内容をlogへ出さず、コピーしたfileをstageしない
-- `.worktreeinclude`のpatternが何にも一致しない場合は正常とする。対象を確定した後のcopyに失敗した場合は、不完全なworktreeで作業を続けず停止する
-- 無関係な未コミット変更をPRへ含めない
-- issue / PRなどの公開面へ秘密情報、非公開情報、個人環境の識別情報を載せない
-- issue / PR本文は`--body-file`で渡す。`--body`や非クォートのheredocは使わない
+3. **変更を検証する**
+
+   完了条件、差分、テスト結果を確認した後、`km-review`を実行する。
+
+4. **PRを提出する**
+
+   `km-commit`で変更をcommitし、作業ブランチをpushして、PRを作成または更新する。
+
+5. **依頼された場合だけマージする**
+
+   ユーザーが現在の依頼でマージを求めた場合、または元の作業指示にマージまで含まれていた場合に限り、レビューを完了したPRをマージする。マージ完了を確認したら基点ブランチ側のworktreeへ戻り、今回の作業に使った専用worktreeを削除する。
+
+6. **結果を報告する**
+
+   PR URL、変更の要約、検証結果を報告する。
+
+## GitHubでの提出契約
+
+- すべての変更はPR経由で基点ブランチへ取り込む。基点ブランチへ直接commit、push、mergeしない。
+- PR本文には、最終差分を理解するために必要な背景、主要な判断、検証結果だけを書く。内部タスクの情報、逐次の作業ログ、レビュー対応の履歴など、不要な経緯は残さない。
+- `km-plan`が管理するissueに実装時確認事項がある場合は、各項目の確認結果または対応しない理由をPR本文に残す。
+- issueを完了するPRには独立行で`Closes #N`を書く。複数PRに分ける場合、中間PRは`Refs #N`とする。
+- CIの状態を確認し、未確認または失敗している場合は、その状態を報告する。
+
+## 安全規則
+
+- force pushしない。
+- worktreeを作る前に、既存のworktree、ブランチ、配置先を確認する。既存worktreeを削除したり、別の作業用ブランチを再利用したりしない。
+- PRのマージ完了を確認するまで、作業用worktreeを削除しない。削除前に対象パスを特定し、未コミット変更がないことを確認する。削除に失敗した場合も強制削除しない。
+- `.worktreeinclude`からコピーするのは、Gitの無視対象である通常ファイルだけとする。Gitの追跡対象、リポジトリ外を指すパス、コピー元のシンボリックリンク、コピー先に既存の項目があるパスは対象にしない。ファイルの内容をログへ出力せず、コピーしたファイルをステージしない。
+- `.worktreeinclude`のパターンに一致するファイルがない場合は、正常な結果として扱う。コピー対象を確定した後に一つでもコピーに失敗した場合は、不完全なworktreeで作業を続けず停止する。
+- 無関係な未コミット変更をPRへ含めない。
+- GitHub上のissueやPRに、秘密情報、非公開情報、個人環境を識別できる情報を載せない。
+- issueとPRの本文は`--body-file`で渡す。`--body`やクォートなしのheredocは使わない。
