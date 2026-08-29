@@ -15,7 +15,8 @@ GitHubリポジトリの変更をissueからPRまで届ける。計画は`km-pla
 3. **Bootstrap**: 専用worktreeの作成直後、新しいworktreeのrepository rootにtracked `.worktreeinclude`があれば、記載されたignored pathまたは`.gitignore`形式のpatternに一致する作成元worktreeのignored fileを、同じ相対pathへコピーする。`.worktreeinclude`がなければ何もしない
 4. **Verify**: 完了条件・差分・テストを確認し、`km-review`を通す
 5. **Deliver**: `km-commit`でコミットし、pushしてPRを作成または更新する
-6. **Report**: PR URL、変更要約、検証結果を報告する
+6. **Merge**: ユーザーがその時点でマージを依頼した場合、または元の作業指示にマージまで含まれていた場合だけ、レビューを完了したPRをマージする。マージ完了後は基点ブランチ側のworktreeへ戻り、作業に使った専用worktreeを削除する
+7. **Report**: PR URL、変更要約、検証結果を報告する
 
 ## GitHub Contract
 
@@ -29,6 +30,7 @@ GitHubリポジトリの変更をissueからPRまで届ける。計画は`km-pla
 
 - force pushしない
 - worktree作成前に既存のworktree・ブランチ・配置先を確認し、既存worktreeの削除や別作業のブランチの再利用をしない
+- PRのマージ完了を確認するまで作業worktreeを削除しない。削除前に対象pathと未コミット変更がないことを確認し、削除に失敗してもforceで続行しない
 - `.worktreeinclude`からコピーするのはGitにignoredされたfileだけとし、tracked file、repository外を指すpath、source symlink、既存destinationは対象にしない。内容をlogへ出さず、コピーしたfileをstageしない
 - `.worktreeinclude`のpatternが何にも一致しない場合は正常とする。対象を確定した後のcopyに失敗した場合は、不完全なworktreeで作業を続けず停止する
 - 無関係な未コミット変更をPRへ含めない
