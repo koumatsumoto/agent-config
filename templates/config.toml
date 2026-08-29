@@ -30,7 +30,8 @@ use_memories = true
 alternate_screen = "never"
 show_tooltips = false
 animations = false
-status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "weekly-limit"]
+status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "weekly-limit", "branch-changes", "estimated-thread-cost", "task-progress"]
+status_line_use_colors = true
 
 [history]
 persistence = "save-all"

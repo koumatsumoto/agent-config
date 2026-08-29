@@ -360,7 +360,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
 - `[features]` には既定値と異なる項目だけを置き、Codex CLI の標準機能改善を取り込む。ローカルメモリは明示的に有効化する
 - ローカルメモリは生成と利用の両方を有効にする。生成物は既定で `~/.codex/memories/` に保存され、チャット単位の制御には `/memories` を使う。必須の指示はメモリだけに依存せず `AGENTS.md` に置く
-- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
+- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を色付きで表示する
 - default は `danger-full-access + never` を前提にする。sandbox も承認もない完全信頼の自律運用で、`approval_policy = "never"` は常時自動実行扱い。危険操作は設定では止まらず、共通 guideline (`templates/CLAUDE.md` → `~/.codex/AGENTS.md`) の安全規約とリポジトリごとのルールで制御する
 - Codexのプロファイルは`~/.codex/<profile>.config.toml`として配布する。管理対象は`readonly`だけに絞る
 - `~/.codex/rules/` は承認が有効なときに force push、hard reset、外部 recursive delete、GitHub 書き込みなどを prompt 承認へ寄せる。日常的な危険コマンドの抑止は共通 guideline (`templates/CLAUDE.md`) の安全規約で扱う
