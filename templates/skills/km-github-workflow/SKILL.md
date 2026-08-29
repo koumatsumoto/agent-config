@@ -1,6 +1,6 @@
 ---
 name: km-github-workflow
-description: GitHubリポジトリの変更をissue・worktree・コミット・PRまで届ける。「PRにして」などの依頼で使う
+description: GitHubリポジトリの変更をissue・worktree・commit・PRまで届ける。「PRにして」などの依頼で使う
 argument-hint: "[issue-number]"
 ---
 
