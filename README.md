@@ -374,7 +374,7 @@ python scripts/cli.py clean
 | `km-review` | 実装した変更をレビューして欠陥を洗い出す |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub リポジトリの採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
-| `km-github-workflow` | GitHub管理リポジトリの変更を、issue・worktree・コミット・PRまで一貫して提出する |
+| `km-github-workflow` | GitHub管理リポジトリの変更を、issue・worktree・commit・PRまで一貫して提出する |
 | `km-skill-eval` | 挙動資産の変更効果を、明示依頼に基づいて実シナリオで評価する |
 | `km-plan` | 複雑で誤方向の手戻りが大きい変更について、背景と設計判断を含む実装計画を作成し、GitHub issueにする |
 
