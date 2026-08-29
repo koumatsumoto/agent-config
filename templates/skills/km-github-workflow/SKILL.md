@@ -12,9 +12,10 @@ GitHubリポジトリの変更をissueからPRまで届ける。計画は`km-pla
 
 1. **Issue**: 原則としてissueとPRを対応させる。論点が少なければ目的と完了条件だけのissueを作り、複雑で誤方向の手戻りが大きい場合は`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する
 2. **Worktree**: 変更前に基点ブランチから作業ブランチと専用worktreeを作り、編集・検証・コミットはそのworktree内で行う。既存PRの更新では、そのブランチ専用のworktreeを使い、なければ作成する。基点ブランチ側や別作業のworktreeを作業場所にしない。ブランチ名は`<type>/<issue番号>-<slug>`、issueがなければ`<type>/<slug>`とする
-3. **Verify**: 完了条件・差分・テストを確認し、`km-review`を通す
-4. **Deliver**: `km-commit`でコミットし、pushしてPRを作成または更新する
-5. **Report**: PR URL、変更要約、検証結果を報告する
+3. **Bootstrap**: 専用worktreeの作成直後、新しいworktreeのrepository rootにtracked `.worktreeinclude`があれば、記載されたignored pathまたは`.gitignore`形式のpatternに一致する作成元worktreeのignored fileを、同じ相対pathへコピーする。`.worktreeinclude`がなければ何もしない
+4. **Verify**: 完了条件・差分・テストを確認し、`km-review`を通す
+5. **Deliver**: `km-commit`でコミットし、pushしてPRを作成または更新する
+6. **Report**: PR URL、変更要約、検証結果を報告する
 
 ## GitHub Contract
 
@@ -28,6 +29,8 @@ GitHubリポジトリの変更をissueからPRまで届ける。計画は`km-pla
 
 - force pushしない
 - worktree作成前に既存のworktree・ブランチ・配置先を確認し、既存worktreeの削除や別作業のブランチの再利用をしない
+- `.worktreeinclude`からコピーするのはGitにignoredされたfileだけとし、tracked file、repository外を指すpath、source symlink、既存destinationは対象にしない。内容をlogへ出さず、コピーしたfileをstageしない
+- `.worktreeinclude`のpatternが何にも一致しない場合は正常とする。対象を確定した後のcopyに失敗した場合は、不完全なworktreeで作業を続けず停止する
 - 無関係な未コミット変更をPRへ含めない
 - issue / PRなどの公開面へ秘密情報、非公開情報、個人環境の識別情報を載せない
 - issue / PR本文は`--body-file`で渡す。`--body`や非クォートのheredocは使わない
