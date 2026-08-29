@@ -1089,11 +1089,6 @@ class InstallTests(unittest.TestCase):
         merged = json.loads(settings.read_text(encoding="utf-8"))
         self.assertEqual(merged["theme"], "user-pick")
 
-    def test_does_not_create_the_qwen_directory(self) -> None:
-        # Qwen Code is opt-in: a plain install must not even create ~/.qwen.
-        self._run_install()
-        self.assertFalse((self.home / ".qwen").exists())
-
     def test_global_guidelines_installed_as_template_copies(self) -> None:
         self._run_install()
         specs = _global_guideline_specs()
@@ -1537,17 +1532,6 @@ class VerifyTests(unittest.TestCase):
             report = cli.verify(self.layout)
         self.assertFalse(any(override_key in m for m in report.failures), report.failures)
 
-    def test_qwen_component_absent_still_verifies(self) -> None:
-        # ~/.qwen is not part of the default selection, so its absence — or any
-        # drift inside it — is none of a plain verify's business.
-        qwen = self.home / ".qwen"
-        (qwen / "skills").mkdir(parents=True)
-        (qwen / "QWEN.md").write_text("drifted", encoding="utf-8")
-        with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.layout)
-        self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
-
-
 # --------------------------------------------------------------------------- #
 # layout command arguments
 # --------------------------------------------------------------------------- #
@@ -1555,7 +1539,6 @@ class LayoutArgumentTests(unittest.TestCase):
     def test_absent_flags_select_the_base_component_set(self) -> None:
         parsed = cli.parse_layout_args([])
         self.assertIsNone(parsed.claude_dir)
-        self.assertFalse(parsed.include_qwen)
 
     def test_separate_value(self) -> None:
         self.assertEqual(cli.parse_layout_args(["--claude-dir", "/tmp/x"]).claude_dir, "/tmp/x")
@@ -1573,18 +1556,10 @@ class LayoutArgumentTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             cli.parse_layout_args(["--claud-dir", "/tmp/x"])
 
-    def test_qwen_flag_sets_the_component(self) -> None:
-        self.assertTrue(cli.parse_layout_args(["--qwen"]).include_qwen)
-
-    def test_claude_dir_with_qwen_raises(self) -> None:
-        # One command must not mutate two unrelated roots.
-        with self.assertRaises(ValueError):
-            cli.parse_layout_args(["--claude-dir", "/tmp/x", "--qwen"])
-
     def test_claude_dir_does_not_swallow_the_next_option(self) -> None:
-        # Otherwise `--claude-dir --qwen` installs into a literal ./--qwen and
-        # never reaches the conflict check.
-        for args in (["--claude-dir", "--qwen"], ["--claude-dir=--qwen"]):
+        # A missing value must not be interpreted as a literal option-shaped
+        # directory and cause a mutation in the current working directory.
+        for args in (["--claude-dir", "--unused"], ["--claude-dir=--unused"]):
             with self.subTest(args=args), self.assertRaises(ValueError):
                 cli.parse_layout_args(args)
 
@@ -1678,14 +1653,14 @@ class ClaudeDirLayoutTests(unittest.TestCase):
         )
 
     def test_excludes_destinations_of_other_tools(self) -> None:
-        # Codex / Qwen / shared-agent files are addressed by their own tools and
-        # are unaffected by CLAUDE_CONFIG_DIR.
+        # Codex / shared-agent files are addressed by their own tools and are
+        # unaffected by CLAUDE_CONFIG_DIR.
         all_dests = (
             [s.dest_rel for s in self.layout.files]
             + [s.dest_rel for s in self.layout.trees]
             + [s.dest_rel for s in self.layout.settings]
         )
-        for other in (".codex", ".qwen", ".agents"):
+        for other in (".codex", ".agents"):
             self.assertFalse(any(other in dest for dest in all_dests), all_dests)
 
     def test_modes_are_inherited_from_the_home_manifest(self) -> None:
@@ -1737,7 +1712,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
 
     def test_leaves_the_home_layout_untouched(self) -> None:
         self._run_install()
-        for sub in cli.INSTALL_HOME_DIRS + cli.QWEN_HOME_DIRS:
+        for sub in cli.INSTALL_HOME_DIRS:
             self.assertFalse((self.home / sub).exists(), f"unexpected: {sub}")
         self.assertFalse((self.target / ".claude").exists())
 
@@ -1911,10 +1886,10 @@ class ClaudeDirCliTests(unittest.TestCase):
 # --------------------------------------------------------------------------- #
 def _guideline_specs() -> list[cli.FileSpec]:
     """Every managed destination that is an agent guideline file."""
-    names = {"CLAUDE.md", "AGENTS.md", "QWEN.md"}
+    names = {"CLAUDE.md", "AGENTS.md"}
     return [
         spec
-        for spec in cli.TEMPLATE_FILES + cli.QWEN_TEMPLATE_FILES
+        for spec in cli.TEMPLATE_FILES
         if Path(spec.dest_rel).name in names
     ]
 
@@ -1924,7 +1899,7 @@ class CanonicalGuidelineTests(unittest.TestCase):
         specs = _guideline_specs()
         self.assertEqual(
             {spec.dest_rel for spec in specs},
-            {".claude/CLAUDE.md", ".codex/AGENTS.md", ".qwen/QWEN.md"},
+            {".claude/CLAUDE.md", ".codex/AGENTS.md"},
         )
         self.assertEqual({spec.src_rel for spec in specs}, {cli.GUIDELINE_TEMPLATE_REL})
 
@@ -1936,247 +1911,6 @@ class CanonicalGuidelineTests(unittest.TestCase):
         guideline_names = {Path(spec.dest_rel).name for spec in _guideline_specs()}
         present = {p.name for p in (cli.REPO_ROOT / canonical.parent).glob("*.md")}
         self.assertEqual(present & guideline_names, {canonical.name})
-
-
-# --------------------------------------------------------------------------- #
-# --qwen: the opt-in Qwen Code component
-# --------------------------------------------------------------------------- #
-def _snapshot(root: Path) -> dict[str, str | None]:
-    """Content of every entry under `root` (None marks a directory)."""
-    return {
-        path.relative_to(root).as_posix(): (
-            None if path.is_dir() else path.read_text(encoding="utf-8")
-        )
-        for path in sorted(root.rglob("*"))
-    }
-
-
-class QwenComponentTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.home = Path(tempfile.mkdtemp(prefix="qwen-test-"))
-        self.base = cli.home_layout(self.home)
-        self.layout = cli.home_layout(self.home, include_qwen=True)
-
-    def tearDown(self) -> None:
-        shutil.rmtree(self.home, ignore_errors=True)
-
-    def _install(self, layout: cli.Layout) -> str:
-        with patch("sys.stdout", new=StringIO()) as out:
-            rc = cli.install(layout)
-        self.assertEqual(rc, 0)
-        return out.getvalue()
-
-    def _seed_foreign_qwen(self) -> dict[str, str | None]:
-        """Populate ~/.qwen as an older install would have, and snapshot it."""
-        qwen = self.home / ".qwen"
-        (qwen / "skills" / "km-commit").mkdir(parents=True)
-        (qwen / "skills" / "km-commit" / "SKILL.md").write_text("stale", encoding="utf-8")
-        # A decommissioned skill name and an orphan file inside a managed skill:
-        # both would be removed by the install-time cleanup if it ran here.
-        (qwen / "skills" / "commit").mkdir()
-        (qwen / "skills" / "commit" / "SKILL.md").write_text("legacy", encoding="utf-8")
-        (qwen / "skills" / "km-commit" / "__orphan__.md").write_text("orphan", encoding="utf-8")
-        # The cleanup also deletes a sibling `retired-skills/` next to a managed
-        # skills root, which is outside the tree itself.
-        (qwen / "retired-skills" / "old").mkdir(parents=True)
-        (qwen / "retired-skills" / "old" / "SKILL.md").write_text("archived", encoding="utf-8")
-        (qwen / "QWEN.md").write_text("my own guideline", encoding="utf-8")
-        (qwen / "settings.json").write_text('{"fastModel": "mine"}', encoding="utf-8")
-        return _snapshot(qwen)
-
-    def test_layout_for_flag_selects_the_component(self) -> None:
-        layout = cli.layout_for(["--qwen"], self.home)
-        self.assertIn(self.home / ".qwen", layout.managed_dirs)
-        self.assertEqual(layout.description, cli.HOME_QWEN_DESCRIPTION)
-
-    def test_layout_is_additive(self) -> None:
-        # --qwen adds to the usual destinations; it never narrows them.
-        for base_specs, qwen_specs in (
-            (self.base.files, self.layout.files),
-            (self.base.trees, self.layout.trees),
-            (self.base.settings, self.layout.settings),
-            (self.base.managed_dirs, self.layout.managed_dirs),
-        ):
-            self.assertEqual(list(qwen_specs[: len(base_specs)]), list(base_specs))
-            self.assertGreater(len(qwen_specs), len(base_specs))
-
-    def test_install_deploys_the_managed_artifacts(self) -> None:
-        self._install(self.layout)
-        self.assertTrue((self.home / ".qwen/QWEN.md").is_file())
-        for rel in _skill_docs():
-            self.assertTrue((self.home / ".qwen/skills" / rel).is_file(), f"missing: {rel}")
-        settings = json.loads(
-            (self.home / cli.QWEN_SETTINGS_DEST_REL).read_text(encoding="utf-8")
-        )
-        self.assertEqual(settings["fastModel"], "qwen3.6-flash")
-        self.assertEqual(settings["tools"]["approvalMode"], "auto")
-
-    def test_guideline_is_a_copy_of_the_canonical_template(self) -> None:
-        self._install(self.layout)
-        canonical = (cli.REPO_ROOT / cli.GUIDELINE_TEMPLATE_REL).read_bytes()
-        for dest_rel in (".claude/CLAUDE.md", ".codex/AGENTS.md", ".qwen/QWEN.md"):
-            self.assertEqual(
-                (self.home / dest_rel).read_bytes(), canonical, f"not a copy: {dest_rel}"
-            )
-
-    def test_settings_user_only_key_preserved_on_rerun(self) -> None:
-        self._install(self.layout)
-        settings = self.home / cli.QWEN_SETTINGS_DEST_REL
-        data = json.loads(settings.read_text(encoding="utf-8"))
-        data["model"] = {"name": "user-model", "reasoningEffort": "high"}
-        settings.write_text(json.dumps(data), encoding="utf-8")
-        self._install(self.layout)
-        merged = json.loads(settings.read_text(encoding="utf-8"))
-        self.assertEqual(merged["model"]["name"], "user-model")
-        self.assertEqual(merged["fastModel"], "qwen3.6-flash")
-
-    def test_install_is_idempotent(self) -> None:
-        self._install(self.layout)
-        out = self._install(self.layout)
-        changed = [
-            line
-            for line in out.splitlines()
-            if line and not line.startswith("ok:") and not line.startswith("Install ")
-        ]
-        self.assertEqual(changed, [], f"unexpected change lines: {changed}")
-
-    def test_verify_passes_after_install(self) -> None:
-        self._install(self.layout)
-        with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.layout)
-        self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
-
-    def test_verify_fails_when_the_component_was_not_installed(self) -> None:
-        self._install(self.base)
-        with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.layout)
-        self.assertTrue(
-            any(".qwen" in message for message in report.failures), report.failures
-        )
-
-    def test_verify_detects_settings_drift(self) -> None:
-        self._install(self.layout)
-        settings = self.home / cli.QWEN_SETTINGS_DEST_REL
-        data = json.loads(settings.read_text(encoding="utf-8"))
-        del data["fastModel"]
-        settings.write_text(json.dumps(data), encoding="utf-8")
-        with patch("sys.stdout", new=StringIO()):
-            report = cli.verify(self.layout)
-        self.assertTrue(
-            any(
-                "settings missing template key" in m and "fastModel" in m
-                for m in report.failures
-            ),
-            report.failures,
-        )
-
-    def test_clean_removes_managed_artifacts_but_keeps_settings(self) -> None:
-        self._install(self.layout)
-        with patch("sys.stdout", new=StringIO()):
-            self.assertEqual(cli.clean(self.layout), 0)
-        self.assertFalse((self.home / ".qwen/QWEN.md").exists())
-        self.assertFalse((self.home / ".qwen/skills").exists())
-        self.assertTrue(
-            (self.home / cli.QWEN_SETTINGS_DEST_REL).exists(),
-            "clean() must not remove ~/.qwen/settings.json (carries user values)",
-        )
-
-    def test_first_qwen_install_adopts_the_tree_and_removes_retired_names(self) -> None:
-        # The flip side of the no-touch guarantee: once selected, ~/.qwen is a
-        # managed tree, so a directory whose name matches a retired skill is
-        # deleted outright (no .bak) while a user-added name survives.
-        qwen = self.home / ".qwen"
-        (qwen / "skills" / "commit").mkdir(parents=True)
-        (qwen / "skills" / "commit" / "SKILL.md").write_text("legacy", encoding="utf-8")
-        (qwen / "skills" / "__mine__").mkdir()
-        (qwen / "skills" / "__mine__" / "SKILL.md").write_text("mine", encoding="utf-8")
-        self._install(self.layout)
-        self.assertFalse((qwen / "skills" / "commit").exists())
-        self.assertFalse((qwen / "skills" / "commit.bak").exists())
-        self.assertTrue((qwen / "skills" / "__mine__" / "SKILL.md").is_file())
-
-    def test_plain_install_does_not_retire_files_under_the_unselected_component(self) -> None:
-        # A retirement entry pointing into ~/.qwen must not make a plain install
-        # reach into a component this layout did not select.
-        target = self.home / ".qwen/QWEN.md"
-        target.parent.mkdir(parents=True)
-        target.write_text("mine", encoding="utf-8")
-        with patch.object(cli, "DECOMMISSIONED_PATHS", (".qwen/QWEN.md",)):
-            self._install(cli.home_layout(self.home))
-        self.assertEqual(target.read_text(encoding="utf-8"), "mine")
-        self.assertFalse(target.with_name("QWEN.md.bak").exists())
-
-    def test_plain_install_leaves_an_existing_qwen_untouched(self) -> None:
-        # Switching back to the default selection must not migrate ~/.qwen:
-        # no prune, no decommissioned-skill cleanup, no settings merge.
-        before = self._seed_foreign_qwen()
-        self._install(self.base)
-        self.assertEqual(_snapshot(self.home / ".qwen"), before)
-
-    def test_plain_clean_leaves_an_existing_qwen_untouched(self) -> None:
-        before = self._seed_foreign_qwen()
-        with patch("sys.stdout", new=StringIO()):
-            self.assertEqual(cli.clean(self.base), 0)
-        self.assertEqual(_snapshot(self.home / ".qwen"), before)
-
-
-class QwenCliTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.home = Path(tempfile.mkdtemp(prefix="qwen-cli-"))
-        self.target = self.home / ".claude-sub"
-
-    def tearDown(self) -> None:
-        shutil.rmtree(self.home, ignore_errors=True)
-
-    def _main(self, *args: str) -> tuple[int, str]:
-        with patch.object(cli.Path, "home", return_value=self.home), patch(
-            "sys.stdout", new=StringIO()
-        ), patch("sys.stderr", new=StringIO()) as err:
-            rc = cli.main(["cli.py", *args])
-        return rc, err.getvalue()
-
-    def test_install_without_the_flag_skips_qwen(self) -> None:
-        rc, _ = self._main("install")
-        self.assertEqual(rc, 0)
-        self.assertTrue((self.home / ".claude").is_dir())
-        self.assertFalse((self.home / ".qwen").exists())
-
-    def test_install_with_the_flag_adds_qwen(self) -> None:
-        rc, _ = self._main("install", "--qwen")
-        self.assertEqual(rc, 0)
-        self.assertTrue((self.home / ".claude").is_dir())
-        self.assertTrue((self.home / ".qwen/QWEN.md").is_file())
-
-    def test_verify_after_a_qwen_install(self) -> None:
-        self._main("install", "--qwen")
-        self.assertEqual(self._main("verify", "--qwen")[0], 0)
-        self.assertEqual(self._main("verify")[0], 0)
-
-    def test_plain_verify_passes_without_qwen(self) -> None:
-        self._main("install")
-        self.assertEqual(self._main("verify")[0], 0)
-        self.assertEqual(self._main("verify", "--qwen")[0], 1)
-
-    def test_claude_dir_with_qwen_is_a_usage_error_before_any_mutation(self) -> None:
-        for command in ("install", "verify", "clean"):
-            with self.subTest(command=command):
-                rc, err = self._main(command, "--claude-dir", str(self.target), "--qwen")
-                self.assertEqual(rc, 2)
-                self.assertIn("--qwen", err)
-                self.assertEqual(list(self.home.iterdir()), [])
-
-    def test_claude_dir_missing_its_value_installs_nowhere(self) -> None:
-        # `--claude-dir --qwen` used to consume the flag as the directory name
-        # and install into a literal ./--qwen, never reaching the conflict check.
-        cwd = Path.cwd()
-        os.chdir(self.home)
-        try:
-            rc, err = self._main("install", "--claude-dir", "--qwen")
-        finally:
-            os.chdir(cwd)
-        self.assertEqual(rc, 2)
-        self.assertIn("--claude-dir", err)
-        self.assertEqual(list(self.home.iterdir()), [])
 
 
 if __name__ == "__main__":
