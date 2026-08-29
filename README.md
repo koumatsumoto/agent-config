@@ -339,6 +339,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
   - Config Basics: `https://developers.openai.com/codex/config-basic`
   - Config Reference: `https://developers.openai.com/codex/config-reference`
   - Advanced Config: `https://developers.openai.com/codex/config`
+  - Memories: `https://learn.chatgpt.com/docs/customization/memories`
   - Rules: `https://developers.openai.com/codex/rules`
   - Hooks: `https://developers.openai.com/codex/hooks`
   - AGENTS.md: `https://developers.openai.com/codex/guides/agents-md`
@@ -351,14 +352,14 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 
 ## Codex 設計メモ
 
-> 外部製品の仕様は2026年8月9日に公式文書で確認した。設定値の正本は`templates/config.toml`と`templates/codex/*.config.toml`である。
+> 外部製品の仕様は2026年8月29日に公式文書で確認した。設定値の正本は`templates/config.toml`と`templates/codex/*.config.toml`である。
 
-- default model は `gpt-5.6-sol`、reasoning effort は `high`、personality は `pragmatic`、verbosity は `low` にして、複雑な実装を簡潔に報告する
-- 管理する reasoning effort は `high` に絞り、`low` / `ultra` は使わない
+- default model は `gpt-5.6-sol`、reasoning effort は `medium`、personality は `pragmatic`、verbosity は `low` にして、品質と応答速度を両立しながら簡潔に報告する
+- `plan_mode_reasoning_effort = "high"` を明示し、実装前の判断には通常の作業より多くの推論を使う。`low` / `ultra` は管理対象にしない
 - `web_search = "cached"` を明示し、通常調査はキャッシュ検索を使う。最新確認が必要な場合は live web を明示して使う
-- `plan_mode_reasoning_effort = "high"` を明示し、Plan mode でも reasoning effort を `high` に保つ
 - `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
-- stable な機能のうち platform 差分が小さいものだけを `[features]` で明示し、将来の既定値変更で挙動がぶれにくいようにしている
+- `[features]` には既定値と異なる項目だけを置き、Codex CLI の標準機能改善を取り込む。ローカルメモリは明示的に有効化する
+- ローカルメモリは生成と利用の両方を有効にする。生成物は既定で `~/.codex/memories/` に保存され、チャット単位の制御には `/memories` を使う。必須の指示はメモリだけに依存せず `AGENTS.md` に置く
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する
 - default は `danger-full-access + never` を前提にする。sandbox も承認もない完全信頼の自律運用で、`approval_policy = "never"` は常時自動実行扱い。危険操作は設定では止まらず、共通 guideline (`templates/CLAUDE.md` → `~/.codex/AGENTS.md`) の安全規約とリポジトリごとのルールで制御する
 - Codexのプロファイルは`~/.codex/<profile>.config.toml`として配布する。管理対象は`readonly`だけに絞る

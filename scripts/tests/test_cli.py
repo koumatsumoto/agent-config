@@ -1004,10 +1004,15 @@ class InstallTests(unittest.TestCase):
             (cli.REPO_ROOT / "templates/config.toml").read_text(encoding="utf-8")
         )
         self.assertEqual(base["model"], "gpt-5.6-sol")
-        self.assertEqual(base["model_reasoning_effort"], "high")
+        self.assertEqual(base["model_reasoning_effort"], "medium")
         self.assertEqual(base["plan_mode_reasoning_effort"], "high")
         self.assertEqual(base["personality"], "pragmatic")
         self.assertEqual(base["model_verbosity"], "low")
+        self.assertEqual(base["features"], {"memories": True})
+        self.assertEqual(
+            base["memories"],
+            {"generate_memories": True, "use_memories": True},
+        )
 
         managed_efforts = {
             data[key]
