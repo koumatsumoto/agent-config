@@ -10,7 +10,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。Qwen C
 - Qwen Code（`~/.qwen/`）は任意で追加できる。`--qwen`を付けたときだけ配布対象に加わる
 - `--claude-dir <dir>` で `CLAUDE_CONFIG_DIR` 用の別プロファイルにも配布できる
 - Linux / macOS / Git Bashでは `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
-- `README.md`と`docs/`は説明資料であり、実行時契約の正本は`templates/`に置く
+- `README.md`は説明資料であり、実行時契約の正本は`templates/`に置く
 
 ## 正本
 
@@ -25,7 +25,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。Qwen C
 - `templates/settings.json` - Claude Code向けの推奨`settings.json`（既存ファイルへは浅くマージ）
 - `templates/qwen-settings.json` - Qwen Code向けの推奨`settings.json`（`--qwen`指定時のみ利用。既存ファイルへは浅くマージ）
 
-`docs/`は参考資料として残す。履歴メモや検討計画はGitで追跡し、作業中の計画メモが必要な場合はリポジトリ直下の`.plan/`に置く。
+履歴メモや検討計画はGitで追跡し、作業中の計画メモが必要な場合はリポジトリ直下の`.plan/`に置く。
 
 ## ディレクトリ構造
 
@@ -34,7 +34,6 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。Qwen C
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
 - `scripts/tests/` - `scripts/cli.py` の unittest
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
-- `docs/` - 保守対象の参考ドキュメント
 - `.github/workflows/` - GitHub Actions CI 設定
 - `.claude/` - このリポジトリ自身の Claude Code 設定
 
@@ -294,19 +293,6 @@ python scripts/cli.py clean
 このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json`と`~/.codex/config.toml`はユーザー・runtime固有値が含まれ得るため対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
 
 撤去対象もインストール・検証時と同じ構成要素の選択規則に従う。`--qwen` を指定しなければ `~/.qwen` に触れず、以前に配布したファイルが残っていても変更しない。`--qwen` を指定すると Qwen の管理対象ファイルも撤去するが、`~/.qwen/settings.json` は同じ理由で保持する。
-
-## Maintained Docs
-
-- `docs/claude-code-best-practices-202604.md`
-  - Claude Codeの`CLAUDE.md`、Rules、Skills、Subagents、Hooks、Settingsを扱う2026-08時点のリファレンス
-- `docs/python-best-practices-202604.md`
-  - Python 3.14 / Pyright / Ruff を前提にした 2026-08 時点のリファレンス
-- `docs/typescript-best-practices-202604.md`
-  - TypeScript 7.0 / ESLint flat config / typescript-eslint typed linting を前提にした 2026-08 時点のリファレンス
-- `docs/claude-code-terminal-customization.md`
-  - Claude Code の status line、Output Styles、Hooks の導入参考
-
-Hooks、Output Styles、permissions のセキュリティハードニングなどの詳細は `docs/claude-code-terminal-customization.md` を参照。
 
 ## 反映先マッピング
 
