@@ -81,6 +81,9 @@ class ManagedTomlSpec:
     src_rel: str
     dest_rel: str
     mode: int = 0o600
+    # Exact (table identity, bare key) pairs whose existing destination values
+    # take precedence. The template still supplies them on first install.
+    preserve_existing: tuple[tuple[str, str], ...] = ()
 
 
 # The one canonical agent guideline. Every tool reads it under the file name it
@@ -103,7 +106,11 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
 )
 
 MANAGED_TOML_FILES: tuple[ManagedTomlSpec, ...] = (
-    ManagedTomlSpec("templates/config.toml", ".codex/config.toml"),
+    ManagedTomlSpec(
+        "templates/config.toml",
+        ".codex/config.toml",
+        preserve_existing=(("", "sandbox_mode"),),
+    ),
 )
 
 # Directory trees synced recursively (with per-file .bak backup).
@@ -546,7 +553,41 @@ def _toml_assignment_blocks(lines: tuple[str, ...]) -> list[tuple[str, tuple[str
     return blocks
 
 
-def merge_managed_toml_text(template_text: str, existing_text: str) -> str:
+def _preserve_toml_assignment_blocks(
+    template_lines: tuple[str, ...],
+    existing_lines: tuple[str, ...],
+    keys: set[str],
+) -> tuple[str, ...]:
+    """Replace selected template assignment blocks with existing blocks."""
+    existing_blocks = dict(_toml_assignment_blocks(existing_lines))
+    available = keys & existing_blocks.keys()
+    if not available:
+        return template_lines
+
+    rendered: list[str] = []
+    index = 0
+    while index < len(template_lines):
+        match = _TOML_ASSIGNMENT_RE.match(template_lines[index])
+        key = match.group(1).strip() if match else None
+        if key not in available:
+            rendered.append(template_lines[index])
+            index += 1
+            continue
+        rendered.extend(existing_blocks[key])
+        index += 1
+        while index < len(template_lines) and not _TOML_ASSIGNMENT_RE.match(
+            template_lines[index]
+        ):
+            index += 1
+    return tuple(rendered)
+
+
+def merge_managed_toml_text(
+    template_text: str,
+    existing_text: str,
+    *,
+    preserve_existing: tuple[tuple[str, str], ...] = (),
+) -> str:
     """Overlay template-declared leaf keys while preserving all other TOML state.
 
     The template owns only the bare assignment keys it declares in each exact
@@ -574,6 +615,18 @@ def merge_managed_toml_text(template_text: str, existing_text: str) -> str:
             )
         managed[section.identity] = keys
 
+    preserved = set(preserve_existing)
+    unsupported_preserved = sorted(
+        (table, key)
+        for table, key in preserved
+        if table not in managed or key not in managed[table]
+    )
+    if unsupported_preserved:
+        formatted = ", ".join(
+            f"{table or '<root>'}.{key}" for table, key in unsupported_preserved
+        )
+        raise ValueError(f"preserved TOML keys are not declared by template: {formatted}")
+
     existing_by_identity: dict[str, _TomlSection] = {}
     destination_only: list[_TomlSection] = []
     for section in existing_sections:
@@ -590,8 +643,16 @@ def merge_managed_toml_text(template_text: str, existing_text: str) -> str:
     rendered: list[str] = []
     for section in template_sections:
         rendered.append(section.header)
-        rendered.extend(section.body)
         existing = existing_by_identity.get(section.identity)
+        preserved_keys = {key for table, key in preserved if table == section.identity}
+        if existing is None or not preserved_keys:
+            rendered.extend(section.body)
+        else:
+            rendered.extend(
+                _preserve_toml_assignment_blocks(
+                    section.body, existing.body, preserved_keys
+                )
+            )
         if existing is None:
             continue
         extra_blocks = [
@@ -615,7 +676,12 @@ def merge_managed_toml_text(template_text: str, existing_text: str) -> str:
     return output if output.endswith("\n") else output + "\n"
 
 
-def merge_managed_toml_into(template: Path, dest: Path) -> str:
+def merge_managed_toml_into(
+    template: Path,
+    dest: Path,
+    *,
+    preserve_existing: tuple[tuple[str, str], ...] = (),
+) -> str:
     """Merge a managed TOML template into a shared destination atomically."""
     if not template.is_file() or template.is_symlink():
         raise FileNotFoundError(f"source not found or not a regular file: {template}")
@@ -624,7 +690,9 @@ def merge_managed_toml_into(template: Path, dest: Path) -> str:
         existing_text = dest.read_text(encoding="utf-8")
     except FileNotFoundError:
         existing_text = ""
-    new_text = merge_managed_toml_text(template_text, existing_text)
+    new_text = merge_managed_toml_text(
+        template_text, existing_text, preserve_existing=preserve_existing
+    )
     unchanged = existing_text == new_text
     if unchanged and not dest.is_symlink():
         ensure_file_mode(dest, FILE_MODE)
@@ -1037,11 +1105,19 @@ def _check_settings_contract(report: VerifyReport, template: Path, dest: Path) -
         report.record(key in dest_data, f"settings missing template key: {dest} ({key})")
 
 
-def _check_managed_toml(report: VerifyReport, template: Path, dest: Path) -> None:
+def _check_managed_toml(
+    report: VerifyReport,
+    template: Path,
+    dest: Path,
+    *,
+    preserve_existing: tuple[tuple[str, str], ...] = (),
+) -> None:
     try:
         template_text = template.read_text(encoding="utf-8")
         dest_text = dest.read_text(encoding="utf-8")
-        expected = merge_managed_toml_text(template_text, dest_text)
+        expected = merge_managed_toml_text(
+            template_text, dest_text, preserve_existing=preserve_existing
+        )
     except FileNotFoundError:
         report.record(False, f"missing: {dest}")
         return
@@ -1063,7 +1139,12 @@ def verify(layout: Layout, repo_root: Path = REPO_ROOT) -> VerifyReport:
 
     for spec in layout.managed_toml:
         dest = layout.root / spec.dest_rel
-        _check_managed_toml(report, repo_root / spec.src_rel, dest)
+        _check_managed_toml(
+            report,
+            repo_root / spec.src_rel,
+            dest,
+            preserve_existing=spec.preserve_existing,
+        )
         _check_mode(report, dest, spec.mode)
 
     for managed in layout.managed_dirs:
@@ -1129,7 +1210,9 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
         dest = layout.root / spec.dest_rel
         if not any(is_within(dest, b) for b in boundary_dirs):
             raise PermissionError(f"refusing to write outside install dirs: {dest}")
-        status = merge_managed_toml_into(src, dest)
+        status = merge_managed_toml_into(
+            src, dest, preserve_existing=spec.preserve_existing
+        )
         if status == "merged":
             print(f"backup: {dest}.bak")
         print(f"{status}: {dest}")

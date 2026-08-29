@@ -8,8 +8,9 @@ model_reasoning_effort = "medium"
 model_verbosity = "low"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Default local development baseline. Workspace edits run autonomously, while
+# Initial local development baseline. Workspace edits run autonomously, while
 # network access and writes outside the workspace require approval review.
+# Later installs preserve an existing sandbox_mode as machine-local policy.
 # Use the explicit `trusted` profile only for already-isolated or fully trusted
 # work that genuinely needs unrestricted host access.
 approval_policy = "on-request"

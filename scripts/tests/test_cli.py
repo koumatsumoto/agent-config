@@ -288,6 +288,33 @@ class ManagedTomlTests(unittest.TestCase):
             self.assertEqual(data["model"], "new")
             self.assertEqual(data["projects"]["/workspace"]["trust_level"], "trusted")
 
+    def test_selected_existing_key_wins_when_present(self) -> None:
+        existing = 'model = "old"\nsandbox_mode = "danger-full-access"\n'
+        merged = cli.merge_managed_toml_text(
+            self.TEMPLATE,
+            existing,
+            preserve_existing=(("", "sandbox_mode"),),
+        )
+        self.assertIn('model = "new"', merged)
+        self.assertIn('sandbox_mode = "danger-full-access"', merged)
+        self.assertNotIn('sandbox_mode = "workspace-write"', merged)
+
+    def test_selected_existing_key_uses_template_when_absent(self) -> None:
+        merged = cli.merge_managed_toml_text(
+            self.TEMPLATE,
+            'model = "old"\n',
+            preserve_existing=(("", "sandbox_mode"),),
+        )
+        self.assertIn('sandbox_mode = "workspace-write"', merged)
+
+    def test_preserved_key_must_exist_in_template(self) -> None:
+        with self.assertRaises(ValueError):
+            cli.merge_managed_toml_text(
+                self.TEMPLATE,
+                "",
+                preserve_existing=(("", "unknown"),),
+            )
+
     def test_destination_only_multiline_value_is_kept_opaque(self) -> None:
         existing = (
             '[features]\n'
@@ -1212,7 +1239,7 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(report.fail_count(), 0, report.failures)
         self.assertIn(f"ok: {config}", self._run_install())
 
-    def test_codex_config_managed_value_drift_is_restored(self) -> None:
+    def test_codex_config_sandbox_mode_is_preserved(self) -> None:
         self._run_install()
         config = _codex_config(self.home)
         config.write_text(
@@ -1224,10 +1251,10 @@ class InstallTests(unittest.TestCase):
         )
         with patch("sys.stdout", new=StringIO()):
             report = cli.verify(self.layout)
-        self.assertTrue(any("managed TOML drift" in item for item in report.failures))
+        self.assertFalse(any("managed TOML drift" in item for item in report.failures))
         self._run_install()
         self.assertIn(
-            'sandbox_mode = "workspace-write"', config.read_text(encoding="utf-8")
+            'sandbox_mode = "danger-full-access"', config.read_text(encoding="utf-8")
         )
 
     def test_legacy_managed_default_rules_retired_only_when_unchanged(self) -> None:

@@ -372,7 +372,7 @@ Hooks、Output Styles、permissions のセキュリティハードニングな�
 - `[features]` には既定値と異なる項目だけを置き、Codex CLI の標準機能改善を取り込む。ローカルメモリは明示的に有効化する
 - ローカルメモリは生成と利用の両方を有効にする。生成物は既定で `~/.codex/memories/` に保存され、チャット単位の制御には `/memories` を使う。必須の指示はメモリだけに依存せず `AGENTS.md` に置く
 - TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。端末が非フォーカスのときにターン完了を通知し、status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を色付きで表示する
-- default は `workspace-write + on-request + auto_review` とし、workspace内の通常操作だけを自動実行する。command networkとworkspace外への昇格はapproval reviewへ送る
+- 新規環境のdefaultは `workspace-write + on-request + auto_review` とし、workspace内の通常操作だけを自動実行する。既存の`~/.codex/config.toml`にある`sandbox_mode`は端末ローカルの選択として再installでも保持し、その他の管理キーはテンプレートへ同期する
 - `trusted` profileは`danger-full-access`を明示選択し、repoと入力を完全に信頼できる作業または外部隔離済み環境だけで使う
 - `readonly` profileは`read-only + approval_policy = "never"`とし、昇格なしで探索する
 - `agent-config.rules`は`git push`、`git reset`、`rm`、主要な`gh` write commandの代表的なargv prefixをapproval reviewへ送る補助境界である。global optionや別ツールを含む全同義表現の意味解析は保証せず、workspace sandboxと共通 guidelineを本境界にする
