@@ -12,7 +12,7 @@ argument-hint: "[title-or-topic | issue-number]"
 ## Workflow
 
 1. **確認**: 要求とリポジトリを調べ、ゴール・設計方針・変更範囲・完了条件を決める。ユーザー判断が必要な事項は選択肢と推奨案を添えて確認する
-2. **文書化**: `references/goal-contract.md`に従って計画を作り、`.plan/YYYYMMDD-<slug>.md`へ書き出す
+2. **文書化**: `references/goal-contract.md`に従って計画を作り、実行ごとの一時ディレクトリへ書き出す
 3. **レビュー**: メイン担当が計画を反証して修正し、必要な場合だけ独立レビューを1名使う
 4. **公開**: `references/issue.md`に従ってGitHub issueへ反映する
 5. **報告**: issue URL、実装時確認事項、重要な残存リスクを報告する
@@ -31,7 +31,9 @@ argument-hint: "[title-or-topic | issue-number]"
 
 ### 文書化
 
-`references/goal-contract.md` を読み、本文を組み立てて `.plan/YYYYMMDD-<slug>.md` へ書き出す。
+`references/goal-contract.md` を読み、本文を組み立てて一時ファイルへ書き出す。
+
+作業ファイルはリポジトリ内に作らず、OSまたは実行環境が提供する一時領域へ、実行ごとに一意なディレクトリを作成して置く。固定パスや特定OSのパスを前提にしない。サブエージェントや外部コマンドへ渡す場合は絶対パスを使う。
 
 ### レビュー
 
@@ -67,6 +69,6 @@ issue URL、実装時確認事項、重要な残存リスクを報告する
 
 ## Contract
 
-- `.plan/`はgitに含めない一時作業場とし、共有上の正本はGitHub issueとする
-- issue本文は`.plan/`と同じMarkdownを`--body-file`で反映し、`--body`や本文の再構成を使わない
+- 一時ファイルはセッションをまたぐ正本とせず、共有上の正本はGitHub issueとする
+- issue本文は一時ファイルと同じMarkdownを`--body-file`で反映し、`--body`や本文の再構成を使わない
 - GitHubへの反映に失敗した場合は成功扱いしない

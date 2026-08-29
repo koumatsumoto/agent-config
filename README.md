@@ -23,7 +23,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `templates/subagent-statusline.py` - Claude Codeのsubagent status line
 - `templates/settings.json` - Claude Code向けの推奨`settings.json`（既存ファイルへは浅くマージ）
 
-履歴メモや検討計画はGitで追跡し、作業中の計画メモが必要な場合はリポジトリ直下の`.plan/`に置く。
+履歴メモや検討計画はGitで追跡し、作業中だけ必要なメモはOSまたは実行環境の一時領域に置く。
 
 ## ディレクトリ構造
 
