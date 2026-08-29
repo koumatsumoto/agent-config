@@ -62,4 +62,4 @@ argument-hint: "[target]"
 未解決のblockerがなければ `PASS` とする。
 完了を妨げる未解決の問題があれば修正と再レビューを繰り返す。MEDIUM・LOW・non-blockingの指摘をゼロにするためにレビューを繰り返さない。
 
-結果は `.km-review/<scope>/integration.md` に残し、同じ内容をユーザーへ報告する。`.km-review/` はgit管理外に保つ。
+結果は実行ごとの一時ディレクトリに`integration.md`として残し、同じ内容をユーザーへ報告する。一時ファイルはセッションをまたぐ正本にしない。

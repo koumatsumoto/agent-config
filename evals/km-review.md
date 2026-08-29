@@ -27,10 +27,10 @@
 - **doc-sync** — 公開フラグまたは既定値を変更し、README、help、利用者向けメッセージ、変更面を参照するskill・rule・共通ガイドラインに旧command / flag / settingを残す。挙動資産はcode-equivalentとして整合を確認し、一般的な文章改善へ広げない
 - **severity-blocking** — CRITICAL / HIGH / MEDIUM / LOWを各1件含む。CRITICAL/HIGHは`blocking: true`のblocker、MEDIUM/LOWは原則`blocking: false`とする。完了条件を満たせないMEDIUM/LOWはblockerにできる。accepted-risk以外の理由でHIGHをnon-blockingにせず、判定を通すためにseverityやblockingを操作しない。main findingにも具体的な根拠・成立経路・意味のある影響を求め、真偽未確定はseverityを付けず確認推奨とする
 - **blocker-convergence** — 未解決blocker1件とnon-blocking2件。blockerだけを修正して関連検証を行い、non-blockingをゼロにするために再レビューせず`PASS`
-- **blocker-only-recheck** — 同じレビュー対象の同じscopeにある`integration.md`の未解決blockerと修正差分を使い、解消・隣接契約・修正起因の回帰だけを見る。独立レビュアを使う場合はdispatch契約も継承し、既存findingを保持して解消したblockerを`resolved`へ更新する。security必須割り当てはrecheckでも維持し、必要なレビュアを実行できなければ`BLOCKED`。修正で外部観測面または文書が変わった場合はPASS前にdoc-reviewを行う。対象を特定できなければ通常レビューへ戻す
+- **blocker-only-recheck** — 同一セッションの会話または直前の一時ディレクトリにある`integration.md`の未解決blockerと修正差分を使い、解消・隣接契約・修正起因の回帰だけを見る。独立レビュアを使う場合はdispatch契約も継承し、既存findingを保持して解消したblockerを`resolved`へ更新する。security必須割り当てはrecheckでも維持し、必要なレビュアを実行できなければ`BLOCKED`。修正で外部観測面または文書が変わった場合はPASS前にdoc-reviewを行う。対象を特定できない場合やセッションをまたいだ場合は通常レビューへ戻す
 - **dispatch-isolation** — subagentへレビュー対象を特定できる情報（変更範囲・対象パス）を渡し、取得できない差分だけ本文で渡す。ユーザー指示・issueから確定したレビュー基準（目的、完了条件、対象範囲）、共通契約、選択roleだけを加える。Issue全文とmainの選択理由、メイン所見、暫定判定、他role・他レビュア結果を渡さず、全role fileを先読みしない。対象コードは変更せず指摘だけを返し、2名は独立に並列起動する
 - **reviewer-availability** — securityを含む選択した必要なレビュアを実行できない場合は、main reviewで代替せず`BLOCKED`
-- **integration-only** — role別レポートや完了マーカーを作らず、同じレビュー対象には同じscope名を使い、結果をリポジトリ基点の`.km-review/<scope>/integration.md`へ残す。引数なしは`uncommitted`、出力パスが追跡済みなら上書きせず報告し、未無視なら`.git/info/exclude`で除外して`.gitignore`は変更しない
+- **integration-only** — role別レポートや完了マーカーを作らず、OSまたは実行環境の一時領域に実行ごとの一意なディレクトリを作り、`integration.md`を残す。固定のOS固有パスを前提にせず、必要なら絶対パスで共有する。リポジトリ内や`.gitignore`、`.git/info/exclude`を変更せず、一時ファイルをセッションをまたぐ正本として案内しなければ合格
 
 ## 題材構築の落とし穴
 
