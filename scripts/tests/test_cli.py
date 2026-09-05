@@ -1195,7 +1195,7 @@ class InstallTests(unittest.TestCase):
         widened = [
             self.home / cli.SETTINGS_DEST_REL,
             self.home / cli.TEMPLATE_FILES[0].dest_rel,
-            self.home / ".claude/output-styles/fable-like.md",
+            self.home / ".claude/skills/km-review/SKILL.md",
         ]
         for path in widened:
             self.assertTrue(path.is_file(), f"missing: {path}")
@@ -1574,8 +1574,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
         self._run_install()
         for name in ("CLAUDE.md", "statusline.py", "subagent-statusline.py"):
             self.assertTrue((self.target / name).is_file(), f"missing: {name}")
-        for name in ("skills", "output-styles"):
-            self.assertTrue((self.target / name).is_dir(), f"missing: {name}")
+        self.assertTrue((self.target / "skills").is_dir())
         self.assertFalse((self.target / "rules").exists())
         self.assertTrue((self.target / "settings.json").is_file())
 
@@ -1725,12 +1724,84 @@ class ClaudeDirInstallTests(unittest.TestCase):
             rc = cli.clean(self.layout)
         self.assertEqual(rc, 0)
         self.assertIn(str(self.target), out.getvalue())
-        for name in ("CLAUDE.md", "statusline.py", "skills", "output-styles"):
+        for name in ("CLAUDE.md", "statusline.py", "skills"):
             self.assertFalse((self.target / name).exists(), f"still present: {name}")
         self.assertTrue(
             (self.target / "settings.json").exists(),
             "clean() must keep settings.json (carries user values)",
         )
+
+
+class OutputStyleRetirementTests(unittest.TestCase):
+    def test_fresh_install_does_not_manage_output_styles(self) -> None:
+        for alternate in (False, True):
+            with self.subTest(alternate=alternate), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                target = home / (".claude-sub" if alternate else ".claude")
+                layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                with patch("sys.stdout", new=StringIO()):
+                    self.assertEqual(cli.install(layout), 0)
+                    self.assertEqual(cli.verify(layout).failures, [])
+                self.assertFalse((target / "output-styles").exists())
+                settings = json.loads((target / "settings.json").read_text(encoding="utf-8"))
+                self.assertEqual(settings["outputStyle"], "Explanatory")
+                if alternate:
+                    self.assertFalse((home / ".claude").exists())
+
+    def test_upgrade_retires_managed_assets_and_preserves_user_values(self) -> None:
+        for alternate in (False, True):
+            for value in ("Explanatory", "Learning", "fable-like", None):
+                with self.subTest(alternate=alternate, value=value), tempfile.TemporaryDirectory() as tmp:
+                    home = Path(tmp)
+                    target = home / (".claude-sub" if alternate else ".claude")
+                    layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                    styles = target / "output-styles"
+                    styles.mkdir(parents=True)
+                    legacy = styles / "fable-like.md"
+                    legacy.write_text("old managed style", encoding="utf-8")
+                    custom = styles / "custom.md"
+                    custom.write_text("user style", encoding="utf-8")
+                    settings_path = target / "settings.json"
+                    original = json.dumps({"outputStyle": value, "theme": "dark"})
+                    settings_path.write_text(original, encoding="utf-8")
+                    with patch("sys.stdout", new=StringIO()):
+                        self.assertEqual(cli.install(layout), 0)
+                        self.assertEqual(cli.verify(layout).failures, [])
+                    self.assertFalse(legacy.exists())
+                    backup = styles / "fable-like.md.bak"
+                    self.assertEqual(backup.read_text(encoding="utf-8"), "old managed style")
+                    self.assertEqual(custom.read_text(encoding="utf-8"), "user style")
+                    settings = json.loads(settings_path.read_text(encoding="utf-8"))
+                    self.assertEqual(settings["theme"], "dark")
+                    self.assertEqual(settings["outputStyle"], "Explanatory")
+                    settings_backup = target / "settings.json.bak"
+                    self.assertEqual(settings_backup.read_text(encoding="utf-8"), original)
+                    installed = settings_path.read_bytes()
+                    with patch("sys.stdout", new=StringIO()):
+                        self.assertEqual(cli.install(layout), 0)
+                        self.assertEqual(cli.verify(layout).failures, [])
+                        self.assertEqual(cli.clean(layout), 0)
+                    self.assertEqual(settings_path.read_bytes(), installed)
+                    self.assertEqual(settings_backup.read_text(encoding="utf-8"), original)
+                    self.assertEqual(backup.read_text(encoding="utf-8"), "old managed style")
+                    self.assertEqual(custom.read_text(encoding="utf-8"), "user style")
+                    if alternate:
+                        self.assertFalse((home / ".claude").exists())
+
+    def test_clean_does_not_own_existing_output_styles(self) -> None:
+        for alternate in (False, True):
+            with self.subTest(alternate=alternate), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                target = home / (".claude-sub" if alternate else ".claude")
+                layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                styles = target / "output-styles"
+                styles.mkdir(parents=True)
+                for name in ("fable-like.md", "custom.md"):
+                    (styles / name).write_text(name, encoding="utf-8")
+                with patch("sys.stdout", new=StringIO()):
+                    self.assertEqual(cli.clean(layout), 0)
+                for name in ("fable-like.md", "custom.md"):
+                    self.assertEqual((styles / name).read_text(encoding="utf-8"), name)
 
 
 class ClaudeDirCliTests(unittest.TestCase):

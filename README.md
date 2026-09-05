@@ -15,7 +15,6 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 
 - `templates/CLAUDE.md` - Claude Code、Codex CLIに共通するAI共通ガイドライン（唯一の正本）
 - `templates/skills/` - Claude / Codex CLI 共用の skills
-- `templates/output-styles/` - Claude Code 向け custom output styles (モデル切替時の行動規範。`fable-like` 同梱)
 - `templates/config.toml` - Codex CLI 用設定テンプレート
 - `templates/codex/*.config.toml` - Codex CLI用のプロファイルテンプレート（`~/.codex/<profile>.config.toml`）
 - `templates/codex-rules/` - Codex CLI 用 exec policy rules
@@ -73,7 +72,6 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 
 - `~/.claude/CLAUDE.md` (詳細は後述)
 - `~/.claude/skills/`
-- `~/.claude/output-styles/`
 - `~/.claude/statusline.py`
 - `~/.claude/subagent-statusline.py`
 - `~/.claude/settings.json`（推奨設定を浅くマージ。詳細は後述）
@@ -112,7 +110,6 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 | --- | --- |
 | `templates/CLAUDE.md` | `<dir>/CLAUDE.md` |
 | `templates/skills/` | `<dir>/skills/` |
-| `templates/output-styles/` | `<dir>/output-styles/` |
 | `templates/statusline.py` | `<dir>/statusline.py` |
 | `templates/subagent-statusline.py` | `<dir>/subagent-statusline.py` |
 | `templates/settings.json` | `<dir>/settings.json` (浅いマージ) |
@@ -144,6 +141,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 | `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | subagent行を自前描画する |
 | `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止と `Bash(npx *)` | 機密ファイルへのアクセスを既定で遮断する |
 | `permissions.defaultMode` | `"auto"` | セッションを既定で auto mode で開始する（classifier が安全な操作を自動承認する） |
+| `outputStyle` | `"Explanatory"` | Claude Code組み込みの説明スタイルを選択する |
 | `language` | `"日本語"` | 応答言語を日本語に固定する |
 | `effortLevel` | `"xhigh"` | reasoning effort を xhigh で永続化する |
 | `attribution.commit` / `attribution.pr` | 空文字 | コミットおよび PR 説明から Claude の署名を抑止する |
@@ -179,14 +177,6 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 内容はツール非依存に保つ。モデル名、推論強度、permission、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約でも抑止する。Codexの既定profileは`:workspace + on-request + auto_review`とし、host全体を開く場合だけ`trusted` profileを明示選択する。
 
 マシン固有・個人ローカルな指示は配布対象の正本へ書かない。Claude Codeでは各リポジトリの`CLAUDE.local.md`（git管理外）へ置く。Codexでは`AGENTS.override.md`が同じdirectoryの`AGENTS.md` / fallbackを置き換えるため、必要な通常指示も含めたlocal overrideとして使う。ユーザーレベルの`~/.claude/CLAUDE.local.md`は自動読み込みされない。
-
-### Output Styles の取り扱い
-
-`templates/output-styles/` は Claude Code の custom output style を `~/.claude/output-styles/` へ配布する。同梱の `fable-like` は、モデルを Opus / Sonnet に切り替えたセッションでも Fable 5 相当の行動様式（結論先行の報告・即行動・検証の実証・スコープ規律）を system prompt 末尾に注入する（`keep-coding-instructions: true` により組み込みのソフトウェアエンジニアリング指示は保持する）。
-
-- **有効化**: `/config` → Output style で `fable-like` を選ぶ（選択は local レベル = プロジェクトの `.claude/settings.local.json` に保存）か、`.claude/settings.local.json` に `"outputStyle": "fable-like"` を直接書く。反映は `/clear` または新セッション（style は session 開始時にのみ読み込まれる）
-- **運用上の注意**: ユーザーレベルの`~/.claude/settings.json`にある`outputStyle`はテンプレート宣言キー（既定値は`Explanatory`）で、インストールを再実行するたびにリポジトリの値へ戻る。そのため、fable-likeはユーザーレベルではなく**プロジェクトレベル**（`.claude/settings.local.json`など）で有効化する
-- **無効化 (Fable に戻す)**: `/config` で outputStyle を元に戻すか、`.claude/settings.local.json` の `outputStyle` を削除する。反映は同じく `/clear` または新セッション
 
 ## 検証
 
@@ -241,7 +231,6 @@ python scripts/cli.py clean
 | `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
 | `templates/skills/` | `~/.claude/skills/` |
-| `templates/output-styles/` | `~/.claude/output-styles/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (浅いマージ) |
@@ -262,7 +251,6 @@ python scripts/cli.py clean
   - Hooks: `https://code.claude.com/docs/en/hooks`
   - Settings: `https://code.claude.com/docs/en/settings`
   - Status line: `https://code.claude.com/docs/en/statusline`
-  - Output styles: `https://code.claude.com/docs/en/output-styles`
 - OpenAI Codex CLI
   - CLI Overview: `https://developers.openai.com/codex/cli`
   - Config Basics: `https://developers.openai.com/codex/config-basic`

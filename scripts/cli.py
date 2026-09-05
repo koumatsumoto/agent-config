@@ -90,7 +90,6 @@ TEMPLATE_FILES: tuple[FileSpec, ...] = (
 # Directory trees synced recursively (with per-file .bak backup).
 TEMPLATE_TREES: tuple[TreeSpec, ...] = (
     TreeSpec("templates/skills", ".claude/skills"),
-    TreeSpec("templates/output-styles", ".claude/output-styles"),
     TreeSpec("templates/skills", ".agents/skills"),
 )
 
@@ -155,6 +154,7 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
 DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".codex/full.config.toml",
     ".claude/rules",
+    ".claude/output-styles/fable-like.md",
 )
 
 # Runtime/user state shares ~/.codex/rules. Codex itself writes accepted TUI
