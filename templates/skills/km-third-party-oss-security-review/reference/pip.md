@@ -25,7 +25,7 @@ pip（PyPI）パッケージの採用前レビューで共通 8 観点に加え�
 
 - `[project.scripts]` / `[project.gui-scripts]` / `console_scripts` で公開される entry を確認する
 - 主要 module の `__init__.py` / entry module に外部通信、subprocess 呼び出し、eval / `exec` / 動的 import、難読化 blob の兆候がないか
-- ネイティブ拡張（C / Rust / Cython）を含む場合は「実行権限と影響範囲」を一段高いリスクとして扱う
+- ネイティブ拡張（C / Rust / Cython）の有無と実行箇所を確認する
 
 ## 依存関係と供給網
 
@@ -44,6 +44,6 @@ pip（PyPI）パッケージの採用前レビューで共通 8 観点に加え�
 - `license` フィールド、classifier、LICENSE ファイルの整合性
 - GPL 系ライセンスと社内方針の適合を確認する
 
-## 判定への反映
+## 評価への引き渡し
 
-- ネイティブ拡張 / `.pth` 注入 / ビルド時ネットワーク取得のいずれかを確認した場合は、「利用環境への影響」でさらに厳しい判定を選ぶ
+ネイティブ拡張 / `.pth` 注入 / ビルド時ネットワーク取得の確認結果は、`decision-rules.md`の「ecosystem固有の判定影響」へ渡す。
