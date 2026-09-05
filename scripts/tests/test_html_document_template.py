@@ -2,7 +2,7 @@
 
 The template ships as a skeleton (document-template.html) plus separate asset
 files (document-template.css, document-template.js) that build.js inlines into a
-single self-contained report. The diagram tools (wheel zoom, drag, PNG/WebP
+single report; Mermaid itself is loaded from its pinned CDN. The diagram tools (wheel zoom, drag, PNG/WebP
 export) run as an inline script, so script-src allows 'unsafe-inline' — the
 security floor here is no external egress, not inline-script blocking.
 

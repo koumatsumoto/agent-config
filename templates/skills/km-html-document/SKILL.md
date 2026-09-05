@@ -8,6 +8,8 @@ argument-hint: "[topic | output-path.html]"
 
 用意済みの本文をHTMLへ組み、レイアウト、図、安全対策だけを担う。本文の内容と構成は呼び出し側が決める。
 
+単一HTMLはCSSと操作用JavaScriptを同梱した1ファイルを指す。Mermaid本体はCDNから取得するため、図の描画にはネットワーク接続が必要。
+
 ## Files（`references/`）
 
 | ファイル | 役割 | 本文作成時 |

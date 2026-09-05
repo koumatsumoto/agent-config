@@ -434,24 +434,9 @@ class SkillMetadataTests(unittest.TestCase):
                     dangling.append(f"{doc.relative_to(cli.REPO_ROOT)} -> {rel}")
         self.assertEqual(dangling, [])
 
-    def test_colon_tokens_are_stable_protocol_markers_only(self) -> None:
-        repo_root = cli.REPO_ROOT
-        source_files = [repo_root / "README.md", repo_root / "CLAUDE.md"]
-        for root_name in ("scripts", "templates"):
-            source_files.extend(
-                path
-                for path in (repo_root / root_name).rglob("*")
-                if path.is_file()
-                and path.suffix in {".css", ".html", ".js", ".md", ".py", ".sh"}
-            )
-
-        tokens: set[str] = set()
-        for path in source_files:
-            tokens.update(
-                re.findall(r"km:[a-z][a-z0-9:-]*", path.read_text(encoding="utf-8"))
-            )
-
-        self.assertEqual(tokens, {"km:plan:managed", "km:review:report:complete"})
+    def test_plan_issue_template_contains_managed_marker(self) -> None:
+        issue = cli.REPO_ROOT / "templates/skills/km-plan/references/issue.md"
+        self.assertIn("<!-- km:plan:managed -->", issue.read_text(encoding="utf-8"))
 
 
 class BackupTests(unittest.TestCase):

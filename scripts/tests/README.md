@@ -1,7 +1,7 @@
 # Tests
 
-`scripts/cli.py` の `install`、`clean`、`verify`、`merge` と、ファイル操作ヘルパーを対象とする単体テスト。
-サポート対象は Linux / macOS / Windows。
+配布CLIの`install`、`clean`、`verify`、`merge`とファイル操作、Skill helperの実行、HTMLテンプレートのbuild・CSP、文書の参照・一覧を検査する。自然言語の意味やAIの判断品質は、文字列検査の合格では保証しない。
+CLIのサポート対象はLinux / macOS / Windows。OSや実行依存に制約があるテストは、条件を満たさなければskipする。
 
 ## 実行
 
