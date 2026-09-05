@@ -1440,15 +1440,98 @@ class VerifyTests(unittest.TestCase):
             report = cli.verify(self.layout)
         self.assertTrue(any("settings.json must be a JSON object" in m for m in report.failures))
 
-    def test_settings_existing_key_override_is_allowed(self) -> None:
+    def test_settings_managed_value_drift_and_reinstall(self) -> None:
+        settings = self.home / cli.SETTINGS_DEST_REL
+        for key, value in (("effortLevel", "low"), ("outputStyle", "Default"),
+                           ("permissions", {"defaultMode": "dontAsk"}), ("verbose", 1)):
+            with self.subTest(key=key):
+                data = json.loads(settings.read_text(encoding="utf-8"))
+                data[key] = value
+                settings.write_text(json.dumps(data), encoding="utf-8")
+                before = settings.read_bytes()
+                with patch("sys.stdout", new=StringIO()):
+                    report = cli.verify(self.layout)
+                    self.assertTrue(any("settings value drift" in m and key in m for m in report.failures))
+                    self.assertEqual(settings.read_bytes(), before, "verify is read-only")
+                    cli.install(self.layout)
+                    self.assertEqual(cli.verify(self.layout).failures, [])
+
+    def test_settings_user_keys_and_object_order_are_allowed(self) -> None:
         settings = self.home / cli.SETTINGS_DEST_REL
         data = json.loads(settings.read_text(encoding="utf-8"))
-        override_key = next(iter(data))
-        data[override_key] = "user override"
-        settings.write_text(json.dumps(data), encoding="utf-8")
+        data["theme"] = "dark"
+        data["permissions"] = dict(reversed(list(data["permissions"].items())))
+        settings.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
+        with patch("sys.stdout", new=StringIO()):
+            self.assertEqual(cli.verify(self.layout).failures, [])
+            cli.install(self.layout)
+            before = {p: p.read_bytes() for p in self.home.rglob("*") if p.is_file()}
+            cli.install(self.layout)
+        self.assertEqual(before, {p: p.read_bytes() for p in self.home.rglob("*") if p.is_file()})
+        self.assertEqual(json.loads(settings.read_text(encoding="utf-8"))["theme"], "dark")
+
+    def test_managed_orphans_fail_but_user_units_and_backups_pass(self) -> None:
+        for tree in self.layout.trees:
+            with self.subTest(tree=tree.dest_rel):
+                root = self.home / tree.dest_rel
+                orphan = root / "km-review/old-reference.md"
+                orphan.write_text("old", encoding="utf-8")
+                subdir = root / "km-review/old-dir"
+                subdir.mkdir()
+                (subdir / "old.txt").write_text("old nested", encoding="utf-8")
+                custom = root / "custom/SKILL.md"
+                custom.parent.mkdir()
+                custom.write_text("custom", encoding="utf-8")
+                with patch("sys.stdout", new=StringIO()):
+                    report = cli.verify(self.layout)
+                    for path in (orphan, subdir):
+                        self.assertTrue(any("orphan drift" in m and str(path) in m for m in report.failures))
+                    cli.install(self.layout)
+                    self.assertEqual(cli.verify(self.layout).failures, [])
+                self.assertEqual(custom.read_text(encoding="utf-8"), "custom")
+                self.assertTrue(orphan.with_name(orphan.name + ".bak").is_file())
+                self.assertTrue(subdir.with_name(subdir.name + ".bak").is_dir())
+
+    @unittest.skipUnless(os.name == "posix", "symlink fixture")
+    def test_settings_link_is_not_converged(self) -> None:
+        settings = self.home / cli.SETTINGS_DEST_REL
+        real = settings.with_name("user-settings.json")
+        settings.rename(real)
+        settings.symlink_to(real)
         with patch("sys.stdout", new=StringIO()):
             report = cli.verify(self.layout)
-        self.assertFalse(any(override_key in m for m in report.failures), report.failures)
+            self.assertTrue(any("settings must be a regular file" in m for m in report.failures))
+            cli.install(self.layout)
+            self.assertEqual(cli.verify(self.layout).failures, [])
+        self.assertFalse(settings.is_symlink())
+
+    def test_retired_path_is_not_converged(self) -> None:
+        for alternate in (False, True):
+            layout = cli.claude_dir_layout(self.home / "other", self.home) if alternate else self.layout
+            with self.subTest(alternate=alternate), patch("sys.stdout", new=StringIO()):
+                cli.install(layout)
+                retired = layout.root / layout.retired_dests[0]
+                retired.parent.mkdir(parents=True, exist_ok=True)
+                retired.write_text("old", encoding="utf-8")
+                self.assertTrue(any("retired path drift" in m for m in cli.verify(layout).failures))
+                cli.install(layout)
+                self.assertEqual(cli.verify(layout).failures, [])
+
+    def test_statusline_expectation_matches_install_platform_and_profile(self) -> None:
+        for posix in (True, False):
+            for alternate in (False, True):
+                with self.subTest(posix=posix, alternate=alternate), patch("cli.POSIX", posix), patch("sys.stdout", new=StringIO()):
+                    layout = cli.claude_dir_layout(self.home / "Claude Profiles/sub", self.home) if alternate else self.layout
+                    cli.install(layout)
+                    self.assertEqual(cli.verify(layout).failures, [])
+                    settings = layout.root / layout.settings[0].dest_rel
+                    data = json.loads(settings.read_text(encoding="utf-8"))
+                    data["statusLine"]["command"] = "wrong-profile/statusline.py"
+                    settings.write_text(json.dumps(data), encoding="utf-8")
+                    self.assertTrue(any("settings value drift" in m and "statusLine" in m for m in cli.verify(layout).failures))
+                    cli.install(layout)
+                    self.assertEqual(cli.verify(layout).failures, [])
+
 
 # --------------------------------------------------------------------------- #
 # layout command arguments
