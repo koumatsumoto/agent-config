@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import shlex
 import sys
 import tempfile
 from collections.abc import Callable
@@ -38,7 +39,6 @@ from pathlib import Path
 POSIX = os.name == "posix"
 DIR_MODE = 0o700
 FILE_MODE = 0o600
-EXEC_MODE = 0o700
 
 # scripts/cli.py -> scripts -> repo root.
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -52,7 +52,6 @@ class FileSpec:
     src_rel: str           # relative to REPO_ROOT
     dest_rel: str          # relative to home
     mode: int
-    is_executable: bool = False
 
 
 @dataclass(frozen=True)
@@ -74,12 +73,11 @@ GUIDELINE_TEMPLATE_REL = "templates/CLAUDE.md"
 
 # Files that are full-template overwrites (with .bak backup). The agent
 # guideline is owned by the template: each install refreshes it so edits to the
-# repo propagate. Machine-local overrides belong in a sibling *.local.md, which
-# the installer never writes.
+# repo propagate.
 TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec(GUIDELINE_TEMPLATE_REL, ".claude/CLAUDE.md", 0o600),
-    FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700, is_executable=True),
-    FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
+    FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700),
+    FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700),
     FileSpec(GUIDELINE_TEMPLATE_REL, ".codex/AGENTS.md", 0o600),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
     FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
@@ -227,17 +225,26 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
     )
 
 
-def clean_targets(layout: Layout) -> list[Path]:
+def clean_targets(layout: Layout, repo_root: Path = REPO_ROOT) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
 
     settings.json is intentionally excluded because it mixes template and
-    user/runtime-owned keys rather than being a pure template copy.
+    user/runtime-owned keys rather than being a pure template copy. Trees are
+    shared roots: only top-level entries present in the source are managed.
     """
     out: list[Path] = []
     for spec in layout.files:
         out.append(layout.root / spec.dest_rel)
     for tspec in layout.trees:
-        out.append(layout.root / tspec.dest_rel)
+        dest_root = layout.root / tspec.dest_rel
+        # The skills root is shared with user assets. Never traverse a link to
+        # select children: that would turn a rename into mutation of its target.
+        if dest_root.is_symlink():
+            raise PermissionError(f"refusing to clean through symlink: {dest_root}")
+        if not any(is_within(dest_root, managed) for managed in layout.managed_dirs):
+            raise PermissionError(f"refusing to clean outside install dirs: {dest_root}")
+        for src in sorted((repo_root / tspec.src_rel).iterdir()):
+            out.append(dest_root / src.name)
     return out
 
 
@@ -506,16 +513,7 @@ def remove_with_backup(path: Path) -> str:
 
     Returns one of: skipped | backed_up.
     """
-    if not (path.exists() or path.is_symlink()):
-        return "skipped"
-    bak = path.with_name(path.name + ".bak")
-    if bak.exists() or bak.is_symlink():
-        if bak.is_dir() and not bak.is_symlink():
-            shutil.rmtree(bak)
-        else:
-            bak.unlink()
-    os.rename(path, bak)
-    return "backed_up"
+    return "backed_up" if backup(path) is not None else "skipped"
 
 
 # --------------------------------------------------------------------------- #
@@ -525,7 +523,8 @@ def statusline_command(script: Path, *, posix: bool, python: str, home: Path) ->
     """Build a runnable status-line `command` string for the target platform.
 
     POSIX: a `~`-relative path when the script lives under `home`, else its
-    absolute path. The shebang + executable bit launch the script
+    absolute path. Quote the path portion while leaving `~/` expandable.
+    The shebang + executable bit launch the script
     OS-independently and re-resolve the interpreter via PATH on every run, which
     survives the interpreter moving as long as it stays on PATH.
 
@@ -536,9 +535,9 @@ def statusline_command(script: Path, *, posix: bool, python: str, home: Path) ->
     if not posix:
         return f'"{python}" "{script.as_posix()}"'
     try:
-        return f"~/{script.relative_to(home).as_posix()}"
+        return "~/" + shlex.quote(script.relative_to(home).as_posix())
     except ValueError:
-        return script.as_posix()
+        return shlex.quote(script.as_posix())
 
 
 def apply_statusline_commands(

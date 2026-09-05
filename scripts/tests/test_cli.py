@@ -10,6 +10,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -480,6 +481,37 @@ class BackupTests(unittest.TestCase):
         cli.backup(target)
         self.assertEqual(bak.read_text(encoding="utf-8"), "v2")
 
+    @unittest.skipUnless(os.name == "posix", "symlink fixture requires POSIX")
+    def test_backup_preserves_entry_type_and_never_follows_links(self) -> None:
+        for operation in (cli.backup, cli.remove_with_backup):
+            for kind in ("file", "directory", "symlink", "dangling"):
+                for old_kind in ("file", "directory", "symlink"):
+                    with self.subTest(operation=operation.__name__, kind=kind, old=old_kind), tempfile.TemporaryDirectory() as tmp:
+                        root = Path(tmp)
+                        external = root / "external"
+                        external.mkdir()
+                        marker = external / "keep"
+                        marker.write_text("user data", encoding="utf-8")
+                        target = root / "managed"
+                        bak = root / "managed.bak"
+                        for path, entry in ((target, kind), (bak, old_kind)):
+                            if entry == "directory":
+                                path.mkdir()
+                                (path / "content").write_text("content", encoding="utf-8")
+                            elif entry in ("symlink", "dangling"):
+                                path.symlink_to(external if entry == "symlink" else root / "missing", target_is_directory=True)
+                            else:
+                                path.write_text("content", encoding="utf-8")
+                        result = operation(target)
+                        self.assertEqual(result, bak if operation is cli.backup else "backed_up")
+                        self.assertFalse(target.exists() or target.is_symlink())
+                        self.assertEqual(bak.is_symlink(), kind in ("symlink", "dangling"))
+                        if kind == "file":
+                            self.assertEqual(bak.read_text(encoding="utf-8"), "content")
+                        elif kind == "directory":
+                            self.assertEqual((bak / "content").read_text(encoding="utf-8"), "content")
+                        self.assertEqual(marker.read_text(encoding="utf-8"), "user data")
+
     def test_remove_with_backup_skipped_when_missing(self) -> None:
         self.assertEqual(cli.remove_with_backup(self.dir / "nope"), "skipped")
 
@@ -517,6 +549,27 @@ class StatuslineCommandTests(unittest.TestCase):
             home=self.HOME,
         )
         self.assertEqual(cmd, "/opt/profiles/sub/statusline.py")
+
+    @unittest.skipUnless(os.name == "posix", "POSIX shell command")
+    def test_posix_commands_execute_with_special_path_characters(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home with spaces"
+            home.mkdir()
+            for parent in (home / ".claude", home / "Claude Profiles", root / "outside"):
+                for name in ("plain", "space and 'quote'", "$(echo UNEXPECTED);$x`echo BAD`"):
+                    with self.subTest(parent=parent, name=name):
+                        script = parent / name / "statusline.py"
+                        script.parent.mkdir(parents=True, exist_ok=True)
+                        script.write_text("#!/bin/sh\nprintf STATUSLINE_OK\n", encoding="utf-8")
+                        script.chmod(0o700)
+                        command = cli.statusline_command(script, posix=True,
+                                                         python=sys.executable, home=home)
+                        result = subprocess.run(["/bin/sh", "-c", command],
+                                                env={**os.environ, "HOME": str(home)},
+                                                capture_output=True, text=True, timeout=10)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertEqual(result.stdout, "STATUSLINE_OK")
 
     def test_windows_invokes_interpreter_with_absolute_path(self) -> None:
         cmd = cli.statusline_command(
@@ -1068,7 +1121,7 @@ class InstallTests(unittest.TestCase):
         self.assertIn(f"drift: {config}", report.failures)
 
     def test_global_guidelines_overwritten_when_present(self) -> None:
-        # Machine-local edits belong in a *.local.md; the guideline files
+        # The guideline files
         # themselves are refreshed from the template so repo edits propagate.
         for spec in _global_guideline_specs():
             dest = self.home / spec.dest_rel
@@ -1202,10 +1255,50 @@ class CleanTests(unittest.TestCase):
             dest = self.home / spec.dest_rel
             self.assertFalse(dest.exists(), f"still present: {dest}")
 
-    def test_removes_managed_trees(self) -> None:
+    def test_backs_up_only_managed_tree_entries(self) -> None:
         self._run_clean()
         for tspec in cli.TEMPLATE_TREES:
-            self.assertFalse((self.home / tspec.dest_rel).exists())
+            root = self.home / tspec.dest_rel
+            self.assertTrue(root.is_dir())
+            for src in (cli.REPO_ROOT / tspec.src_rel).iterdir():
+                self.assertFalse((root / src.name).exists())
+                self.assertTrue((root / (src.name + ".bak")).exists())
+
+    def test_repeated_install_clean_preserves_user_entries(self) -> None:
+        alternate = cli.claude_dir_layout(self.home / "Claude Profiles/sub", self.home)
+        for layout in (self.layout, alternate):
+            with self.subTest(layout=layout.description):
+                custom_files = []
+                for tree in layout.trees:
+                    root = layout.root / tree.dest_rel
+                    custom = root / "custom-skill/SKILL.md"
+                    custom.parent.mkdir(parents=True, exist_ok=True)
+                    custom.write_text("user skill", encoding="utf-8")
+                    loose = root / "user-notes.txt"
+                    loose.write_text("user notes", encoding="utf-8")
+                    custom_files.extend((custom, loose))
+                for _ in range(2):
+                    with patch("sys.stdout", new=StringIO()):
+                        self.assertEqual(cli.install(layout), 0)
+                        self.assertEqual(cli.verify(layout).failures, [])
+                        self.assertEqual(cli.clean(layout), 0)
+                    for custom in custom_files:
+                        self.assertEqual(custom.read_text(encoding="utf-8"),
+                                         "user skill" if custom.name == "SKILL.md" else "user notes")
+                    for spec in layout.settings:
+                        self.assertTrue((layout.root / spec.dest_rel).exists())
+
+    @unittest.skipUnless(os.name == "posix", "symlink fixture requires POSIX")
+    def test_clean_refuses_symlinked_skills_root_without_mutation(self) -> None:
+        root = self.home / ".claude/skills"
+        outside = self.home / "external-skills"
+        root.rename(outside)
+        root.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(PermissionError):
+            self._run_clean()
+        self.assertTrue(root.is_symlink())
+        self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
+        self.assertTrue((outside / "km-review/SKILL.md").exists())
 
     def test_creates_bak_for_each(self) -> None:
         self._run_clean()
@@ -1272,7 +1365,7 @@ class VerifyTests(unittest.TestCase):
 
     def test_global_guideline_drift_flagged(self) -> None:
         # The guideline files are pure template copies, so an edit to one is
-        # drift that verify must report (machine-local rules go in a *.local.md).
+        # drift that verify must report.
         specs = _global_guideline_specs()
         self.assertTrue(specs, "expected the global guideline specs")
         for spec in specs:
@@ -1460,7 +1553,6 @@ class ClaudeDirLayoutTests(unittest.TestCase):
         by_src = {s.src_rel: s for s in cli.TEMPLATE_FILES}
         for spec in self.layout.files:
             self.assertEqual(spec.mode, by_src[spec.src_rel].mode)
-            self.assertEqual(spec.is_executable, by_src[spec.src_rel].is_executable)
 
 
 # --------------------------------------------------------------------------- #
@@ -1623,7 +1715,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
             rc = cli.clean(self.layout)
         self.assertEqual(rc, 0)
         self.assertIn(str(self.target), out.getvalue())
-        for name in ("CLAUDE.md", "statusline.py", "skills"):
+        for name in ("CLAUDE.md", "statusline.py", "skills/km-review"):
             self.assertFalse((self.target / name).exists(), f"still present: {name}")
         self.assertTrue(
             (self.target / "settings.json").exists(),
