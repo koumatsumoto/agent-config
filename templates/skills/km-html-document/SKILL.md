@@ -6,7 +6,7 @@ argument-hint: "[topic | output-path.html]"
 
 # HTML Document
 
-用意済みの本文をHTMLへ組み、レイアウト、図、安全対策だけを担う。本文の内容と構成は呼び出し側が決める。既存テンプレートをそのまま使い、必要な本文だけを流し込んで単一ファイルにする。
+用意済みの本文をHTMLへ組み、レイアウト、図、安全対策だけを担う。本文の内容と構成は呼び出し側が決める。
 
 ## Files（`references/`）
 
@@ -21,7 +21,7 @@ argument-hint: "[topic | output-path.html]"
 ## Workflow
 
 1. 出力先を決める（既定 `./<slug>.html`、`$ARGUMENTS` にパスがあれば優先）。既存ファイルは上書き前に確認する
-2. `references/document-template.html` の複製へ、用意済みの本文を必要最小限のHTMLとして配置する。`BUILD:INLINE` マーカーと既存のCSPは変えない
+2. `references/document-template.html` の複製へ、用意済みの本文を必要最小限のHTMLとして配置する。本文テキストはHTMLとして解釈させる部分を除いてエスケープする
 3. `node references/build.js <出力パス>` を実行する
 4. コマンドが成功し、出力ファイルが生成されたことだけを確認する
 5. ユーザーが表示不要と明示していなければ、best-effortの後処理として `$km-open-file` で生成したHTMLを開く。表示できなくても生成成功は取り消さず、生成結果と表示結果を分けて報告する。内容の再レビューや反復的な磨き込みは行わない
@@ -32,13 +32,9 @@ argument-hint: "[topic | output-path.html]"
 
 - 用意済みの内容を過不足なく配置した単一 HTML を出力する
 - `build.js` が正常終了し、CSS/JavaScriptが挿入されている
-- 既存テンプレートのレイアウト、CSP、SRI、図操作を壊さない
 - 概念や関係を図で分かりやすくしつつ、内容にない事実や理解に寄与しない装飾を加えない
 
 ## Safety Rules
 
 - ローカル `file://` 閲覧を前提とする（HTTP 配信のヘッダ防御は対象外）
-- 既存ファイルは上書き前に確認する
-- 本文の内容そのものを作るのは責務外。内容生成は呼び出し側に委ねる
-- 本文テキストはHTMLとして解釈させる部分を除いてエスケープする
-- CSPによる外部送信の防止策（`default-src` / `connect-src 'none'`など）と`BUILD:INLINE`マーカーを壊さない
+- 既存テンプレートのレイアウト、図操作、`BUILD:INLINE`マーカーを保ち、CSP・SRIを削除・緩和しない。変更が必要な場合の制約は`authoring-guide.md`に従う

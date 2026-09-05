@@ -17,4 +17,4 @@ python3 -m unittest discover -s scripts/tests -t scripts
 python -m unittest discover -s scripts/tests -t scripts
 ```
 
-CI（`.github/workflows/tests.yml`）は各 OS と Python 3.9 / 3.12 / 3.13 の組み合わせで、単体テストとシェルラッパーの基本動作を確認する。
+CI（[tests.yml](../../.github/workflows/tests.yml)）はPRごとに`ubuntu-latest`でPython 3.9 / 3.12 / 3.13の単体テストとシェルラッパーの基本動作を確認する。macOS / Windowsは`workflow_dispatch`でOSを指定した場合だけ実行する（`all`で全OS）。

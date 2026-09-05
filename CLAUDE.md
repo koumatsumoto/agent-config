@@ -2,16 +2,9 @@
 
 Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 
-## 構成
-
-- `templates/` - デプロイ対象テンプレート（install.sh で ~/.claude/ 等に反映）
-- `templates/CLAUDE.md` - Claude Code、Codex CLIに共通するAI共通ガイドラインの唯一の正本。`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`へ同じ内容を配布する
-- `.claude/` - このプロジェクト固有の設定
-- `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
-
 ## 注意
 
-- テンプレートの編集は `templates/` 配下で行う
+- テンプレートの編集は `templates/` 配下で行う。AI共通ガイドラインの唯一の正本は `templates/CLAUDE.md` とし、Claude / Codexへ同じ内容を配布する
 - AI 共通ガイドラインはツール非依存に保つ。モデル、推論強度、サンドボックス、承認ポリシーなどの実行時設定は、各ツール固有の設定ファイルに置く
 - `install.sh` 実行でテンプレートがホームディレクトリに反映される
 - 作業中だけ必要なメモは、OSまたは実行環境が提供する一時領域に置く
