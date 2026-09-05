@@ -175,7 +175,7 @@ python3 scripts/cli.py clean
 python scripts/cli.py clean
 ```
 
-このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。利用者・runtime固有値を保持する`~/.claude/settings.json`だけは対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
+このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。スキルは`templates/skills/`直下に存在する管理項目だけを退避し、同じ置き場に追加された独自スキルやファイルは残す。利用者・runtime固有値を保持する`~/.claude/settings.json`も対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
 
 ## 反映先マッピング
 

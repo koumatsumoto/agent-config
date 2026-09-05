@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import shlex
 import sys
 import tempfile
 from collections.abc import Callable
@@ -227,17 +228,26 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
     )
 
 
-def clean_targets(layout: Layout) -> list[Path]:
+def clean_targets(layout: Layout, repo_root: Path = REPO_ROOT) -> list[Path]:
     """Paths that clean() removes (with .bak backup).
 
     settings.json is intentionally excluded because it mixes template and
-    user/runtime-owned keys rather than being a pure template copy.
+    user/runtime-owned keys rather than being a pure template copy. Trees are
+    shared roots: only top-level entries present in the source are managed.
     """
     out: list[Path] = []
     for spec in layout.files:
         out.append(layout.root / spec.dest_rel)
     for tspec in layout.trees:
-        out.append(layout.root / tspec.dest_rel)
+        dest_root = layout.root / tspec.dest_rel
+        # The skills root is shared with user assets. Never traverse a link to
+        # select children: that would turn a rename into mutation of its target.
+        if dest_root.is_symlink():
+            raise PermissionError(f"refusing to clean through symlink: {dest_root}")
+        if not any(is_within(dest_root, managed) for managed in layout.managed_dirs):
+            raise PermissionError(f"refusing to clean outside install dirs: {dest_root}")
+        for src in sorted((repo_root / tspec.src_rel).iterdir()):
+            out.append(dest_root / src.name)
     return out
 
 
@@ -525,7 +535,8 @@ def statusline_command(script: Path, *, posix: bool, python: str, home: Path) ->
     """Build a runnable status-line `command` string for the target platform.
 
     POSIX: a `~`-relative path when the script lives under `home`, else its
-    absolute path. The shebang + executable bit launch the script
+    absolute path. Quote the path portion while leaving `~/` expandable.
+    The shebang + executable bit launch the script
     OS-independently and re-resolve the interpreter via PATH on every run, which
     survives the interpreter moving as long as it stays on PATH.
 
@@ -536,9 +547,9 @@ def statusline_command(script: Path, *, posix: bool, python: str, home: Path) ->
     if not posix:
         return f'"{python}" "{script.as_posix()}"'
     try:
-        return f"~/{script.relative_to(home).as_posix()}"
+        return "~/" + shlex.quote(script.relative_to(home).as_posix())
     except ValueError:
-        return script.as_posix()
+        return shlex.quote(script.as_posix())
 
 
 def apply_statusline_commands(
