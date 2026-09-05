@@ -225,16 +225,17 @@ def claude_dir_layout(target: Path, home: Path) -> Layout:
     )
 
 
-def clean_targets(layout: Layout, repo_root: Path = REPO_ROOT) -> list[Path]:
-    """Paths that clean() removes (with .bak backup).
+def clean_targets(layout: Layout, repo_root: Path = REPO_ROOT) -> list[tuple[Path, Path]]:
+    """Source and backup paths for clean(), checked before any removal.
 
     settings.json is intentionally excluded because it mixes template and
     user/runtime-owned keys rather than being a pure template copy. Trees are
     shared roots: only top-level entries present in the source are managed.
     """
-    out: list[Path] = []
+    out: list[tuple[Path, Path]] = []
     for spec in layout.files:
-        out.append(layout.root / spec.dest_rel)
+        dest = layout.root / spec.dest_rel
+        out.append((dest, dest.with_name(dest.name + ".bak")))
     for tspec in layout.trees:
         dest_root = layout.root / tspec.dest_rel
         # The skills root is shared with user assets. Never traverse a link to
@@ -243,8 +244,16 @@ def clean_targets(layout: Layout, repo_root: Path = REPO_ROOT) -> list[Path]:
             raise PermissionError(f"refusing to clean through symlink: {dest_root}")
         if not any(is_within(dest_root, managed) for managed in layout.managed_dirs):
             raise PermissionError(f"refusing to clean outside install dirs: {dest_root}")
+        # A directory containing SKILL.md is still discoverable with a .bak
+        # suffix. Keep backups outside the skills root, one managed entry at a
+        # time, preserving other entries in an existing backup directory.
+        backup_root = dest_root.with_name(dest_root.name + ".bak")
+        if backup_root.is_symlink() or (backup_root.exists() and not backup_root.is_dir()):
+            raise PermissionError(f"refusing to use non-directory backup root: {backup_root}")
+        if not any(is_within(backup_root, managed) for managed in layout.managed_dirs):
+            raise PermissionError(f"refusing to back up outside install dirs: {backup_root}")
         for src in sorted((repo_root / tspec.src_rel).iterdir()):
-            out.append(dest_root / src.name)
+            out.append((dest_root / src.name, backup_root / src.name))
     return out
 
 
@@ -322,11 +331,18 @@ def same_content(src: Path, dest: Path) -> bool:
     return src.read_bytes() == dest.read_bytes()
 
 
-def backup(path: Path) -> Path | None:
-    """Move existing path to path.bak (single generation). Return the .bak Path or None."""
+def backup(path: Path, *, destination: Path | None = None) -> Path | None:
+    """Move path to a single-generation backup; default to path.bak.
+
+    An explicit destination lets clean keep skill backups outside discovery
+    roots. Its parent must be validated by the caller before mutation.
+    Return the backup Path, or None when the source is absent.
+    """
     if not (path.exists() or path.is_symlink()):
         return None
-    bak = path.with_name(path.name + ".bak")
+    bak = destination if destination is not None else path.with_name(path.name + ".bak")
+    if destination is not None:
+        bak.parent.mkdir(mode=DIR_MODE, parents=True, exist_ok=True)
     if bak.exists() or bak.is_symlink():
         if bak.is_dir() and not bak.is_symlink():
             shutil.rmtree(bak)
@@ -861,12 +877,12 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
 
 def clean(layout: Layout) -> int:
     print(f"Clean {layout.description}")
-    for target in clean_targets(layout):
-        result = remove_with_backup(target)
-        if result == "skipped":
+    for target, bak in clean_targets(layout):
+        result = backup(target, destination=bak)
+        if result is None:
             print(f"skip: {target}")
         else:
-            print(f"backup: {target}.bak")
+            print(f"backup: {bak}")
             print(f"removed: {target}")
     print("done")
     return 0

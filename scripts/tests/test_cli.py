@@ -1247,7 +1247,8 @@ class CleanTests(unittest.TestCase):
             self.assertTrue(root.is_dir())
             for src in (cli.REPO_ROOT / tspec.src_rel).iterdir():
                 self.assertFalse((root / src.name).exists())
-                self.assertTrue((root / (src.name + ".bak")).exists())
+                self.assertTrue((root.with_name(root.name + ".bak") / src.name).exists())
+            self.assertEqual(list(root.rglob("SKILL.md")), [])
 
     def test_repeated_install_clean_preserves_user_entries(self) -> None:
         alternate = cli.claude_dir_layout(self.home / "Claude Profiles/sub", self.home)
@@ -1261,7 +1262,10 @@ class CleanTests(unittest.TestCase):
                     custom.write_text("user skill", encoding="utf-8")
                     loose = root / "user-notes.txt"
                     loose.write_text("user notes", encoding="utf-8")
-                    custom_files.extend((custom, loose))
+                    saved = root.with_name(root.name + ".bak") / "user-notes.txt"
+                    saved.parent.mkdir(parents=True, exist_ok=True)
+                    saved.write_text("user notes", encoding="utf-8")
+                    custom_files.extend((custom, loose, saved))
                 for _ in range(2):
                     with patch("sys.stdout", new=StringIO()):
                         self.assertEqual(cli.install(layout), 0)
@@ -1272,6 +1276,11 @@ class CleanTests(unittest.TestCase):
                                          "user skill" if custom.name == "SKILL.md" else "user notes")
                     for spec in layout.settings:
                         self.assertTrue((layout.root / spec.dest_rel).exists())
+                    for tree in layout.trees:
+                        self.assertEqual(
+                            list((layout.root / tree.dest_rel).rglob("SKILL.md")),
+                            [layout.root / tree.dest_rel / "custom-skill/SKILL.md"],
+                        )
 
     @unittest.skipUnless(os.name == "posix", "symlink fixture requires POSIX")
     def test_clean_refuses_symlinked_skills_root_without_mutation(self) -> None:
@@ -1284,6 +1293,44 @@ class CleanTests(unittest.TestCase):
         self.assertTrue(root.is_symlink())
         self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
         self.assertTrue((outside / "km-review/SKILL.md").exists())
+
+    @unittest.skipUnless(os.name == "posix", "symlink fixture requires POSIX")
+    def test_clean_refuses_linked_backup_root_before_removal(self) -> None:
+        for tree in self.layout.trees:
+            with self.subTest(tree=tree.dest_rel), tempfile.TemporaryDirectory() as tmp:
+                outside = Path(tmp)
+                marker = outside / "keep"
+                marker.write_text("user data", encoding="utf-8")
+                root = self.home / tree.dest_rel
+                bak = root.with_name(root.name + ".bak")
+                bak.symlink_to(outside, target_is_directory=True)
+                try:
+                    with self.assertRaises(PermissionError):
+                        self._run_clean()
+                    self.assertEqual(marker.read_text(encoding="utf-8"), "user data")
+                    self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
+                    self.assertTrue((root / "km-review/SKILL.md").exists())
+                finally:
+                    bak.unlink()
+
+    @unittest.skipUnless(os.name == "posix", "isolated junction-like path fixture")
+    def test_clean_checks_resolved_backup_boundary_without_symlink_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outside = Path(tmp)
+            marker = outside / "km-review/keep"
+            marker.parent.mkdir()
+            marker.write_text("user data", encoding="utf-8")
+            bak = self.home / ".claude/skills.bak"
+            bak.symlink_to(outside, target_is_directory=True)
+            original = Path.is_symlink
+            # Windows junctions can resolve elsewhere without is_symlink().
+            # Represent those path properties on POSIX without touching NTFS.
+            with patch.object(Path, "is_symlink", lambda p: False if p == bak else original(p)):
+                with self.assertRaises(PermissionError):
+                    self._run_clean()
+            self.assertEqual(marker.read_text(encoding="utf-8"), "user data")
+            self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
+            self.assertTrue((self.home / ".claude/skills/km-review/SKILL.md").exists())
 
     def test_creates_bak_for_each(self) -> None:
         self._run_clean()
