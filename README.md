@@ -107,7 +107,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 つまり、`theme`のような個人設定はユーザー側で書き加えれば、次回のインストールでも消えない。一方、テンプレートが宣言するキーは実行時に一時変更しても、次回のインストールでリポジトリの値に戻る。恒久的に変える場合は`templates/settings.json`を編集する。
 
-配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。
+配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。`includeGitInstructions=false`でClaude組み込みのcommit・PR指示と開始時のGit statusスナップショットを外し、Git操作の契約は共通ガイドライン、`km-commit`、`km-github-workflow`で管理する。
 
 `*.config`や`appsettings.json`のような一般的なアプリ設定はglobal denyに含めない。これらに秘密情報を置くrepositoryでは、`.claude/settings.json`または`.claude/settings.local.json`でdenyを追加する。
 
