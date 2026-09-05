@@ -7,13 +7,18 @@
 | 触った箇所 | 再走する題材 |
 | --- | --- |
 | description・起動条件 | explicit-trigger |
-| 不変条件・削除条件 | contract-preservation, semantic-relations, negation-scope, quantifier-preservation, temporal-order, exception-binding, reference-resolution, intentional-duplication, over-compression, spec-boundary, no-change |
+| 意味リスク判定・参照のロード条件 | standard-routing, contract-routing, diagnosis-routing, repository-audit-routing, skill-description, genre-adaptation |
+| 共通の保護条件・契約保護の進め方・削除条件 | contract-preservation, semantic-relations, negation-scope, quantifier-preservation, temporal-order, exception-binding, reference-resolution, intentional-duplication, over-compression, spec-boundary, no-change |
 | 推敲工程・一般ガイドライン | terminology, logical-structure, markup-preservation, repository-terminology, genre-adaptation |
 | `references/skill-description.md` | skill-description |
 | 出力契約 | output-boundary, audit-output, repository-coverage |
 
 ## 題材と合否線
 
+- **standard-routing** — 一般的な複数文の説明を推敲させる。専門用語やMarkdownがあっても、意味関係が要求・挙動・判断条件を左右しない題材を使う。`japanese-guidelines.md`を読まず、意味・事実・語調を保って自然に改善し、全項目の意味台帳を出力へ追加しないことが合否線
+- **contract-routing** — 条件・例外・法性・数量・否定が判断や行動を左右する文章を推敲させる。文書名によらず`japanese-guidelines.md`を読み、意味台帳と双方向の照合で強さ・作用域・適用関係を維持することが合否線
+- **diagnosis-routing** — 通常の文章または単一ファイルを診断させる。`repository-audit.md`を読まず、場所・修正案・理由など診断の出力契約を満たすことが合否線
+- **repository-audit-routing** — 変更不要・保護対象・契約文を含む小さなリポジトリ全体を日本語監査させる。`repository-audit.md`を読み、契約文を扱う時点で`japanese-guidelines.md`も読み、対象網羅・監査状態・仕様変更候補と事実再確認の分離を維持することが合否線
 - **explicit-trigger** — description 一覧だけから skill を選ばせる。should:「この日本語を推敲して」「冗長な説明を削って」「自然で分かりやすい日本語にして」「意味を変えずに、この手順を簡潔にして」「この skill description を一行で的確にして」。should-not:「この英語を日本語に翻訳して」「この英語を自然で分かりやすい日本語にして」「この実装をレビューして」「README と実装の整合を確認して」「この仕様を再設計して」「日本語の typo を直した」。明示された日本語文の推敲では起動し、通常の実装、レビュー、翻訳、文書同期では自動起動しないことが合否線
 - **contract-preservation** — 「利用者は申請を取り消してよい。ただし、承認後は管理者だけが取り消せる。監査ログは削除してはならない。」を簡潔にさせる。許可、例外、主体、禁止の強さがすべて残ることが合否線
 - **semantic-relations** — 目的と機能、既存状態と新規行為、並置と因果、事実と根拠を含む文章を推敲させる。目的を実際の機能へ、既存状態を新規行為へ、並置を因果へ、根拠候補を断定へ変えないことが合否線
@@ -33,9 +38,9 @@
 - **over-compression** — 条件、例外、根拠を含む長文を簡潔化させる。短さのために重要な命題を削らず、原文にない命題も追加しないことが合否線
 - **markup-preservation** — YAMLフロントマター、コードフェンス、Markdownリンク、見出しID、プレースホルダーを含む文書を推敲させる。文章以外の構造と識別子が変わらないことが合否線
 - **repository-terminology** — 複数ファイルで同じ一般概念を異なる語で呼ぶリポジトリを監査させる。一般概念を統一し、識別子と固定フィールド値は維持することが合否線
-- **audit-output** — 複数ファイルを診断させる。各指摘に一意なID、場所、変更前後、理由、適用規則、変更種別があることが合否線
+- **audit-output** — リポジトリ全体を監査させる。各指摘に一意なID、場所、変更前後、理由、適用規則、変更種別があることが合否線
 - **repository-coverage** — 変更不要・保護対象を含む追跡ファイル一式を監査させる。全ファイルの状態と指摘IDを欠落なく照合できることが合否線
-- **genre-adaptation** — 同じ一文または単一段落を、レポート、番号付き手順、エラー、警告、規程としてそれぞれ整えさせる。短い入力でも `japanese-guidelines.md` を読み、意味台帳は共通のまま、用途に応じて結論、前提、危険、次の行動、法性の優先順が変わることが合否線
+- **genre-adaptation** — 同じ一文または単一段落を、レポート、番号付き手順、エラー、警告、規程としてそれぞれ整えさせる。長さや文書名ではなく、意味関係が判断や行動を左右する場合だけ`japanese-guidelines.md`を読むこと、同じ意味を保ちつつ用途に応じて結論、前提、危険、次の行動、法性の優先順が変わることが合否線
 - **output-boundary** — 複数段落の推敲を依頼する。推敲後の本文を先に返し、全変更の逐語対照や一般的講評を自動追加しないことが合否線。意味上の判断や残る重要な曖昧さがある場合だけ補足する
 
 ## 落とし穴
