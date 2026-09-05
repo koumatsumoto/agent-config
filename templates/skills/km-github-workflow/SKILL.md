@@ -21,7 +21,12 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 - 変更に着手する前に、基点branchから作業branchと専用worktreeを作る。以降の作業は、そのworktree内で行う。基点branch側や別の作業用worktreeを作業場所にしない。
 - branch名は`<type>/<issue番号>-<slug>`とする。issueがない場合は`<type>/<slug>`とする。
 - 既存PRを更新する場合は、そのbranch専用のworktreeを使う。専用worktreeがなければ作成する。
-- worktreeの作成直後、新しいworktreeのリポジトリルートに、Gitが追跡する`.worktreeinclude`があるか確認する。存在する場合は、作成元worktreeにある無視対象ファイルのうち、記載されたパスまたは`.gitignore`形式のパターンに一致するものを同じ相対パスへコピーする。存在しない場合は何もしない。
+- worktreeの作成直後、`python3`、次に`python`の順で `-c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'` を実行し、最初に成功したinterpreterを使う。どちらも成功しなければ停止する。
+- 読み込んだこの `SKILL.md` の実在directoryを基準に `scripts/prepare-worktree.py` を解決し、skill directoryへ `cd` せず、作成元worktree rootと新しいworktree rootを引数にして次の形で呼ぶ。正常終了（no-op / matchなしを含む）なら続行し、失敗した場合はそのworktreeで作業を始めず停止する。
+
+```text
+"<python>" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>"
+```
 
 ### Implement
 
@@ -54,8 +59,6 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 - force pushしない。
 - worktreeを作る前に、既存のworktree、branch、配置先を確認する。既存worktreeを削除したり、別の作業用branchを再利用したりしない。
 - PRのマージ完了を確認するまで、作業用worktreeを削除しない。削除前に対象パスを特定し、未コミット変更がないことを確認する。削除に失敗した場合も強制削除しない。
-- `.worktreeinclude`からコピーするのは、Gitの無視対象である通常ファイルだけとする。Gitの追跡対象、リポジトリ外を指すパス、コピー元のシンボリックリンク、コピー先に既存の項目があるパスは対象にしない。ファイルの内容をログへ出力せず、コピーしたファイルをステージしない。
-- `.worktreeinclude`のパターンに一致するファイルがない場合は、正常な結果として扱う。コピー対象を確定した後に一つでもコピーに失敗した場合は、不完全なworktreeで作業を続けず停止する。
 - 無関係な未コミット変更をPRへ含めない。
 - GitHub上のissueやPRに、秘密情報、非公開情報、個人環境を識別できる情報を載せない。
 - issueとPRの本文は`--body-file`で渡す。`--body`やクォートなしのheredocは使わない。

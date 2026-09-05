@@ -58,7 +58,7 @@ argument-hint: "[target]"
 
 ## 統合と収束
 
-指摘事項は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` の重大度を報告する。統合、判定、報告は `references/verdict.md` に従う。
+指摘事項は `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` の重大度を報告する。分類前に `references/finding-contract.md` を読み、統合、判定、報告は `references/verdict.md` に従う。
 未解決のblockerがなければ `PASS` とする。
 完了を妨げる未解決の問題があれば修正と再レビューを繰り返す。MEDIUM・LOW・non-blockingの指摘をゼロにするためにレビューを繰り返さない。
 

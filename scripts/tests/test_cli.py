@@ -50,6 +50,12 @@ def _skill_docs() -> list[Path]:
     return [p.relative_to(skills_root) for p in sorted(skills_root.rglob("*.md"))]
 
 
+def _skill_files() -> list[Path]:
+    """Every distributed regular file in the managed skills tree."""
+    skills_root = cli.REPO_ROOT / "templates" / "skills"
+    return [p.relative_to(skills_root) for p in sorted(skills_root.rglob("*")) if p.is_file()]
+
+
 def _codex_profile_specs() -> list[cli.FileSpec]:
     """Codex profile files loaded by `codex --profile <name>`."""
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel.startswith(".codex/") and s.dest_rel.endswith(".config.toml")]
@@ -972,6 +978,17 @@ class InstallTests(unittest.TestCase):
             for rel in docs:
                 self.assertTrue((self.home / root_rel / rel).is_file(), f"missing: {root_rel}/{rel}")
 
+    def test_every_skill_helper_reaches_each_skills_root(self) -> None:
+        self._run_install()
+        helpers = [path for path in _skill_files() if "scripts" in path.parts]
+        self.assertTrue(helpers, "no managed skill helpers found")
+        for root_rel in (".claude/skills", ".agents/skills"):
+            for rel in helpers:
+                deployed = self.home / root_rel / rel
+                self.assertTrue(deployed.is_file(), f"missing: {root_rel}/{rel}")
+                if os.name != "nt":
+                    self.assertFalse(os.access(deployed, os.X_OK), str(deployed))
+
     def test_creates_settings_json(self) -> None:
         self._run_install()
         settings = self.home / cli.SETTINGS_DEST_REL
@@ -1702,6 +1719,16 @@ class ClaudeDirInstallTests(unittest.TestCase):
             self.assertTrue((self.target / name).is_dir(), f"missing: {name}")
         self.assertFalse((self.target / "rules").exists())
         self.assertTrue((self.target / "settings.json").is_file())
+
+    def test_deploys_skill_helpers_without_execute_bit(self) -> None:
+        self._run_install()
+        helpers = [path for path in _skill_files() if "scripts" in path.parts]
+        self.assertTrue(helpers, "no managed skill helpers found")
+        for rel in helpers:
+            deployed = self.target / "skills" / rel
+            self.assertTrue(deployed.is_file(), str(deployed))
+            if os.name != "nt":
+                self.assertFalse(os.access(deployed, os.X_OK), str(deployed))
 
     def test_content_matches_the_templates(self) -> None:
         self._run_install()

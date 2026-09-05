@@ -1,25 +1,8 @@
 # 統合と判定
 
+findingの採用、severity、blockingには、先に `references/finding-contract.md` を読み、その契約を使う。
+
 メイン担当が全指摘の根拠を確認し、同じ原因と影響を指すものを統合する。レビュアの判定をそのまま採用しない。
-具体的な根拠、現実的な成立経路、意味のある影響を示せないものは正式な指摘にしない。
-
-## severity
-
-- `CRITICAL` — 現実的な経路で即時の重大事故、壊滅的損失、即時悪用につながる
-- `HIGH` — 主な成果の不達、重大な回帰、脆弱性、データ・運用事故、長期保守を直撃する設計欠陥
-- `MEDIUM` — 限定的だが意味のある品質・性能・可用性・運用・設計上の問題
-- `LOW` — 具体的な改善価値はあるが、主な成果を重大には損なわない
-
-## blocking
-
-severityと完了を妨げるかは別に判定する。
-
-- CRITICAL / HIGHは`blocking: true`のblocker
-- MEDIUM / LOWは原則`blocking: false`
-- 明示された完了条件または主な成果を満たせない場合は、MEDIUM / LOWもblockerにできる
-- 真偽を確定できない懸念はseverityを付けず、何を確認すれば決まるかを確認推奨として残す
-- ユーザーが理由と条件を理解して受け入れた問題は`accepted-risk`とし、severityは変えない
-- 判定を通すためにseverityやblockingを変更しない。
 
 ## status
 
