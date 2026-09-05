@@ -231,7 +231,7 @@ python scripts/cli.py clean
 | `km-html-document` | 用意済みの内容を安全対策済みの単一HTMLにする |
 | `km-open-file` | Windows / WSL Ubuntuでローカルのファイル・フォルダを開く |
 | `km-japanese-refine` | 日本語の説明・指示文を、意味を保って自然で簡潔に推敲する |
-| `km-review` | 実装した変更をレビューして欠陥を洗い出す |
+| `km-review` | 実装した変更をread-onlyでレビューし、欠陥と品質判定を返す |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub リポジトリの採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub管理リポジトリの変更をissue・PRとして提出し、明示された場合はマージまで完了する |
