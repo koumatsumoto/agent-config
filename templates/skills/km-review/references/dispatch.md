@@ -6,13 +6,14 @@
 
 - レビュー対象を特定できる情報（変更範囲・対象パス）。subagent自身が取得できない差分だけ本文で渡す
 - ユーザー指示・issueから確定したレビュー基準（目的、完了条件、対象範囲）
+- `references/finding-contract.md`の内容
 - `reviewers/contract.md`の内容
 - 選んだ`reviewers/<role>.md`の内容
 - 挙動資産の場合は`reviewers/behavior-asset.md`の内容
 
 ## 渡さないもの
 
-メイン担当の所見、修正理由、暫定判定、選択理由、他レビュアの結果は渡さない。`--recheck`では、確認対象のblockerと修正内容を渡してよい。
+参照pathだけを知らせてsubagentへ探索させず、上記contractの内容そのものを渡す。メイン担当の所見、修正理由、暫定判定、選択理由、他レビュアの結果は渡さない。`--recheck`では、確認対象のblockerと修正内容を渡してよい。
 
 レビュアの結果はメイン担当が直接回収し、`references/verdict.md`に従って統合する。role別の報告ファイルや完了マーカーは作らない。
 

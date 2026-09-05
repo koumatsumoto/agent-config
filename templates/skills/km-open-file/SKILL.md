@@ -6,7 +6,7 @@ argument-hint: "[パス]"
 
 # Open File
 
-ローカルのファイルやフォルダを Windows 側で開く。対応環境は **Windows (Git Bash)** と **WSL (Ubuntu)** のみ。標準コマンド（`uname` / `wslpath` / `cygpath` / `explorer.exe`）だけで動き、追加パッケージ（`wslview` 等）は前提にしない。
+ローカルのファイルやフォルダを Windows 側で開く。対応環境は **Windows (Git Bash)** と **WSL (Ubuntu)** のみ。追加パッケージ（`wslview` 等）は前提にしない。
 
 開く手段は`explorer.exe`に統一し、対象の種類で扱いを分ける。HTML以外のファイルは直接実行しない。HTMLはブラウザ上のスクリプトが動く可能性を確認してから開く。
 
@@ -25,43 +25,24 @@ argument-hint: "[パス]"
 - 対象を種類に応じて Windows 側で開く（フォルダ=Explorer / HTML=既定ブラウザ / その他=選択表示）
 - 存在しないパス・対応外環境では開かず、理由を伝えて止まる
 
-## 開き方
+## Workflow
 
-`<パス>` を対象に置き換えて、次の 1 ブロックをそのまま実行する。環境判定・パス正規化・存在確認・種別分岐はスクリプト内で行うため、WSL / Git Bash を呼び分ける必要はない。
+1. 対象がユーザーの意図したローカルのパス / 既知のパスであることを確認する
+2. HTMLの場合は、作成元、外部資源、埋め込みスクリプト、秘密情報の有無を確認し、ユーザーが明示したHTMLまたはこのsessionで生成したHTMLだけを開く
+3. 読み込んだこの `SKILL.md` の実在directoryを基準に `scripts/open-file.sh` を解決し、skill directoryへ `cd` せず次の形で呼ぶ。対象pathはshell文字列へ埋め込まず、一つの引数として渡す
 
 ```bash
-target='<パス>'
-
-# 実行環境でパス変換ツールを選ぶ（wslpath / cygpath は -u/-w/-- 互換）
-case "$(uname -s)" in
-  MINGW*|MSYS*|CYGWIN*) tool=cygpath ;;
-  *) grep -qi microsoft /proc/version 2>/dev/null && tool=wslpath || { echo "open-file: 未対応の環境（WSL / Git Bash のみ）" >&2; exit 1; } ;;
-esac
-
-# 入力が Windows 形式なら Linux パスへ正規化（存在確認・種別判定は Linux パスで行う）
-case "$target" in
-  [A-Za-z]:[\\/]* | *\\*) target="$("$tool" -u -- "$target")" ;;
-esac
-
-[ -e "$target" ] || { echo "open-file: ファイルが見つかりません: $target" >&2; exit 1; }
-winpath="$("$tool" -w -- "$target")" || { echo "open-file: パス変換に失敗 -> $target" >&2; exit 1; }
-
-if [ -d "$target" ]; then
-  explorer.exe "$winpath"                 # フォルダを開く
-elif [[ "${target,,}" == *.html || "${target,,}" == *.htm ]]; then
-  explorer.exe "$winpath"                 # .html は関連付けで既定ブラウザに描画
-else
-  # Git Bashでは先頭 / の引数が Windows パスへ変換されるのを防ぐ
-  MSYS2_ARG_CONV_EXCL='*' explorer.exe /select,"$winpath"
-fi
+bash "<skill-directory>/scripts/open-file.sh" "<path>"
 ```
 
-- 開けたら対象の絶対パスを添えて報告する
-- `explorer.exe` は成功時でも非 0 を返すことがある。終了コードではなく開いたかどうかで判断する
+helperはplatform判定、path正規化、存在確認、対象種別に応じたdispatchを担う。relative pathはhelperを呼んだworking directory基準で解釈される。
+
+- helperが成功したら、Windows側へ起動要求をdispatchできたものとして対象の絶対pathを報告する
+- helperが失敗したら、その理由を報告する
+- `explorer.exe` は表示に成功しても非0を返すことがあるため、helperは前提検証後に起動要求をdispatchできたことを成功とする
 
 ## Safety Rules
 
-- HTML以外のファイルは実行せず、Explorerの選択表示にとどめる
-- HTMLを開く前に、作成元、外部資源、埋め込みスクリプト、秘密情報の有無を確認する。ユーザーが明示的に指定したHTMLまたはこのセッションで生成したHTMLだけを開く
-- 開く対象はユーザーが意図したローカルのパス / 既知のパスに限る
+- HTML以外のファイルは直接実行しない
+- HTMLの信頼判断とユーザー意図の確認をhelperへ委ねない
 - 対応は Windows (Git Bash) / WSL (Ubuntu) のみ。それ以外の環境は開かず「未対応」と伝えて止まる
