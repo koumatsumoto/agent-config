@@ -1,42 +1,23 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 # OpenAI Codex CLI base configuration managed by agent-config.
-# Copy this file to ~/.codex/config.toml via install.sh.
+# install.sh replaces ~/.codex/config.toml with this template.
 
-model = "gpt-5.6-sol"
-model_reasoning_effort = "medium"
-model_verbosity = "low"
-plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# Initial local development baseline. Workspace edits run autonomously, while
-# network access and writes outside the workspace require approval review.
-# Later installs preserve an existing sandbox_mode as machine-local policy.
-# Use the explicit `trusted` profile only for already-isolated or fully trusted
-# work that genuinely needs unrestricted host access.
+
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
-sandbox_mode = "workspace-write"
+default_permissions = ":workspace"
+
 web_search = "live"
-check_for_update_on_startup = true
 project_doc_fallback_filenames = ["CLAUDE.md"]
-
-[features]
-memories = true
-
-[memories]
-generate_memories = true
-use_memories = true
 
 [tui]
 alternate_screen = "never"
 show_tooltips = false
 animations = false
 notifications = ["agent-turn-complete"]
-notification_method = "auto"
-notification_condition = "unfocused"
 status_line = ["model-with-reasoning", "git-branch", "current-dir", "context-used", "five-hour-limit", "used-tokens", "weekly-limit", "branch-changes", "estimated-thread-cost", "task-progress"]
-status_line_use_colors = true
 
 [history]
-persistence = "save-all"
 max_bytes = 50000000

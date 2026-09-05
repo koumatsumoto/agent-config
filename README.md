@@ -83,7 +83,7 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 - `~/.codex/rules/`
 - `~/.agents/skills/`
 
-`settings.json`と`~/.codex/config.toml`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。両設定ファイルは利用者・runtime固有の値を保持しながらテンプレート管理値をマージする。
+`settings.json`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。`settings.json`だけは利用者・runtime固有の値を保持しながらテンプレート管理値をマージする。
 
 `skills/`はテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
 
@@ -157,14 +157,13 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 ### Codex `config.toml` の取り扱い
 
-`~/.codex/config.toml`はagent-configとCodex runtime・利用者の共同所有ファイルとして扱う。`templates/config.toml`が宣言するsection/keyはテンプレート値へ更新し、それ以外のkeyとtableは保持する。Codexが保存するproject trust、MCP、apps/plugins、keymap、将来追加される未知の設定をinstallで削除しない。
+`~/.codex/config.toml`はagent-configが完全管理する。installは既存内容をマージせず、`templates/config.toml`とバイト単位で一致する通常のテンプレートファイルとして配置する。
 
 - 初回installはテンプレートから`~/.codex/config.toml`を作成する
-- 2回目以降はmanaged keyだけを更新し、既知section内の未知keyとdestinationだけにあるsubtable/tableを保持する
-- managed keyがずれた場合だけ`verify`を失敗させる。runtime固有設定が追加されただけではdriftにしない
-- マージで内容が変わる場合は既存ファイルを`config.toml.bak`へ退避する
-- `clean`はruntime・利用者固有設定を失わないよう`~/.codex/config.toml`を保持する
-- Python 3.9 / stdlib-onlyを維持するため、テンプレート側のmanaged構文は通常tableとbare keyの単一行assignmentに限定する。対応外のmanaged構文は書き込まずエラーにする
+- 2回目以降もテンプレート全体を正本とし、既存の未知key、project trust、MCP、apps/plugins等は保持しない
+- 内容を置換する場合は既存ファイルを`config.toml.bak`へ退避する
+- 再installは同じ内容へ収束し、`verify`はテンプレートとの差分をすべてdriftとして検出する
+- マシン固有または一時的な設定は、CLI flagや明示的なprofileなど別の設定経路を使う
 
 ### 共通 AI エージェント指針の取り扱い
 
@@ -177,7 +176,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 配布後の 2 ファイルは `templates/CLAUDE.md` とバイト単位で一致する。テンプレートを唯一の正本として毎回上書きするため、リポジトリ側の更新がそのまま各マシンへ反映される。指針を変える場合は `templates/CLAUDE.md` を編集し、再インストールする。
 
-内容はツール非依存に保つ。モデル名、推論強度、サンドボックス、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約でも抑止する。Codexの既定は`workspace-write + on-request + auto_review`で、workspace外とcommand networkへの昇格をapproval reviewへ送る。host全体を開く場合だけ`trusted` profileを明示選択する。
+内容はツール非依存に保つ。モデル名、推論強度、permission、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約でも抑止する。Codexの既定profileは`:workspace + on-request + auto_review`とし、host全体を開く場合だけ`trusted` profileを明示選択する。
 
 マシン固有・個人ローカルな指示は配布対象の正本へ書かない。Claude Codeでは各リポジトリの`CLAUDE.local.md`（git管理外）へ置く。Codexでは`AGENTS.override.md`が同じdirectoryの`AGENTS.md` / fallbackを置き換えるため、必要な通常指示も含めたlocal overrideとして使う。ユーザーレベルの`~/.claude/CLAUDE.local.md`は自動読み込みされない。
 
@@ -233,7 +232,7 @@ python3 scripts/cli.py clean
 python scripts/cli.py clean
 ```
 
-このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。`~/.claude/settings.json`と`~/.codex/config.toml`はユーザー・runtime固有値が含まれ得るため対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
+このコマンドは配布済みのテンプレート管理対象を `*.bak` に退避してから削除する。利用者・runtime固有値を保持する`~/.claude/settings.json`だけは対象から除外している。`--claude-dir <dir>` を付けると、そのディレクトリへ配布した分を同じ規律で撤去する。
 
 ## 反映先マッピング
 
@@ -246,7 +245,7 @@ python scripts/cli.py clean
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
 | `templates/settings.json` | `~/.claude/settings.json` (浅いマージ) |
-| `templates/config.toml` | `~/.codex/config.toml` (managed keyをマージ) |
+| `templates/config.toml` | `~/.codex/config.toml` (完全管理) |
 | `templates/codex/*.config.toml` | `~/.codex/*.config.toml` |
 | `templates/codex-rules/agent-config.rules` | `~/.codex/rules/agent-config.rules` |
 | `templates/skills/` | `~/.agents/skills/` |
@@ -268,26 +267,25 @@ python scripts/cli.py clean
   - CLI Overview: `https://developers.openai.com/codex/cli`
   - Config Basics: `https://developers.openai.com/codex/config-basic`
   - Config Reference: `https://developers.openai.com/codex/config-reference`
+  - Permissions: `https://learn.chatgpt.com/docs/permissions`
+  - Auto Review: `https://learn.chatgpt.com/docs/sandboxing/auto-review`
   - Advanced Config: `https://learn.chatgpt.com/docs/config-file/config-advanced`
-  - Memories: `https://learn.chatgpt.com/docs/customization/memories`
   - Rules: `https://developers.openai.com/codex/rules`
   - Hooks: `https://developers.openai.com/codex/hooks`
   - AGENTS.md: `https://developers.openai.com/codex/guides/agents-md`
   - Skills: `https://developers.openai.com/codex/skills`
 ## Codex 設計メモ
 
-> 外部製品の仕様は2026年8月29日に公式文書で確認した。設定値の正本は`templates/config.toml`と`templates/codex/*.config.toml`である。
+> 外部製品の仕様は2026年9月5日に公式文書とCodex CLI 0.153.4で確認した。設定値の正本は`templates/config.toml`と`templates/codex/*.config.toml`である。
 
-- default model は `gpt-5.6-sol`、reasoning effort は `medium`、personality は `pragmatic`、verbosity は `low` にして、品質と応答速度を両立しながら簡潔に報告する
-- `plan_mode_reasoning_effort = "high"` を明示し、実装前の判断には通常の作業より多くの推論を使う。`low` / `ultra` は管理対象にしない
+- model、reasoning effort、verbosityは固定せず、Codexと選択したmodelのbuilt-in presetに追従する
+- `personality = "pragmatic"` はagent-config固有の応答方針として維持する
 - `web_search = "live"` を明示し、web検索は常に最新データを取得する
-- `check_for_update_on_startup = true` を明示し、更新確認をローカル設定で無効化しない前提にしている
-- `[features]` には既定値と異なる項目だけを置き、Codex CLI の標準機能改善を取り込む。ローカルメモリは明示的に有効化する
-- ローカルメモリは生成と利用の両方を有効にする。生成物は既定で `~/.codex/memories/` に保存され、チャット単位の制御には `/memories` を使う。必須の指示はメモリだけに依存せず `AGENTS.md` に置く
-- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。端末が非フォーカスのときにターン完了を通知し、status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を色付きで表示する
-- 新規環境のdefaultは `workspace-write + on-request + auto_review` とし、workspace内の通常操作だけを自動実行する。既存の`~/.codex/config.toml`にある`sandbox_mode`は端末ローカルの選択として再installでも保持し、その他の管理キーはテンプレートへ同期する
-- `trusted` profileは`danger-full-access`を明示選択し、repoと入力を完全に信頼できる作業または外部隔離済み環境だけで使う
-- `readonly` profileは`read-only + approval_policy = "never"`とし、昇格なしで探索する
+- Memoriesは暗黙に有効化せず、永続的な指示は`AGENTS.md`とSkillsで管理する
+- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。ターン完了を通知し、status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を表示する
+- 新規環境のdefaultは`:workspace + on-request + auto_review`とする。base / readonly / trustedはいずれもPermission Profilesを使い、legacy `sandbox_mode`とは併用しない
+- `trusted` profileは`:danger-full-access`を明示選択し、repoと入力を完全に信頼できる作業または外部隔離済み環境だけで使う
+- `readonly` profileは`:read-only + approval_policy = "never"`とし、昇格なしで探索する
 - `agent-config.rules`は`git push`、`git reset`、`rm`、主要な`gh` write commandの代表的なargv prefixをapproval reviewへ送る補助境界である。global optionや別ツールを含む全同義表現の意味解析は保証せず、workspace sandboxと共通 guidelineを本境界にする
 - `~/.codex/rules/default.rules`はCodex runtime・利用者の所有とし、agent-configは別ファイルを配布する
 - `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
