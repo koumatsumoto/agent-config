@@ -85,10 +85,6 @@ WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環
 
 `skills/`はテンプレートに合わせ、管理下の不要項目を削除する（`pruned: ...`と出力し、`*.bak`へ退避）。ただし、ツリー直下に利用者が作成したファイルとディレクトリは保持する。
 
-配布を終了した組み込みskillと改名前の旧名は一覧で管理する。skillの読み込み処理による誤検出を防ぐため、インストーラーは該当する現行ディレクトリと同名バックアップを`skills/`から削除する。既存の同階層にある`retired-skills/`も削除し、新旧または退役済みのskillを検出対象の近くに残さない。
-
-`km-kaizen` の退役時、リポジトリ内の `.kaizen/` は自動収集しない。外部 issue の作成や他のリポジトリの削除をインストーラーの副作用にしないため、残存項目は利用者が確認し、後続対応の価値を説明できるものだけ後続 issue へ移して残りを削除する。
-
 ### 別の設定ディレクトリへインストールする (`--claude-dir`)
 
 `CLAUDE_CONFIG_DIR` で `~/.claude` 以外の設定ディレクトリを使うプロファイル (サブアカウント用の起動コマンド等) にも、同じテンプレートを配布できる。
@@ -118,7 +114,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 - 対象はClaude Codeの設定ディレクトリのみ。Codex（`~/.codex`）と共用スキル（`~/.agents/skills`）は各ツールが自前のパスを参照するため配布しない
 - `settings.json` の status line は指定ディレクトリのスクリプトを指すよう書き換える (ホーム配下なら `~/.claude-sub/statusline.py`、ホーム外なら絶対パス)
-- 既存ファイルの `*.bak` 退避、不要項目の削除、退役 skill の削除、POSIX permission (`0700` / `0600`) は既定インストールと同じ規律で動く
+- 既存ファイルの `*.bak` 退避、不要項目の削除、POSIX permission (`0700` / `0600`) は既定インストールと同じ規律で動く
 - `clean` / `verify` も同じオプションを受け取る
 - ディレクトリが無ければ `0700` で作成する。ホームディレクトリ自身・ファイルシステムのルート・既存の非ディレクトリは拒否する
 - `CLAUDE_CONFIG_DIR` 環境変数は参照しない。それを export したシェルからの `./install.sh` も `~/.claude` を対象にし、配布先の切り替えは常に明示操作にする
@@ -239,7 +235,7 @@ python scripts/cli.py clean
 | `templates/codex-rules/agent-config.rules` | `~/.codex/rules/agent-config.rules` |
 | `templates/skills/` | `~/.agents/skills/` |
 
-注記: `~/.codex/rules/default.rules`はCodex runtime・利用者側の所有とし、agent-configは変更しない。旧版が配布した内容とbyte一致する場合だけ、初回migrationで`default.rules.bak`へ退役する。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
+注記: `~/.codex/rules/default.rules`はCodex runtime・利用者側の所有とし、agent-configは変更しない。`--claude-dir <dir>` 指定時の反映先は「別の設定ディレクトリへインストールする」を参照。
 
 ## 公式仕様
 

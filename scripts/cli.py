@@ -121,30 +121,6 @@ STATUSLINE_COMMANDS: tuple[tuple[str, str], ...] = (
 # Top-level home subdirectories that the installer may write into.
 INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 
-# Top-level skill directory names that are no longer maintained. prune_tree keeps
-# entries with no source counterpart because they may be user-added, so obsolete
-# managed names would otherwise linger after install. The installer deletes each
-# explicit managed name and its same-name backup from every skills tree during the
-# migration window.
-DECOMMISSIONED_SKILLS: tuple[str, ...] = (
-    "code-review",
-    "commit",
-    "doc-review",
-    "github-workflow",
-    "html-document",
-    "intent-review",
-    "kaizen",
-    "km-skill-improve",
-    "open-file",
-    "open-html",
-    "plan",
-    "quality-review",
-    "review",
-    "review-loop",
-    "skill-improve",
-    "third-party-oss-security-review",
-)
-
 # Managed destinations that are no longer maintained. A removed spec leaves
 # its deployed path in place otherwise, so the installer retires each explicit
 # managed path to its single-generation .bak: the retired config stops being
@@ -152,17 +128,7 @@ DECOMMISSIONED_SKILLS: tuple[str, ...] = (
 # directory are re-rooted by claude_dir_layout alongside the active specs, so
 # a --claude-dir profile retires the same slice it used to receive.
 DECOMMISSIONED_PATHS: tuple[str, ...] = (
-    ".codex/full.config.toml",
-    ".claude/rules",
     ".claude/output-styles/fable-like.md",
-)
-
-# Runtime/user state shares ~/.codex/rules. Codex itself writes accepted TUI
-# allow rules to default.rules, so only retire the historical agent-config copy
-# when its bytes still match the last managed version. Any user-modified file is
-# left untouched.
-LEGACY_MANAGED_FILES: tuple[tuple[str, str], ...] = (
-    ("scripts/migrations/codex-default.rules-v1", ".codex/rules/default.rules"),
 )
 
 
@@ -513,47 +479,6 @@ def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]
     return pruned
 
 
-def remove_decommissioned_skills(layout: Layout) -> list[Path]:
-    """Delete deployed skill names that must no longer be discoverable.
-
-    prune_tree preserves top-level entries with no source counterpart (possibly
-    user-added), so obsolete managed names and their backups are deleted by
-    explicit name here.
-    """
-    removed: list[Path] = []
-    skill_roots = [
-        layout.root / t.dest_rel
-        for t in layout.trees
-        if t.src_rel == "templates/skills"
-    ]
-    for root in skill_roots:
-        for name in DECOMMISSIONED_SKILLS:
-            for target in (root / name, root / f"{name}.bak"):
-                if not (target.exists() or target.is_symlink()):
-                    continue
-                if target.is_symlink():
-                    target.unlink()
-                else:
-                    assert_within(target, root)
-                if target.exists() and target.is_dir():
-                    shutil.rmtree(target)
-                elif target.exists():
-                    target.unlink()
-                removed.append(target)
-        archive_root = root.parent / "retired-skills"
-        if archive_root.exists() or archive_root.is_symlink():
-            if archive_root.is_symlink():
-                archive_root.unlink()
-            else:
-                assert_within(archive_root, root.parent)
-            if archive_root.exists() and archive_root.is_dir():
-                shutil.rmtree(archive_root)
-            elif archive_root.exists():
-                archive_root.unlink()
-            removed.append(archive_root)
-    return removed
-
-
 def remove_decommissioned_paths(layout: Layout) -> list[Path]:
     """Retire deployed destinations the manifest no longer maintains.
 
@@ -574,23 +499,6 @@ def remove_decommissioned_paths(layout: Layout) -> list[Path]:
         if remove_with_backup(target) == "backed_up":
             removed.append(target)
     return removed
-
-
-def retire_legacy_managed_files(
-    layout: Layout, repo_root: Path = REPO_ROOT
-) -> list[Path]:
-    """Retire exact historical managed files without taking user-owned state."""
-    retired: list[Path] = []
-    for src_rel, dest_rel in LEGACY_MANAGED_FILES:
-        source = repo_root / src_rel
-        target = layout.root / dest_rel
-        if not any(is_within(target, managed) for managed in layout.managed_dirs):
-            continue
-        if target.is_symlink() or not target.is_file() or not same_content(source, target):
-            continue
-        backup(target)
-        retired.append(target)
-    return retired
 
 
 def remove_with_backup(path: Path) -> str:
@@ -907,16 +815,9 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
             for dest in prune_tree(src_root, dest_root, boundary=boundary):
                 print(f"pruned: {dest}")
 
-    for dest in remove_decommissioned_skills(layout):
-        print(f"removed (obsolete skill data): {dest}")
-
     for dest in remove_decommissioned_paths(layout):
         print(f"backup: {dest}.bak")
         print(f"removed (obsolete config): {dest}")
-
-    for dest in retire_legacy_managed_files(layout, repo_root):
-        print(f"backup: {dest}.bak")
-        print(f"removed (legacy managed file): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
     # exist and be >= 3.9, and on Windows it is exactly the python that must be
