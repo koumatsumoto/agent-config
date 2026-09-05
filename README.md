@@ -32,7 +32,6 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `scripts/tests/` - `scripts/cli.py` の unittest
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
 - `.github/workflows/` - GitHub Actions CI 設定
-- `.claude/` - このリポジトリ自身の Claude Code 設定
 
 ## セットアップ
 
@@ -54,9 +53,7 @@ python scripts/cli.py install
 
 要件はPython 3.9以上で、外部パッケージには依存しない。シェルラッパーは`python3`、`python`の順に利用可能な実行環境を探す。特定のOSパッケージマネージャーには依存しない。
 
-Python 3.9は、このリポジトリの互換性とCIの最低基準である。Appleの公式文書ではmacOS 26に付属するPythonの版を確認できないため、macOSの初期状態だけで要件を満たすとはみなさない。（確認日: 2026年8月9日）
-
-> **OSごとのPython実行環境**: LinuxとmacOSの例は`python3`、Windowsの例は`python`と表記する。macOSでは`python`が存在しない場合があるため、`python3`を先に探す。インストーラー自体はmacOS固有のシステムPythonや特定の導入方法に依存しない。
+Python 3.9は互換性とCIの最低基準である。OSへの同梱は前提にせず、PATH上に要件を満たすPythonを用意する。以下の例はLinux / macOSで`python3`、Windowsで`python`を使う。
 
 サポート境界は次のとおり。
 
@@ -68,18 +65,7 @@ Python 3.9は、このリポジトリの互換性とCIの最低基準である�
 
 WindowsのGit Bashでは`./install.sh`もサポートし、`python3`がない環境では同じ検出処理で`python`を選ぶ。WSLはLinuxとして扱う。
 
-このコマンドは、次のファイルとディレクトリを配置する。
-
-- `~/.claude/CLAUDE.md` (詳細は後述)
-- `~/.claude/skills/`
-- `~/.claude/statusline.py`
-- `~/.claude/subagent-statusline.py`
-- `~/.claude/settings.json`（推奨設定を浅くマージ。詳細は後述）
-- `~/.codex/AGENTS.md` (詳細は後述)
-- `~/.codex/config.toml`
-- `~/.codex/*.config.toml` (Codex プロファイル: `readonly` / `trusted`)
-- `~/.codex/rules/`
-- `~/.agents/skills/`
+配置先は[反映先マッピング](#反映先マッピング)を参照。
 
 `settings.json`以外を置き換える前に、既存内容を`*.bak`へ退避する。バックアップは単一世代である。`settings.json`だけは利用者・runtime固有の値を保持しながらテンプレート管理値をマージする。
 
@@ -102,15 +88,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 `CLAUDE_CONFIG_DIR`は`~/.claude`の代替先を示す。このため、ファイルは指定ディレクトリの直下へ配置する。
 
-| Repository Source | Destination (`--claude-dir <dir>`) |
-| --- | --- |
-| `templates/CLAUDE.md` | `<dir>/CLAUDE.md` |
-| `templates/skills/` | `<dir>/skills/` |
-| `templates/statusline.py` | `<dir>/statusline.py` |
-| `templates/subagent-statusline.py` | `<dir>/subagent-statusline.py` |
-| `templates/settings.json` | `<dir>/settings.json` (浅いマージ) |
-
-配布内容は`~/.claude`向けの配布一覧から導出する。`~/.claude`に配るものが増減すれば、指定ディレクトリ側も同じだけ増減する。
+配布内容は既定のClaude向け配布一覧と共通で、配布先だけを指定ディレクトリへ置き換える。
 
 - 対象はClaude Codeの設定ディレクトリのみ。Codex（`~/.codex`）と共用スキル（`~/.agents/skills`）は各ツールが自前のパスを参照するため配布しない
 - `settings.json` の status line は指定ディレクトリのスクリプトを指すよう書き換える (ホーム配下なら `~/.claude-sub/statusline.py`、ホーム外なら絶対パス)
@@ -127,26 +105,9 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 - 2回目以降: テンプレートが宣言するトップレベルキーはテンプレート値で上書きし、リポジトリを正本とする。テンプレートが宣言しないキー（例: `theme`、`model`、`enabledPlugins`などのUI・実行時管理値）はユーザー設定を保持する
 - マージ後の内容が既存と一致する場合は何もしない (`ok: ...` 出力)。差分が出た場合のみ既存ファイルを `*.bak` へ退避する
 
-つまり、`theme`のような個人設定はユーザー側で書き加えれば、次回のインストールでも消えない。一方、テンプレートが宣言するキー（下表）は実行時に一時変更しても、次回のインストールでリポジトリの値に戻る。恒久的に変える場合は`templates/settings.json`を編集する。
+つまり、`theme`のような個人設定はユーザー側で書き加えれば、次回のインストールでも消えない。一方、テンプレートが宣言するキーは実行時に一時変更しても、次回のインストールでリポジトリの値に戻る。恒久的に変える場合は`templates/settings.json`を編集する。
 
-`templates/settings.json` が現時点で配布する推奨キー:
-
-| キー | 値 | 目的 |
-| --- | --- | --- |
-| `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`)。OS 別に書き換え (下記) | リポジトリ同梱のリッチ status line を有効化する |
-| `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | subagent行を自前描画する |
-| `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止 | 秘密情報を持つ可能性が高いファイルをglobal denyで保護する |
-| `permissions.ask` | `Bash(npx *)` | Bash経路の`npx`はパッケージを取得・実行し得るため、実行前に確認する |
-| `permissions.defaultMode` | `"auto"` | セッションを既定で auto mode で開始する（classifier が安全な操作を自動承認する） |
-| `outputStyle` | `"Explanatory"` | Claude Code組み込みの説明スタイルを選択する |
-| `language` | `"日本語"` | 応答言語を日本語に固定する |
-| `effortLevel` | `"xhigh"` | reasoning effort を xhigh で永続化する |
-| `attribution.commit` / `attribution.pr` | 空文字 | コミットおよび PR 説明から Claude の署名を抑止する |
-| `fileCheckpointingEnabled` | `true` | 編集前ファイルをスナップショットし `/rewind` で巻き戻せるようにする |
-| `tui` | `"fullscreen"` | ちらつきの無い alt-screen レンダラ + 仮想化スクロールバックを有効化する |
-| `showTurnDuration` | `true` | アシスタントターンごとの所要時間を表示する |
-| `showMessageTimestamps` | `true` | 各メッセージにタイムスタンプを付与する |
-| `feedbackSurveyRate` | `0` | セッション品質アンケートを抑止する |
+配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。
 
 `*.config`や`appsettings.json`のような一般的なアプリ設定はglobal denyに含めない。これらに秘密情報を置くrepositoryでは、`.claude/settings.json`または`.claude/settings.local.json`でdenyを追加する。
 
@@ -164,16 +125,9 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 ### 共通 AI エージェント指針の取り扱い
 
-`templates/CLAUDE.md` は全プロジェクト共通の AI coding agent 動作指針で、リポジトリ内で唯一の正本。ツールごとに読み込むファイル名が違うだけなので、installer が同じ内容を各ツールのファイル名へ配布する。
+指針は[`templates/CLAUDE.md`](templates/CLAUDE.md)を編集し、再インストールする。Claude / Codex向けの両ファイルへ同じ内容を上書きする。
 
-| Destination | 配布条件 |
-| --- | --- |
-| `~/.claude/CLAUDE.md` | 常に |
-| `~/.codex/AGENTS.md` | 常に |
-
-配布後の 2 ファイルは `templates/CLAUDE.md` とバイト単位で一致する。テンプレートを唯一の正本として毎回上書きするため、リポジトリ側の更新がそのまま各マシンへ反映される。指針を変える場合は `templates/CLAUDE.md` を編集し、再インストールする。
-
-内容はツール非依存に保つ。モデル名、推論強度、permission、承認ポリシーのような実行時設定は、各ツール固有の設定ファイル（`templates/settings.json` / `templates/config.toml`）側の責務とし、共通ガイドラインにツール別の分岐を持たせない。再帰削除、ハードリセット、強制プッシュ、権限変更、秘密情報の読み取り、外部サービスへの書き込みといった危険操作は、共通ガイドラインの安全規約でも抑止する。Codexの既定profileは`:workspace + on-request + auto_review`とし、host全体を開く場合だけ`trusted` profileを明示選択する。
+共通ガイドラインはツール非依存に保つ。モデル、推論強度、権限、承認ポリシーなどの実行時設定は各ツールの設定テンプレートで管理する。
 
 マシン固有・個人ローカルな指示は配布対象の正本へ書かない。Claude Codeでは各リポジトリの`CLAUDE.local.md`（git管理外）へ置く。Codexでは`AGENTS.override.md`が同じdirectoryの`AGENTS.md` / fallbackを置き換えるため、必要な通常指示も含めたlocal overrideとして使う。ユーザーレベルの`~/.claude/CLAUDE.local.md`は自動読み込みされない。
 
@@ -261,27 +215,21 @@ python scripts/cli.py clean
   - Hooks: `https://developers.openai.com/codex/hooks`
   - AGENTS.md: `https://developers.openai.com/codex/guides/agents-md`
   - Skills: `https://developers.openai.com/codex/skills`
-## Codex 設計メモ
+## Codex設定の設計方針
 
-> 外部製品の仕様は2026年9月5日に公式文書とCodex CLI 0.153.4で確認した。設定値の正本は`templates/config.toml`と`templates/codex/*.config.toml`である。
+設定値は[`templates/config.toml`](templates/config.toml)、用途別の設定は[`templates/codex/`](templates/codex/)を参照。
 
-- model、reasoning effort、verbosityは固定せず、Codexと選択したmodelのbuilt-in presetに追従する
-- `personality = "pragmatic"` はagent-config固有の応答方針として維持する
-- `web_search = "live"` を明示し、web検索は常に最新データを取得する
-- Memoriesは暗黙に有効化せず、永続的な指示は`AGENTS.md`とSkillsで管理する
-- TUI は `alternate_screen = "never"` を使い、端末 scrollback を保持する。ターン完了を通知し、status line はモデル、git、作業ディレクトリ、コンテキスト、利用制限、トークン、変更状態、推定コスト、タスク進捗を表示する
-- 新規環境のdefaultは`:workspace + on-request + auto_review`とする。base / readonly / trustedはいずれもPermission Profilesを使い、legacy `sandbox_mode`とは併用しない
-- `trusted` profileは`:danger-full-access`を明示選択し、repoと入力を完全に信頼できる作業または外部隔離済み環境だけで使う
-- `readonly` profileは`:read-only + approval_policy = "never"`とし、昇格なしで探索する
-- `agent-config.rules`は`git push`、`git reset`、`rm`、主要な`gh` write commandの代表的なargv prefixをapproval reviewへ送る補助境界である。global optionや別ツールを含む全同義表現の意味解析は保証せず、workspace sandboxと共通 guidelineを本境界にする
-- `~/.codex/rules/default.rules`はCodex runtime・利用者の所有とし、agent-configは別ファイルを配布する
-- `project_doc_fallback_filenames = ["CLAUDE.md"]` を設定し、既存リポジトリとの互換を保っている
-- 外部エディタ起動はシェルの `VISUAL` / `EDITOR` に委ねている
+- モデルと推論・応答量は製品の既定に追従し、永続的な指示は共通ガイドラインとSkillsで管理する
+- 既定はworkspace内の作業用。探索には`readonly`、リポジトリと入力を完全に信頼できる作業または外部隔離済み環境には明示的に`trusted`を選ぶ
+- [`agent-config.rules`](templates/codex-rules/agent-config.rules)は代表的な危険操作をapproval reviewへ送る補助境界であり、すべての同義コマンドの検出は保証しない。workspace sandboxと共通ガイドラインを安全境界とする
+- リポジトリの`CLAUDE.md`も指示として利用し、外部エディタは`VISUAL` / `EDITOR`に委ねる
 
 ## スキル一覧
 
 | スキル | 説明 |
 | --- | --- |
+| `km-html-document` | 用意済みの内容を安全対策済みの単一HTMLにする |
+| `km-open-file` | Windows / WSL Ubuntuでローカルのファイル・フォルダを開く |
 | `km-japanese-refine` | 日本語の説明・指示文を、意味を保って自然で簡潔に推敲する |
 | `km-review` | 実装した変更をレビューして欠陥を洗い出す |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub リポジトリの採用前セキュリティレビュー |

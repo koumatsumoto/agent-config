@@ -4,7 +4,7 @@
 
 ## 図（Mermaid）
 
-説明に図が要る箇所だけ Mermaid を使う。カタログの型に限る（外部 icon/フォントを取得する `architecture-beta` や icon パックは使わない）。
+カタログの型に限る（外部 icon/フォントを取得する `architecture-beta` や icon パックは使わない）。
 
 | 用途 | 図種 |
 | --- | --- |
@@ -21,8 +21,6 @@
 - 図は `<figure class="diagram"><pre class="mermaid">...</pre><figcaption>図N: ...</figcaption></figure>` で置く。`<pre>` にすると読込失敗・JS 無効時もソースが読める
 - ノードのラベルは要約した短文にする（長いログ・エラー文字列をそのまま貼らない）
 - `mindmap` / `timeline` は字下げに敏感。`<pre class="mermaid">` 内は相対インデントを揃え、末尾に空白だけの行を残さない
-- `document-template.js`が各`figure.diagram`にCtrl+ホイール、＋−ボタンでの拡縮、ドラッグ移動、WebPの別タブ表示を付ける。`figure class="diagram"`構造を保てば自動で有効になり、個別にボタン要素を書く必要はない。図ラベルは`htmlLabels:false`でSVGの`<text>`にし、キャンバスを汚染せずWebPへ変換できるようにする
-- mermaid を更新する時は、`document-template.html` の `<script src>` と CSP `script-src` のバージョンパス、`integrity`(SRI) を同時に差し替える（バージョン未固定は SRI と両立しないため使わない）
 
 ## エスケープ
 
@@ -45,6 +43,6 @@
 
 ## スタイル / レイアウト
 
-- コンテンツ幅 1400px の中央寄せ。CSS は `document-template.css` にあり、ビルドで `<style>` に挿入される。配色・タイポグラフィ等の調整はこのファイルで行う
+- スタイル変更が必要な場合は`document-template.css`を使う
 - 外部画像は無効（`img-src blob:` は図の画像化用のローカル blob のみ）。スクリーンショットを埋める場合は `img-src blob: data:` にし、インラインのBase64データで埋める（connect/form/default 等の `'none'` は触らない）
 - 印刷/PDF を想定し、`document-template.css` の print CSS（色保持・改ページ回避）を保つ

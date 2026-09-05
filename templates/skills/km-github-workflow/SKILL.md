@@ -10,8 +10,6 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 
 ## Workflow
 
-`Plan` → `Setup` → `Implement` → `Verify` → `Review` → `Submit` → `Merge`（依頼された場合のみ）
-
 ### Plan
 
 原則として変更ごとにissueを作り、PRと対応させる。論点が少ない場合は、目的と完了条件だけを記載する。複雑で、誤方向へ進んだ場合の手戻りが大きい場合は`km-plan`を使う。ユーザーがissueは不要だと明示した場合は省略する。

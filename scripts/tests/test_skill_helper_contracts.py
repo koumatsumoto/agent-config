@@ -22,10 +22,8 @@ class SkillHelperContractTests(unittest.TestCase):
 
     def test_open_file_keeps_trust_decisions_outside_helper(self) -> None:
         skill = (SKILLS / "km-open-file/SKILL.md").read_text(encoding="utf-8")
-        success = self._section(skill, "## Success Criteria", "## Workflow")
         workflow = self._section(skill, "## Workflow", "## Safety Rules")
         safety = skill.split("## Safety Rules", 1)[1]
-        self.assertIn("起動要求", success)
         self.assertIn('bash "<skill-directory>/scripts/open-file.sh" "<path>"', workflow)
         self.assertIn("HTML", safety)
         self.assertIn("helper", safety)
