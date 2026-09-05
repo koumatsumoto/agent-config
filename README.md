@@ -146,7 +146,7 @@ python3 scripts/cli.py verify
 python scripts/cli.py verify
 ```
 
-検証対象はインストール時と同じ構成要素の選択規則に従う。通常はClaude、Codex、共用skillを検証し、`--claude-dir <dir>`を指定すると、そのディレクトリへのインストール結果を検証する。
+検証対象はインストール時と同じ構成要素の選択規則に従う。通常はClaude、Codex、共用skillを検証し、`--claude-dir <dir>`を指定すると、そのディレクトリへのインストール結果を検証する。管理ファイルとスキルは配布元との内容一致、POSIXでは権限も確認する。`settings.json`はJSON object、必要なトップレベルキーと権限を確認し、設定値の完全一致は要求しない。
 
 `scripts/cli.py` の unittest (Linux / macOS / Windows で実行可能):
 

@@ -481,6 +481,37 @@ class BackupTests(unittest.TestCase):
         cli.backup(target)
         self.assertEqual(bak.read_text(encoding="utf-8"), "v2")
 
+    @unittest.skipUnless(os.name == "posix", "symlink fixture requires POSIX")
+    def test_backup_preserves_entry_type_and_never_follows_links(self) -> None:
+        for operation in (cli.backup, cli.remove_with_backup):
+            for kind in ("file", "directory", "symlink", "dangling"):
+                for old_kind in ("file", "directory", "symlink"):
+                    with self.subTest(operation=operation.__name__, kind=kind, old=old_kind), tempfile.TemporaryDirectory() as tmp:
+                        root = Path(tmp)
+                        external = root / "external"
+                        external.mkdir()
+                        marker = external / "keep"
+                        marker.write_text("user data", encoding="utf-8")
+                        target = root / "managed"
+                        bak = root / "managed.bak"
+                        for path, entry in ((target, kind), (bak, old_kind)):
+                            if entry == "directory":
+                                path.mkdir()
+                                (path / "content").write_text("content", encoding="utf-8")
+                            elif entry in ("symlink", "dangling"):
+                                path.symlink_to(external if entry == "symlink" else root / "missing", target_is_directory=True)
+                            else:
+                                path.write_text("content", encoding="utf-8")
+                        result = operation(target)
+                        self.assertEqual(result, bak if operation is cli.backup else "backed_up")
+                        self.assertFalse(target.exists() or target.is_symlink())
+                        self.assertEqual(bak.is_symlink(), kind in ("symlink", "dangling"))
+                        if kind == "file":
+                            self.assertEqual(bak.read_text(encoding="utf-8"), "content")
+                        elif kind == "directory":
+                            self.assertEqual((bak / "content").read_text(encoding="utf-8"), "content")
+                        self.assertEqual(marker.read_text(encoding="utf-8"), "user data")
+
     def test_remove_with_backup_skipped_when_missing(self) -> None:
         self.assertEqual(cli.remove_with_backup(self.dir / "nope"), "skipped")
 
@@ -1090,7 +1121,7 @@ class InstallTests(unittest.TestCase):
         self.assertIn(f"drift: {config}", report.failures)
 
     def test_global_guidelines_overwritten_when_present(self) -> None:
-        # Machine-local edits belong in a *.local.md; the guideline files
+        # The guideline files
         # themselves are refreshed from the template so repo edits propagate.
         for spec in _global_guideline_specs():
             dest = self.home / spec.dest_rel
@@ -1334,7 +1365,7 @@ class VerifyTests(unittest.TestCase):
 
     def test_global_guideline_drift_flagged(self) -> None:
         # The guideline files are pure template copies, so an edit to one is
-        # drift that verify must report (machine-local rules go in a *.local.md).
+        # drift that verify must report.
         specs = _global_guideline_specs()
         self.assertTrue(specs, "expected the global guideline specs")
         for spec in specs:
@@ -1522,7 +1553,6 @@ class ClaudeDirLayoutTests(unittest.TestCase):
         by_src = {s.src_rel: s for s in cli.TEMPLATE_FILES}
         for spec in self.layout.files:
             self.assertEqual(spec.mode, by_src[spec.src_rel].mode)
-            self.assertEqual(spec.is_executable, by_src[spec.src_rel].is_executable)
 
 
 # --------------------------------------------------------------------------- #

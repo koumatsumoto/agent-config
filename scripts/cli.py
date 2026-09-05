@@ -39,7 +39,6 @@ from pathlib import Path
 POSIX = os.name == "posix"
 DIR_MODE = 0o700
 FILE_MODE = 0o600
-EXEC_MODE = 0o700
 
 # scripts/cli.py -> scripts -> repo root.
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -53,7 +52,6 @@ class FileSpec:
     src_rel: str           # relative to REPO_ROOT
     dest_rel: str          # relative to home
     mode: int
-    is_executable: bool = False
 
 
 @dataclass(frozen=True)
@@ -75,12 +73,11 @@ GUIDELINE_TEMPLATE_REL = "templates/CLAUDE.md"
 
 # Files that are full-template overwrites (with .bak backup). The agent
 # guideline is owned by the template: each install refreshes it so edits to the
-# repo propagate. Machine-local overrides belong in a sibling *.local.md, which
-# the installer never writes.
+# repo propagate.
 TEMPLATE_FILES: tuple[FileSpec, ...] = (
     FileSpec(GUIDELINE_TEMPLATE_REL, ".claude/CLAUDE.md", 0o600),
-    FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700, is_executable=True),
-    FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700, is_executable=True),
+    FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700),
+    FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700),
     FileSpec(GUIDELINE_TEMPLATE_REL, ".codex/AGENTS.md", 0o600),
     FileSpec("templates/config.toml", ".codex/config.toml", 0o600),
     FileSpec("templates/codex/readonly.config.toml", ".codex/readonly.config.toml", 0o600),
@@ -516,16 +513,7 @@ def remove_with_backup(path: Path) -> str:
 
     Returns one of: skipped | backed_up.
     """
-    if not (path.exists() or path.is_symlink()):
-        return "skipped"
-    bak = path.with_name(path.name + ".bak")
-    if bak.exists() or bak.is_symlink():
-        if bak.is_dir() and not bak.is_symlink():
-            shutil.rmtree(bak)
-        else:
-            bak.unlink()
-    os.rename(path, bak)
-    return "backed_up"
+    return "backed_up" if backup(path) is not None else "skipped"
 
 
 # --------------------------------------------------------------------------- #
