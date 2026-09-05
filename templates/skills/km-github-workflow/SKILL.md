@@ -10,7 +10,7 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 
 ## Workflow
 
-`Plan` → `Setup` → `Implement` → `Review` → `Submit` → `Merge`（依頼された場合のみ）
+`Plan` → `Setup` → `Implement` → `Verify` → `Review` → `Submit` → `Merge`（依頼された場合のみ）
 
 ### Plan
 
@@ -32,9 +32,19 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 
 依頼された変更を専用worktreeで実装する。
 
+### Verify
+
+完了条件、差分、テスト結果を確認する。修正後は関連検証を実行する。
+
 ### Review
 
-完了条件、差分、テスト結果を確認した後、`km-review`を実行する。
+対象を変更しないquality gateとして`km-review`を実行し、判定後にreview phaseを終了する。
+
+- `PASS`ならSubmitへ進む。
+- `BLOCKED`ならImplementへ戻り、未解決blockerとその解消に必要な最小範囲を通常の実装として修正する。Verifyを経て`km-review --recheck`を実行し、判定に従う。
+- `NOOP`なら対象と完了条件を照合し、提出する変更がなければ終了する。対象の指定漏れなら指定を直してReviewへ戻る。
+
+修正はissueの範囲内に保ち、MEDIUM・LOWのnon-blockingをゼロにするために反復しない。blockerを既存のユーザー権限・要件内で安全に解消できない、必要な検証を完了できない、またはユーザー判断が必要な場合は、`BLOCKED`として論点を報告して停止する。
 
 ### Submit
 
