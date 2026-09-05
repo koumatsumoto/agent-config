@@ -36,6 +36,8 @@
 - `Medium`: 主要観点は一次ソースで確認できているが、一部観点で補助ソースまたは unknown が残る
 - `Low`: `Artifact Resolution Status != resolved`、または主要観点で一次ソースが欠落している
 
+VS Code Marketplaceに`Verified Domain`バッジがないpublisherは、提供元の信頼性の不確実要素として確信度を下げる。
+
 ## 指摘形式
 
 主要指摘は`## <severity>: <要約>`を見出しにし、`観点`、`問題`、`根拠`、`推奨対応`を明記する。根拠には確認日も含める。

@@ -30,7 +30,7 @@ npm パッケージの採用前レビューで共通 8 観点に加えて確認�
 - `dependencies`、`peerDependencies`、`optionalDependencies`、`bundledDependencies` の範囲を確認する
 - bundle された依存がある場合は bundle 経由でも typosquatting や危険 package が含まれないかを確認する
 - npm provenance statement の有無を確認する。存在する場合、対象 version の statement が有効か
-- provenance statement が期待される新規パッケージで欠落している場合など、不確実性が残る場合は、より厳しい判定を選ぶ
+- provenance statement が期待される新規パッケージで欠落している場合など、不確実性が残る場合は、その根拠を記録し、`decision-rules.md`の「ecosystem固有の判定影響」を適用する
 
 ## 配布の整合性
 

@@ -24,13 +24,13 @@ VS Code 拡張機能の採用前レビューで共通 8 観点に加えて確認
 
 - extension が language server を同梱する場合（`vscode-languageclient` / `vscode-languageserver` に依存）、client 側と server 側で別プロセスが動作する
 - ルートの `package.json` に加えて、`client/` / `server/` / `gclient/` / `gserver/` などのサブディレクトリにある `package.json` をすべて列挙し、それぞれの `dependencies` / `devDependencies` / `main` を「依存関係と供給網」と「実行権限と影響範囲」の両方に反映する
-- サブディレクトリが存在するものの内容を取得できない場合は、その旨を「不確実性 / 未確認事項」に残し、`NEEDS_HUMAN_REVIEW` と判定する
+- サブディレクトリが存在するものの内容を取得できない場合は、その旨を「不確実性 / 未確認事項」に残し、`decision-rules.md`の「ecosystem固有の判定影響」を適用する
 
 ## Marketplace 開示欠落
 
 - Marketplace の掲載情報に license / privacy / telemetry の記載がない場合は、提供元の信頼性を判断する不確実要素として記録する
 - license は repository 側の `LICENSE` / `package.json.license` で代替確認してよいが、Marketplace 表示欠落そのものは「不確実性 / 未確認事項」に残す
-- Marketplace に `Verified Domain` バッジがない publisher は、提供元の信頼性を判断する不確実要素として記録し、確信度を下げる
+- Marketplace に `Verified Domain` バッジがない publisher は、提供元の信頼性を判断する不確実要素として記録する。確信度への反映は`../report-format.md`の「Review Confidence」に従う
 
 ## manifest（`package.json`）解析
 
@@ -52,7 +52,7 @@ extension ソース（`src/` / `out/` 以下）で次の呼び出しの有無を
 - `FileSystemWatcher` の広域 watch、`onDidSaveTextDocument` 等での副作用
 - 自己更新、extension 外 binary の download、IDE 外 shell 起動
 
-bundler 出力だけが公開されている場合は、該当 bundle のソース（リポジトリ上）に遡って確認する。ソースを確認できなければ `NEEDS_HUMAN_REVIEW` と判定する。
+bundler 出力だけが公開されている場合は、該当 bundle のソース（リポジトリ上）に遡って確認する。ソースを確認できなければ、その欠落を記録して`decision-rules.md`の「ecosystem固有の判定影響」を適用する。
 
 ## 依存 / 供給網
 
@@ -68,6 +68,6 @@ bundler 出力だけが公開されている場合は、該当 bundle のソー�
 
 - Marketplace 上の "Privacy" / "License" 記載と実 license が一致するか
 
-## 判定への反映
+## 評価への引き渡し
 
-- `実行形態=editor-extension` は判定を厳しくする条件の対象なので、高リスクの兆候があれば「利用環境への影響」にも反映する
+確認した高リスクの兆候を「利用環境への影響」にも反映する。`実行形態=editor-extension`の判定への適用は`decision-rules.md`の「判定を厳しくする条件」に従う。
