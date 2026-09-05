@@ -1,6 +1,12 @@
 # Third-Party OSS Security Review Decision Rules
 
-判定は`ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`に固定する。共通8観点とecosystem固有の評価をもとに、以下の順で基本判定を決め、最後に利用文脈を適用する。
+判定は`ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`に固定する。共通8観点とecosystem固有の評価をもとに、まず下記の契約衝突がないか確認し、衝突しない場合は各節の条件で基本判定を決め、最後に利用文脈を適用する。
+
+## 契約が衝突する場合
+
+第1節の`NEEDS_HUMAN_REVIEW`条件と第2節の`REJECT`条件が同時に成立する場合の優先順位は未決である。例えば、成果物は`unresolved`だが、信頼できない由来が既に確定している場合が該当する。
+
+節の順序から優先順位を推測せず、`ALLOW` / `ALLOW_WITH_CONDITIONS`にも進まない。最終判定を確定する通常のレポートは作らず、同時に成立する条件・根拠と、`NEEDS_HUMAN_REVIEW` / `REJECT`のどちらを優先するか未決であることを報告し、採用ポリシーの決定者へ確認する。未特定と既知の危険のどちらも隠さない。
 
 ## 1. 特定不能・証跡不足
 
@@ -33,7 +39,9 @@
 
 明確な採用阻害要因はないものの、運用条件を付ければ採用できる場合は`ALLOW_WITH_CONDITIONS`を使う。条件は運用可能なものに限る（version / tag pin、devDependency / build-time only、install scripts無効化、本番非投入、secretsへのアクセス制限など）。
 
-証跡不足、repository対応の曖昧さ、外部ソース障害による主要要素の欠落、利用文脈の高トレードオフ、権限・データ影響を機械的に止めきれない場合など、画一的に判定できなければ`NEEDS_HUMAN_REVIEW`とする。advisory情報源を確認できない、repositoryを解決できない・対応が曖昧な場合も`ALLOW`にはしない。
+証跡不足、repository対応の曖昧さ、外部ソース障害による主要要素の欠落、利用文脈の高トレードオフ、権限・データ影響を機械的に止めきれない場合など、画一的に判定できなければ`NEEDS_HUMAN_REVIEW`とする。repositoryを解決できない・対応が曖昧な場合も`ALLOW`にはしない。
+
+採用阻害要因が確認されておらず、advisory情報源が取得不能の場合は`NEEDS_HUMAN_REVIEW`とする。`ALLOW` / `ALLOW_WITH_CONDITIONS`は選ばず、脆弱性の有無を未確認として残す。
 
 ## 判定を厳しくする条件
 

@@ -6,12 +6,13 @@
 
 | 変更面 | 題材 | 合否線 |
 | --- | --- | --- |
-| 成果物の特定・判定 | unresolved-artifact | npm入力で対象versionが特定不能。`unresolved` / `NEEDS_HUMAN_REVIEW` / `Low`、冒頭に暫定評価と書く。`ALLOW` / `ALLOW_WITH_CONDITIONS`は不可 |
+| 成果物の特定・判定 | unresolved-artifact | npm入力で対象versionが特定不能で、REJECT条件は確認されていない。`unresolved` / `NEEDS_HUMAN_REVIEW` / `Low`、冒頭に暫定評価と書く。`ALLOW` / `ALLOW_WITH_CONDITIONS`は不可 |
 | 採用阻害要因 | critical-advisory | 一意に特定した対象versionに未解決Critical advisoryが当たる。低リスク利用文脈でも`REJECT`、理由は`vulnerability` |
-| 情報源の失敗 | advisory-unavailable | 対象はresolvedだがadvisory取得不能。脆弱性なしと扱わず、`ALLOW`にしない。主要観点欠落としてconfidenceと未確認事項へ反映 |
+| 判定条件の衝突 | unresolved-with-reject-evidence | 対象versionは未特定だが、一次証跡でtyposquattingが確定。未特定・既知の危険の両方を報告し、NHR/REJECTの優先順位が未決と示して採用ポリシーの決定者へ確認する。節順で片方を確定する、通常の最終判定レポートを完成する、危険を伏せる、ALLOW/AWCにする走は不合格 |
+| 情報源の失敗 | advisory-unavailable | 対象はresolved、採用阻害要因は確認されていないがadvisory取得不能。`NEEDS_HUMAN_REVIEW` / `Low`とし、脆弱性なしと扱わない。`ALLOW` / `ALLOW_WITH_CONDITIONS`は禁止。主要観点欠落としてconfidenceと未確認事項へ反映 |
 | 利用文脈 | context-escalation | 全8観点を一次証跡で確認できるresolved対象。基本`ALLOW`から、development/library/secretsなし/lowは据置、productionだけなら`ALLOW_WITH_CONDITIONS`、productionとsecretsありなら`NEEDS_HUMAN_REVIEW`。厳格化だけでは`REJECT`にしない |
 | ecosystem routing・読込順 | npm-only-routing | npm入力で最初にnpm reference、収集前にframework、評価後にdecision、報告前にreport-formatを読む。pip / vscode referenceを読まない |
-| 報告 | report-contract | 各判定でサマリー7キー、固定11節とその順、confidence、URL・確認日、不足情報と確認主体、条件または拒否分類が揃う |
+| 報告 | report-contract | 契約衝突の確認待ちを除き、各判定でサマリー7キー、固定11節とその順、confidence、URL・確認日、不足情報と確認主体、条件または拒否分類が揃う |
 
 方法は変更後の回帰評価とする。実行担当には最初にSKILLを読み、その指示するタイミングでreferenceを読むよう伝える。成果物と実際の読込順・分岐のtraceを返させる。全件再走ではなく、変更した境界に対応する題材だけ選ぶ。
 
