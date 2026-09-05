@@ -21,7 +21,12 @@ GitHubリポジトリの変更について、issueの作成からPRの提出ま�
 - 変更に着手する前に、基点branchから作業branchと専用worktreeを作る。以降の作業は、そのworktree内で行う。基点branch側や別の作業用worktreeを作業場所にしない。
 - branch名は`<type>/<issue番号>-<slug>`とする。issueがない場合は`<type>/<slug>`とする。
 - 既存PRを更新する場合は、そのbranch専用のworktreeを使う。専用worktreeがなければ作成する。
-- worktreeの作成直後、読み込んだこの `SKILL.md` の実在directoryを基準に `scripts/prepare-worktree.py` を解決し、利用可能なPython 3.9以上のinterpreterで、作成元worktree rootと新しいworktree rootを引数に渡す。skill directoryへ `cd` しない。正常終了（no-op / matchなしを含む）なら続行し、失敗した場合はそのworktreeで作業を始めず停止する。
+- worktreeの作成直後、`python3`、次に`python`の順で `-c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'` を実行し、最初に成功したinterpreterを使う。どちらも成功しなければ停止する。
+- 読み込んだこの `SKILL.md` の実在directoryを基準に `scripts/prepare-worktree.py` を解決し、skill directoryへ `cd` せず、作成元worktree rootと新しいworktree rootを引数にして次の形で呼ぶ。正常終了（no-op / matchなしを含む）なら続行し、失敗した場合はそのworktreeで作業を始めず停止する。
+
+```text
+"<python>" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>"
+```
 
 ### Implement
 

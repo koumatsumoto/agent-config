@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -7,10 +8,16 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import BinaryIO
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HELPER = REPO_ROOT / "templates/skills/km-github-workflow/scripts/prepare-worktree.py"
+SPEC = importlib.util.spec_from_file_location("prepare_worktree_helper", HELPER)
+assert SPEC is not None and SPEC.loader is not None
+prepare_worktree_helper = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(prepare_worktree_helper)
 
 
 class PrepareWorktreeHelperTests(unittest.TestCase):
@@ -35,9 +42,12 @@ class PrepareWorktreeHelperTests(unittest.TestCase):
             stderr=subprocess.PIPE,
         )
 
-    def _commit_fixture(self, *, include: str | None = ".env\n") -> None:
+    def _commit_fixture(
+        self, *, include: str | None = ".env\n", extra_ignore: str = ""
+    ) -> None:
         (self.repo / ".gitignore").write_text(
-            ".env\ncache/\nunlisted.txt\nlinked/\ncredential.private\n",
+            ".env\ncache/\nunlisted.txt\nlinked/\ncredential.private\n"
+            + extra_ignore,
             encoding="utf-8",
         )
         (self.repo / "tracked.txt").write_text("tracked", encoding="utf-8")
@@ -50,8 +60,15 @@ class PrepareWorktreeHelperTests(unittest.TestCase):
         self._git(self.repo, "worktree", "add", "-q", os.fspath(self.destination), "-b", "work")
 
     def _run(
-        self, source: Path | None = None, destination: Path | None = None
+        self,
+        source: Path | None = None,
+        destination: Path | None = None,
+        *,
+        env_extra: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        if env_extra:
+            env.update(env_extra)
         return subprocess.run(
             [
                 sys.executable,
@@ -60,6 +77,7 @@ class PrepareWorktreeHelperTests(unittest.TestCase):
                 os.fspath(destination or self.destination),
             ],
             cwd=self.root,
+            env=env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -146,6 +164,82 @@ class PrepareWorktreeHelperTests(unittest.TestCase):
         result = self._run()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.destination / ".env").stat().st_mode & 0o777, 0o600)
+
+    @unittest.skipIf(os.name == "nt", "POSIX mode semantics required")
+    def test_new_parent_directories_are_private(self) -> None:
+        self._commit_fixture(
+            include="private/nested/config.json\n", extra_ignore="private/\n"
+        )
+        private = self.repo / "private/nested"
+        private.mkdir(parents=True, mode=0o700)
+        (private / "config.json").write_text("secret", encoding="utf-8")
+
+        previous_umask = os.umask(0o022)
+        try:
+            result = self._run()
+        finally:
+            os.umask(previous_umask)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.destination / "private").stat().st_mode & 0o777, 0o700)
+        self.assertEqual(
+            (self.destination / "private/nested").stat().st_mode & 0o777, 0o700
+        )
+
+    @unittest.skipIf(os.name == "nt", "POSIX mode semantics required")
+    def test_existing_parent_directory_mode_is_unchanged(self) -> None:
+        self._commit_fixture(
+            include="private/config.json\n", extra_ignore="private/\n"
+        )
+        source_parent = self.repo / "private"
+        source_parent.mkdir()
+        (source_parent / "config.json").write_text("secret", encoding="utf-8")
+        destination_parent = self.destination / "private"
+        destination_parent.mkdir(mode=0o755)
+
+        result = self._run()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(destination_parent.stat().st_mode & 0o777, 0o755)
+
+    def test_partial_destination_is_removed_after_copy_failure(self) -> None:
+        self._commit_fixture()
+        source = self.repo / ".env"
+        source.write_text("complete content", encoding="utf-8")
+
+        def fail_after_partial_write(
+            source_file: BinaryIO, destination_file: BinaryIO
+        ) -> None:
+            destination_file.write(source_file.read(4))
+            destination_file.flush()
+            raise OSError("injected copy failure")
+
+        with patch.object(
+            prepare_worktree_helper.shutil,
+            "copyfileobj",
+            side_effect=fail_after_partial_write,
+        ):
+            with self.assertRaises(prepare_worktree_helper.PreparationError):
+                prepare_worktree_helper.prepare(self.repo, self.destination)
+
+        destination = self.destination / ".env"
+        self.assertFalse(destination.exists())
+        copied, skipped = prepare_worktree_helper.prepare(self.repo, self.destination)
+        self.assertEqual((copied, skipped), (1, 0))
+        self.assertEqual(destination.read_text(encoding="utf-8"), "complete content")
+
+    def test_git_fatal_in_predicates_fails_closed(self) -> None:
+        self._commit_fixture()
+        invalid_index = self.root / "invalid-index"
+        invalid_index.mkdir()
+        with patch.dict(os.environ, {"GIT_INDEX_FILE": os.fspath(invalid_index)}):
+            with self.assertRaises(prepare_worktree_helper.PreparationError):
+                prepare_worktree_helper._is_tracked(self.repo, ".worktreeinclude")
+            with self.assertRaises(prepare_worktree_helper.PreparationError):
+                prepare_worktree_helper._is_ignored(self.repo, ".env")
+        result = self._run(env_extra={"GIT_INDEX_FILE": os.fspath(invalid_index)})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("prepare-worktree:", result.stderr)
 
     @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
     def test_destination_parent_resolving_outside_is_rejected(self) -> None:

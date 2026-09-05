@@ -22,7 +22,7 @@ argument-hint: "[パス]"
 
 ## Success Criteria
 
-- 対象を種類に応じて Windows 側で開く（フォルダ=Explorer / HTML=既定ブラウザ / その他=選択表示）
+- 対象種別に応じたWindows側の起動要求を送信する（フォルダ=Explorer / HTML=既定ブラウザ / その他=選択表示）
 - 存在しないパス・対応外環境では開かず、理由を伝えて止まる
 
 ## Workflow

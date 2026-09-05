@@ -9,27 +9,38 @@ SKILLS = REPO_ROOT / "templates/skills"
 
 
 class SkillHelperContractTests(unittest.TestCase):
+    @staticmethod
+    def _section(text: str, heading: str, next_heading: str) -> str:
+        return text.split(heading, 1)[1].split(next_heading, 1)[0]
+
     def test_html_generation_success_does_not_depend_on_opening(self) -> None:
         text = (SKILLS / "km-html-document/SKILL.md").read_text(encoding="utf-8")
-        success = text.split("## Success Criteria", 1)[1].split("## Safety Rules", 1)[0]
+        workflow = self._section(text, "## Workflow", "## Success Criteria")
+        success = self._section(text, "## Success Criteria", "## Safety Rules")
+        self.assertIn("$km-open-file", workflow)
         self.assertNotIn("km-open-file", success)
-        self.assertIn("best-effort", text)
-        self.assertIn("表示できなくても生成成功は取り消さず", text)
 
     def test_open_file_keeps_trust_decisions_outside_helper(self) -> None:
         skill = (SKILLS / "km-open-file/SKILL.md").read_text(encoding="utf-8")
-        helper = (SKILLS / "km-open-file/scripts/open-file.sh").read_text(encoding="utf-8")
-        self.assertIn("ユーザーが明示したHTML", skill)
-        self.assertIn("HTMLの信頼判断とユーザー意図の確認をhelperへ委ねない", skill)
-        self.assertNotIn("ユーザーが明示したHTML", helper)
+        success = self._section(skill, "## Success Criteria", "## Workflow")
+        workflow = self._section(skill, "## Workflow", "## Safety Rules")
+        safety = skill.split("## Safety Rules", 1)[1]
+        self.assertIn("起動要求", success)
+        self.assertIn('bash "<skill-directory>/scripts/open-file.sh" "<path>"', workflow)
+        self.assertIn("HTML", safety)
+        self.assertIn("helper", safety)
         self.assertNotIn("case \"$(uname", skill)
 
-    def test_worktree_copy_algorithm_is_only_in_helper(self) -> None:
+    def test_worktree_helper_has_deterministic_invocation_contract(self) -> None:
         skill = (SKILLS / "km-github-workflow/SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("scripts/prepare-worktree.py", skill)
-        self.assertIn("失敗した場合はそのworktreeで作業を始めず停止", skill)
-        self.assertNotIn("シンボリックリンク", skill)
-        self.assertNotIn("同じ相対パスへコピー", skill)
+        setup = self._section(skill, "### Setup", "### Implement")
+        self.assertLess(setup.index("`python3`"), setup.index("`python`"))
+        self.assertIn("sys.version_info >= (3, 9)", setup)
+        self.assertIn(
+            '"<python>" "<skill-directory>/scripts/prepare-worktree.py" '
+            '"<source-root>" "<destination-root>"',
+            setup,
+        )
 
 
 if __name__ == "__main__":

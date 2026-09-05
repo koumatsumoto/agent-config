@@ -67,14 +67,22 @@ def _exists_without_following(path: Path) -> bool:
     return True
 
 
+def _git_predicate(root: Path, *args: str) -> bool:
+    result = _git(root, *args, check=False)
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    message = result.stderr.decode("utf-8", errors="replace").strip()
+    raise PreparationError(message or f"git {' '.join(args)} に失敗しました")
+
+
 def _is_tracked(root: Path, relative: str) -> bool:
-    result = _git(root, "ls-files", "--error-unmatch", "--", relative, check=False)
-    return result.returncode == 0
+    return _git_predicate(root, "ls-files", "--error-unmatch", "--", relative)
 
 
 def _is_ignored(root: Path, relative: str) -> bool:
-    result = _git(root, "check-ignore", "-q", "--", relative, check=False)
-    return result.returncode == 0
+    return _git_predicate(root, "check-ignore", "-q", "--", relative)
 
 
 def _matching_untracked(source: Path, patterns: Path) -> list[str]:
@@ -87,6 +95,66 @@ def _matching_untracked(source: Path, patterns: Path) -> list[str]:
         f"--exclude-from={patterns}",
     )
     return [item.decode("utf-8", errors="surrogateescape") for item in result.stdout.split(b"\0") if item]
+
+
+def _ensure_private_parents(destination: Path, parent: Path) -> None:
+    try:
+        relative = parent.relative_to(destination)
+    except ValueError as exc:
+        raise PreparationError("destination worktree外への書き込みを拒否しました") from exc
+
+    current = destination
+    for part in relative.parts:
+        current /= part
+        if _exists_without_following(current):
+            if not current.is_dir() or not _within(current.resolve(strict=True), destination):
+                raise PreparationError("destination worktree外への書き込みを拒否しました")
+            continue
+        current.mkdir(mode=0o700)
+        if not _within(current.resolve(strict=True), destination):
+            raise PreparationError("destination worktree外への書き込みを拒否しました")
+
+
+def _remove_created_partial(destination: Path, identity: tuple[int, int]) -> None:
+    try:
+        current = destination.lstat()
+    except FileNotFoundError:
+        return
+    if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != identity:
+        raise PreparationError("作成したpartial destinationを安全に削除できません")
+    destination.unlink()
+
+
+def _copy_regular_file(source: Path, destination: Path) -> None:
+    created_identity: tuple[int, int] | None = None
+    try:
+        with ExitStack() as stack:
+            source_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            source_fd = os.open(source, source_flags)
+            source_file = stack.enter_context(os.fdopen(source_fd, "rb"))
+            source_stat = os.fstat(source_file.fileno())
+            if not stat.S_ISREG(source_stat.st_mode):
+                raise PreparationError("sourceの通常file以外はcopyできません")
+
+            destination_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            destination_fd = os.open(
+                destination,
+                destination_flags,
+                stat.S_IMODE(source_stat.st_mode),
+            )
+            destination_stat = os.fstat(destination_fd)
+            created_identity = (destination_stat.st_dev, destination_stat.st_ino)
+            destination_file = stack.enter_context(os.fdopen(destination_fd, "wb"))
+            shutil.copyfileobj(source_file, destination_file)
+    except OSError as exc:
+        if created_identity is not None:
+            try:
+                _remove_created_partial(destination, created_identity)
+            except (OSError, PreparationError) as cleanup_exc:
+                raise PreparationError(
+                    "ignored fileのcopyに失敗し、partial destinationも削除できません"
+                ) from cleanup_exc
+        raise PreparationError("ignored fileのcopyに失敗しました") from exc
 
 
 def prepare(source_arg: Path, destination_arg: Path) -> tuple[int, int]:
@@ -142,29 +210,10 @@ def prepare(source_arg: Path, destination_arg: Path) -> tuple[int, int]:
 
     copied = 0
     for source_path, destination_path in planned:
-        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        _ensure_private_parents(destination, destination_path.parent)
         if not _within(destination_path.parent.resolve(strict=True), destination):
             raise PreparationError("destination worktree外への書き込みを拒否しました")
-        try:
-            with ExitStack() as stack:
-                source_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-                source_fd = os.open(source_path, source_flags)
-                source_file = stack.enter_context(os.fdopen(source_fd, "rb"))
-                source_stat = os.fstat(source_file.fileno())
-                if not stat.S_ISREG(source_stat.st_mode):
-                    raise PreparationError("sourceの通常file以外はcopyできません")
-                destination_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-                destination_fd = os.open(
-                    destination_path,
-                    destination_flags,
-                    stat.S_IMODE(source_stat.st_mode),
-                )
-                destination_file = stack.enter_context(
-                    os.fdopen(destination_fd, "wb")
-                )
-                shutil.copyfileobj(source_file, destination_file)
-        except OSError as exc:
-            raise PreparationError("ignored fileのcopyに失敗しました") from exc
+        _copy_regular_file(source_path, destination_path)
         copied += 1
     return copied, skipped
 
