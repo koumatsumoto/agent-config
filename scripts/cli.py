@@ -408,6 +408,32 @@ def install_file(src: Path, dest: Path, mode: int = FILE_MODE) -> str:
     return "replaced" if bak is not None else "copied"
 
 
+def assert_directory_identity(path: Path) -> None:
+    """Allow an absent directory, but reject redirects and non-directories.
+
+    Resolve the parent separately so aliases above the managed tree (such as
+    macOS /var) are allowed. Comparing the final component catches Windows
+    junctions too, without requiring the Python 3.12-only is_junction API.
+    """
+    if path.is_symlink() or path.resolve(strict=False) != path.parent.resolve(strict=False) / path.name:
+        raise PermissionError(f"refusing redirected managed directory: {path}")
+    if path.exists() and not path.is_dir():
+        raise NotADirectoryError(f"managed directory is not a directory: {path}")
+
+
+def assert_tree_directories(src_root: Path, dest_root: Path) -> None:
+    """Check all source-owned directory components before reading/writing destinations."""
+    assert_directory_identity(src_root)
+    if not src_root.is_dir():
+        raise FileNotFoundError(f"source tree not found: {src_root}")
+    assert_directory_identity(dest_root)
+    for dirpath, dirnames, _ in os.walk(src_root, followlinks=False):
+        for name in sorted(dirnames):
+            src = Path(dirpath) / name
+            assert_directory_identity(src)
+            assert_directory_identity(dest_root / src.relative_to(src_root))
+
+
 def install_tree(
     src_root: Path,
     dest_root: Path,
@@ -423,13 +449,13 @@ def install_tree(
     symlinks by default, which would otherwise hang during materialisation).
     Any symlink encountered in src is rejected outright.
 
-    `boundary`, when given, restricts every dest path to live under it after
-    symlink resolution. The check is applied before any filesystem mutation.
+    Source-owned destination directories must retain their path identity:
+    symlinks and junctions are rejected even when they resolve inside boundary.
+    `boundary`, when given, also restricts every destination after resolution.
+    Directory validation precedes any filesystem mutation.
     Returns a list of (status, dest_path) entries for files only.
     """
-    if not src_root.is_dir():
-        raise FileNotFoundError(f"source tree not found: {src_root}")
-
+    assert_tree_directories(src_root, dest_root)
     if boundary is not None:
         assert_within(dest_root, boundary)
     ensure_secure_dir(dest_root, dir_mode)
@@ -483,6 +509,7 @@ def tree_orphans(src_root: Path, dest_root: Path) -> Iterator[Path]:
 
 def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]:
     """Back up orphans inside managed units; preserve user units and .bak entries."""
+    assert_tree_directories(src_root, dest_root)
     pruned: list[Path] = []
     for orphan in tree_orphans(src_root, dest_root):
         assert_within(orphan, boundary)
@@ -690,6 +717,11 @@ def _check_mode(report: VerifyReport, path: Path, expected: int) -> None:
 
 def _check_tree(report: VerifyReport, src_root: Path, dest_root: Path,
                 dir_mode: int, file_mode: int, *, prune: bool = True) -> None:
+    try:
+        assert_tree_directories(src_root, dest_root)
+    except (OSError, RuntimeError) as exc:
+        report.record(False, str(exc))
+        return
     if not dest_root.exists():
         report.record(False, f"missing: {dest_root}")
         return
@@ -808,6 +840,9 @@ def _statusline_transform(
 
 def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
     """Install the layout's templates into its root. Returns process exit code."""
+    # Reject directory redirects before even creating/chmod'ing the layout.
+    for tree in layout.trees:
+        assert_tree_directories(repo_root / tree.src_rel, layout.root / tree.dest_rel)
     # Pre-create the dirs we own, with restrictive perms. They are also the
     # boundary: every destination below must resolve inside one of them.
     boundary_dirs = layout.managed_dirs

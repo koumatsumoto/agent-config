@@ -291,6 +291,41 @@ class InstallTreeTests(unittest.TestCase):
             cli.install_tree(self.src_root, unwritten, boundary=self.dir / "other")
         self.assertFalse(unwritten.exists())
 
+    @unittest.skipUnless(cli.is_posix(), "POSIX symlink fixture")
+    def test_all_managed_directory_redirects_rejected_before_writes(self) -> None:
+        for relative in (".", "sub"):
+            with self.subTest(relative=relative):
+                target = self.dir / "user-data"
+                target.mkdir()
+                (target / "keep.txt").write_text("mine", encoding="utf-8")
+                link = self.dest_root / relative
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.symlink_to(target, target_is_directory=True)
+                with self.assertRaises(PermissionError):
+                    cli.install_tree(self.src_root, self.dest_root, boundary=self.dir)
+                self.assertEqual(list(target.iterdir()), [target / "keep.txt"])
+                self.assertFalse((self.dest_root / "a.txt").exists())
+                link.unlink()
+                shutil.rmtree(target)
+
+    @unittest.skipUnless(cli.is_posix(), "POSIX symlink fixture")
+    def test_junction_like_redirect_does_not_depend_on_is_symlink(self) -> None:
+        target = self.dir / "user-data"
+        target.mkdir()
+        self.dest_root.symlink_to(target, target_is_directory=True)
+        original = Path.is_symlink
+        with patch.object(Path, "is_symlink", lambda path: False if path == self.dest_root else original(path)):
+            with self.assertRaises(PermissionError):
+                cli.install_tree(self.src_root, self.dest_root, boundary=self.dir)
+        self.assertEqual(list(target.iterdir()), [])
+
+    @unittest.skipUnless(cli.is_posix(), "POSIX symlink fixture")
+    def test_ancestor_alias_above_tree_is_allowed(self) -> None:
+        alias = self.dir / "alias"
+        alias.symlink_to(self.dir, target_is_directory=True)
+        cli.install_tree(self.src_root, alias / "dest", boundary=self.dir)
+        self.assertEqual((self.dest_root / "sub" / "b.txt").read_text(), "b")
+
 
 class PruneTreeTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -1370,6 +1405,44 @@ class VerifyTests(unittest.TestCase):
             report = cli.verify(self.layout)
         self.assertEqual(report.fail_count(), 0, f"unexpected failures: {report.failures}")
         self.assertGreater(report.checks, 0)
+
+    @unittest.skipUnless(cli.is_posix(), "POSIX symlink fixture")
+    def test_managed_redirects_fail_install_and_verify_without_mutation(self) -> None:
+        for tree in self.layout.trees:
+            source = cli.REPO_ROOT / tree.src_rel
+            directories = [Path(".")] + [p.relative_to(source) for p in source.rglob("*") if p.is_dir()]
+            # Root, skill and nested reference directories all share the contract.
+            for relative in directories:
+                with self.subTest(tree=tree.dest_rel, relative=relative):
+                    link = self.home / tree.dest_rel / relative
+                    target = self.home / Path(tree.dest_rel).parent / "user-data"
+                    link.rename(target)
+                    link.symlink_to(target, target_is_directory=True)
+                    before = {p.relative_to(target): (p.read_bytes(), p.stat().st_mode) for p in target.rglob("*") if p.is_file()}
+                    with patch("sys.stdout", new=StringIO()):
+                        report = cli.verify(self.layout)
+                        with self.assertRaises(PermissionError):
+                            cli.install(self.layout)
+                    self.assertTrue(any("redirected managed directory" in message for message in report.failures), report.failures)
+                    after = {p.relative_to(target): (p.read_bytes(), p.stat().st_mode) for p in target.rglob("*") if p.is_file()}
+                    self.assertEqual(after, before)
+                    link.unlink()
+                    target.rename(link)
+
+    @unittest.skipUnless(cli.is_posix(), "POSIX symlink fixture")
+    def test_user_added_top_level_redirect_is_preserved(self) -> None:
+        target = self.home / "user-data"
+        target.mkdir()
+        marker = target / "SKILL.md"
+        marker.write_text("mine", encoding="utf-8")
+        for tree in self.layout.trees:
+            (self.home / tree.dest_rel / "my-skill").symlink_to(target, target_is_directory=True)
+        with patch("sys.stdout", new=StringIO()):
+            self.assertEqual(cli.install(self.layout), 0)
+            self.assertEqual(cli.verify(self.layout).fail_count(), 0)
+        self.assertEqual(marker.read_text(), "mine")
+        for tree in self.layout.trees:
+            self.assertTrue((self.home / tree.dest_rel / "my-skill").is_symlink())
 
     def test_missing_file_detected(self) -> None:
         target = self.home / _verified_spec().dest_rel

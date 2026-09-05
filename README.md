@@ -113,6 +113,8 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 > **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、Python CLI がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIXでは `~` パスのまま（shebang + 実行ビットで起動）。
 
+スキルの配置では、`skills/`と配布元に対応する管理ディレクトリのsymlink・junctionをinstall / verifyが拒否する。解決先が設定ディレクトリ内でも別の利用者所有領域へ書き込まないためであり、未知のトップレベルスキルは管理対象に含めない。
+
 ### Codex `config.toml` の取り扱い
 
 `~/.codex/config.toml`はagent-configが完全管理する。installは既存内容をマージせず、`templates/config.toml`とバイト単位で一致する通常のテンプレートファイルとして配置する。
