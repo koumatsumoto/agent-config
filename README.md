@@ -135,7 +135,8 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 | --- | --- | --- |
 | `statusLine` | `~/.claude/statusline.py` を実行する command (`refreshInterval: 30`)。OS 別に書き換え (下記) | リポジトリ同梱のリッチ status line を有効化する |
 | `subagentStatusLine` | `~/.claude/subagent-statusline.py` を実行する command。OS 別に書き換え (下記) | subagent行を自前描画する |
-| `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止と `Bash(npx *)` | 機密ファイルへのアクセスを既定で遮断する |
+| `permissions.deny` | `.env` / 秘密鍵 / `secrets/` 等の読み取り禁止 | 秘密情報を持つ可能性が高いファイルをglobal denyで保護する |
+| `permissions.ask` | `Bash(npx *)` | Bash経路の`npx`はパッケージを取得・実行し得るため、実行前に確認する |
 | `permissions.defaultMode` | `"auto"` | セッションを既定で auto mode で開始する（classifier が安全な操作を自動承認する） |
 | `outputStyle` | `"Explanatory"` | Claude Code組み込みの説明スタイルを選択する |
 | `language` | `"日本語"` | 応答言語を日本語に固定する |
@@ -146,6 +147,8 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 | `showTurnDuration` | `true` | アシスタントターンごとの所要時間を表示する |
 | `showMessageTimestamps` | `true` | 各メッセージにタイムスタンプを付与する |
 | `feedbackSurveyRate` | `0` | セッション品質アンケートを抑止する |
+
+`*.config`や`appsettings.json`のような一般的なアプリ設定はglobal denyに含めない。これらに秘密情報を置くrepositoryでは、`.claude/settings.json`または`.claude/settings.local.json`でdenyを追加する。
 
 > **status line の `command` は OS 別に書き換わる**: テンプレートの `~/.claude/statusline.py` は POSIX シェル（Linux / macOS / Git Bash / WSL2）向け。ネイティブ Windows（`cmd.exe`）は `~` 展開も `.py` 直接実行もできないため、Python CLI がインストール時の Python を明示した `"C:/.../python.exe" "C:/Users/.../.claude/statusline.py"` 形式へ書き換える。POSIXでは `~` パスのまま（shebang + 実行ビットで起動）。
 
