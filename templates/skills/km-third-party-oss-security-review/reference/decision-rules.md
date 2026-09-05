@@ -1,77 +1,39 @@
 # Third-Party OSS Security Review Decision Rules
 
-判定は次の 4 つに固定する。
+判定は`ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`に固定する。共通8観点とecosystem固有の評価をもとに、以下の順で基本判定を決め、最後に利用文脈を適用する。
 
-- `ALLOW`
-- `ALLOW_WITH_CONDITIONS`
-- `NEEDS_HUMAN_REVIEW`
-- `REJECT`
+## 1. 特定不能・証跡不足
 
-## ALLOW
+次の場合は`NEEDS_HUMAN_REVIEW`とし、`ALLOW` / `ALLOW_WITH_CONDITIONS`へ進まない。
 
-次をすべて満たす場合のみ許可する。
+- `Artifact Resolution Status != resolved`（repo-onlyでtag未特定、複数候補を含む）
+- ecosystemが不明・曖昧、または複数候補を推測で絞り込んでいる
+- registry / marketplaceが取得できない
 
-- `Artifact Resolution Status = resolved`
-- 対象成果物とリポジトリの対応が一次ソースで確認できている
-- advisory の情報源を確認済みで、未解決の Critical / High advisory がない
-- 実行権限と影響範囲に明確な危険の兆候がない
-- 組織の方針に違反していない
-- 対象成果物が yanked / deprecated / unpublished でない
-- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）に未確認事項がない
+## 2. 採用阻害要因
 
-## ALLOW_WITH_CONDITIONS
-
-`Artifact Resolution Status = resolved` であり、明確な採用阻害要因はないものの、運用条件を付ければ採用できる場合に使う。
-
-例:
-
-- version / extension version / tag pin が必要
-- devDependency / build-time only 限定
-- install scripts を無効化できる環境限定
-- `production` 環境非投入
-- secrets へのアクセス権限を制限する
-
-条件は運用可能なものだけを書き、抽象的な注意喚起は避ける。
-
-## NEEDS_HUMAN_REVIEW
-
-画一的に判定できない場合に使う。
-
-- 証跡不足
-- `Artifact Resolution Status != resolved`（repo-only で tag 未特定等を含む）
-- 対象成果物とリポジトリの対応が曖昧
-- 外部ソースの障害で主要な判定要素が欠落
-- ecosystem 判別が曖昧（monorepo 等）
-- 利用文脈依存の高トレードオフ
-- 権限やデータ影響が大きく、機械的に止めきれない
-
-## REJECT
-
-次のいずれかに当てはまる場合に使う。
+対象成果物について次のいずれかに当てはまる場合は`REJECT`とする。
 
 - 組織の方針違反
-- 対象成果物に当たる未解決 Critical advisory
+- 対象成果物に当たる未解決Critical advisory
 - 明確に危険な実行権限や影響範囲
-- 信頼できない由来（typosquatting、impersonation、publisher の整合性欠落）
+- 信頼できない由来（typosquatting、impersonation、publisherの整合性欠落）
 
-## 必須判定規則
+## 3. 許可できる範囲
 
-次のいずれかに該当する場合は `ALLOW` を出さない。
+`ALLOW`は、次をすべて満たす場合だけ選ぶ。
 
-- `Artifact Resolution Status != resolved`
-- 対象成果物とリポジトリの対応が曖昧
-- 対象成果物（registry / marketplace の配布物）とリポジトリのソースとの対応を一次ソースで検証できない（例: tag / release / commit の紐付けが取れない、vsix とソースの対応が取れない）
-- advisory の情報源を確認していない
-- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）のいずれかに未確認事項が残る
-- 対象成果物が yanked / deprecated / unpublished
-- 供給網の証明がある ecosystem で証明が欠落し、publisher の整合も取れない
+- 対象成果物とGitHub repository、およびそのソース（tag / release / commit、vsix等）の対応を一次ソースで検証できている
+- advisoryの情報源を確認済みで、対象に未解決Critical / High advisoryがない
+- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）に未確認事項がない
+- 対象成果物が`yanked` / `deprecated` / `unpublished`でない
+- 供給網の証明があるecosystemで、証明欠落とpublisher不整合が同時に生じていない
 
-次に該当する場合は `ALLOW` と `ALLOW_WITH_CONDITIONS` のどちらとも判定せず、`NEEDS_HUMAN_REVIEW` または `REJECT` と判定する。
+実行権限の明確な危険と組織の方針違反は第2節で除外済みとする。
 
-- リポジトリだけを入力し、対象成果物を特定できていない
-- 複数 ecosystem 候補を推測で絞り込んだ場合
+明確な採用阻害要因はないものの、運用条件を付ければ採用できる場合は`ALLOW_WITH_CONDITIONS`を使う。条件は運用可能なものに限る（version / tag pin、devDependency / build-time only、install scripts無効化、本番非投入、secretsへのアクセス制限など）。
 
-対象成果物に当たる未解決の Critical 相当 advisory がある場合は `REJECT` を検討する。
+証跡不足、repository対応の曖昧さ、外部ソース障害による主要要素の欠落、利用文脈の高トレードオフ、権限・データ影響を機械的に止めきれない場合など、画一的に判定できなければ`NEEDS_HUMAN_REVIEW`とする。advisory情報源を確認できない、repositoryを解決できない・対応が曖昧な場合も`ALLOW`にはしない。
 
 ## 判定を厳しくする条件
 
@@ -94,14 +56,6 @@ ALLOW → ALLOW_WITH_CONDITIONS → NEEDS_HUMAN_REVIEW
 
 - `実行形態 ∈ {library, build-tool, test-tool, node-server, browser}`
 - `development` scope のみでの利用
-
-例:
-
-- 基本判定=`ALLOW`、`production=true` のみ → `ALLOW_WITH_CONDITIONS`
-- 基本判定=`ALLOW`、`production=true` + `secrets_access=true` → `NEEDS_HUMAN_REVIEW`
-- 基本判定=`ALLOW`、高リスク 3 条件以上 → `NEEDS_HUMAN_REVIEW`（下限）
-- 基本判定=`ALLOW_WITH_CONDITIONS`、`production=true` のみ → `NEEDS_HUMAN_REVIEW`
-- 基本判定=`NEEDS_HUMAN_REVIEW`、任意 → `NEEDS_HUMAN_REVIEW`（下限）
 
 備考:
 

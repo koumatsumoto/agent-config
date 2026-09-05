@@ -12,32 +12,6 @@
 - `最終判定`: `ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`
 - `Review Confidence`: `High` / `Medium` / `Low`
 
-例:
-
-```md
-## レビュー結果
-
-**対象**: lodash@4.17.21
-**種別 / ecosystem**: npm
-**Resolved Artifact**: lodash@4.17.21
-**Artifact Resolution Status**: resolved
-**Repository**: https://github.com/lodash/lodash
-**最終判定**: ALLOW_WITH_CONDITIONS
-**Review Confidence**: Medium
-```
-
-```md
-## レビュー結果
-
-**対象**: https://github.com/example/tool
-**種別 / ecosystem**: github-repo
-**Resolved Artifact**: 未特定
-**Artifact Resolution Status**: unresolved
-**Repository**: https://github.com/example/tool
-**最終判定**: NEEDS_HUMAN_REVIEW
-**Review Confidence**: Low
-```
-
 ## 必須セクション
 
 以下をこの順で出力する。
@@ -64,16 +38,7 @@
 
 ## 指摘形式
 
-主要指摘は次の形式に揃える。
-
-```md
-## HIGH: インストール処理に外部取得の兆候がある
-
-**観点**: 実行権限と影響範囲
-**問題**: インストール時に外部取得やシェル実行につながる挙動が疑われる。
-**根拠**: `package.json` の `scripts.postinstall` に外部URLからの取得が含まれていた。確認日: 2026-04-19
-**推奨対応**: 本番採用は避け、少なくともインストール用スクリプトを無効化できる環境に限定して再評価する。
-```
+主要指摘は`## <severity>: <要約>`を見出しにし、`観点`、`問題`、`根拠`、`推奨対応`を明記する。根拠には確認日も含める。
 
 ## 記述ルール
 
@@ -81,7 +46,7 @@
 - 判定理由は原則 2〜4点、独立理由が増える場合は主要理由に畳む
 - 証跡には URL と絶対日付（`YYYY-MM-DD`）を付ける
 - 証跡が無いことが論点の場合は「該当なし（確認日: YYYY-MM-DD）」と明記する
-- `ALLOW_WITH_CONDITIONS` の条件は運用可能なものだけを書く。抽象的な注意喚起は避ける
+- `ALLOW_WITH_CONDITIONS`の運用条件を「必要条件」に書く
 - `NEEDS_HUMAN_REVIEW` は不足情報と確認主体を書く
 - `REJECT` は拒否理由を `policy` / `vulnerability` / `provenance` / `behavior` / `privilege` に分類する
 - 「安全である」と断定せず、「確認できた範囲では」と「未確認事項」を分ける
