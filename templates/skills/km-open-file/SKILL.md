@@ -8,17 +8,7 @@ argument-hint: "[パス]"
 
 ローカルのファイルやフォルダを Windows 側で開く。対応環境は **Windows (Git Bash)** と **WSL (Ubuntu)** のみ。追加パッケージ（`wslview` 等）は前提にしない。
 
-開く手段は`explorer.exe`に統一し、対象の種類で扱いを分ける。HTML以外のファイルは直接実行しない。HTMLはブラウザ上のスクリプトが動く可能性を確認してから開く。
-
-- **フォルダ**: Explorer で開く
-- **`.html` / `.htm`**: 拡張子の関連付けで既定ブラウザに描画する
-- **その他のファイル**: 実行せず、Explorer で選択表示（reveal）するだけにとどめる
-
 入力パスは Linux 形式（`/home/...`, `./x`）でも Windows 形式（`C:\...`, `C:/...`, `\\...`）でも受け付ける。
-
-## Context
-
-- Platform: !`uname -sr 2>/dev/null || echo unknown`
 
 ## Success Criteria
 
@@ -35,14 +25,14 @@ argument-hint: "[パス]"
 bash "<skill-directory>/scripts/open-file.sh" "<path>"
 ```
 
-helperはplatform判定、path正規化、存在確認、対象種別に応じたdispatchを担う。relative pathはhelperを呼んだworking directory基準で解釈される。
+相対パスは呼び出し時のworking directoryを基準にする。
 
 - helperが成功したら、Windows側へ起動要求をdispatchできたものとして対象の絶対pathを報告する
-- helperが失敗したら、その理由を報告する
-- `explorer.exe` は表示に成功しても非0を返すことがあるため、helperは前提検証後に起動要求をdispatchできたことを成功とする
+- helperが失敗したら、その理由を報告して停止する
+
+成功は起動要求の送信を意味し、GUI表示完了を保証しない。
 
 ## Safety Rules
 
-- HTML以外のファイルは直接実行しない
+- HTML（`.html` / `.htm`）はブラウザでスクリプトが動く可能性がある。HTML以外のファイルは直接実行しない
 - HTMLの信頼判断とユーザー意図の確認をhelperへ委ねない
-- 対応は Windows (Git Bash) / WSL (Ubuntu) のみ。それ以外の環境は開かず「未対応」と伝えて止まる
