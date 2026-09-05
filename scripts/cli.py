@@ -32,7 +32,7 @@ import shutil
 import shlex
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -458,47 +458,36 @@ def install_tree(
     return results
 
 
-def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]:
-    """Remove deployed files/dirs absent from the template, with .bak backup.
-
-    Makes managed directories mirror the source: an entry is pruned when it lives
-    inside a repo-managed directory (one that exists under src_root) but is not
-    present under src_root. Entries directly under dest_root with no src
-    counterpart — a file or directory the user added — are preserved (never
-    removed; such directories are not descended into).
-
-    Returns the pruned dest paths (each backed up to <path>.bak); `.bak` entries
-    are left alone.
-    """
+def tree_orphans(src_root: Path, dest_root: Path) -> Iterator[Path]:
+    """Yield entries install prunes; never descend into user units or backups."""
     if not dest_root.is_dir():
-        return []
-    pruned: list[Path] = []
+        return
     for dirpath, dirnames, filenames in os.walk(dest_root, topdown=True, followlinks=False):
         dest_dir = Path(dirpath)
         src_dir = src_root / dest_dir.relative_to(dest_root)
         keep_dirs: list[str] = []
         for name in sorted(dirnames):
             if name.endswith(".bak"):
-                continue  # leave single-generation backups
+                continue
             if (src_dir / name).is_dir():
-                keep_dirs.append(name)  # managed → descend and keep in sync
-            elif dest_dir == dest_root:
-                continue  # top-level unit with no source → user-added; never touch
-            else:
-                dest_sub = dest_dir / name  # orphan subdir inside a managed dir
-                assert_within(dest_sub, boundary)
-                backup(dest_sub)
-                pruned.append(dest_sub)
-        dirnames[:] = keep_dirs  # descend only into managed subdirs
+                keep_dirs.append(name)
+            elif dest_dir != dest_root:
+                yield dest_dir / name
+        dirnames[:] = keep_dirs
         for name in sorted(filenames):
             if name.endswith(".bak") or (src_dir / name).exists():
                 continue
-            if dest_dir == dest_root:
-                continue  # top-level file with no source → user-added; never touch
-            dest_file = dest_dir / name
-            assert_within(dest_file, boundary)
-            backup(dest_file)
-            pruned.append(dest_file)
+            if dest_dir != dest_root:
+                yield dest_dir / name
+
+
+def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]:
+    """Back up orphans inside managed units; preserve user units and .bak entries."""
+    pruned: list[Path] = []
+    for orphan in tree_orphans(src_root, dest_root):
+        assert_within(orphan, boundary)
+        backup(orphan)
+        pruned.append(orphan)
     return pruned
 
 
@@ -700,7 +689,7 @@ def _check_mode(report: VerifyReport, path: Path, expected: int) -> None:
 
 
 def _check_tree(report: VerifyReport, src_root: Path, dest_root: Path,
-                dir_mode: int, file_mode: int) -> None:
+                dir_mode: int, file_mode: int, *, prune: bool = True) -> None:
     if not dest_root.exists():
         report.record(False, f"missing: {dest_root}")
         return
@@ -713,6 +702,9 @@ def _check_tree(report: VerifyReport, src_root: Path, dest_root: Path,
         elif src.is_file():
             _check_file(report, src, dest)
             _check_mode(report, dest, file_mode)
+    if prune:
+        for orphan in tree_orphans(src_root, dest_root):
+            report.record(False, f"orphan drift: {orphan}")
 
 
 def _read_json_object(report: VerifyReport, path: Path, label: str) -> dict[str, object] | None:
@@ -733,13 +725,27 @@ def _read_json_object(report: VerifyReport, path: Path, label: str) -> dict[str,
     return data
 
 
-def _check_settings_contract(report: VerifyReport, template: Path, dest: Path) -> None:
+def _check_settings_contract(
+    report: VerifyReport, template: Path, dest: Path,
+    *, transform: Callable[[dict[str, object]], dict[str, object]] | None = None,
+) -> None:
+    regular = dest.is_file() and not dest.is_symlink()
+    report.record(regular, f"settings must be a regular file: {dest}")
+    if not regular:
+        return
     template_data = _read_json_object(report, template, "settings template")
     dest_data = _read_json_object(report, dest, "settings.json")
     if template_data is None or dest_data is None:
         return
+    if transform is not None:
+        template_data = transform(template_data)
     for key in sorted(template_data):
         report.record(key in dest_data, f"settings missing template key: {dest} ({key})")
+        if key in dest_data:
+            # JSON comparison preserves boolean/number distinctions while
+            # ignoring object key order and presentation whitespace.
+            matches = json.dumps(dest_data[key], sort_keys=True) == json.dumps(template_data[key], sort_keys=True)
+            report.record(matches, f"settings value drift: {dest} ({key})")
 
 
 def verify(layout: Layout, repo_root: Path = REPO_ROOT) -> VerifyReport:
@@ -758,13 +764,22 @@ def verify(layout: Layout, repo_root: Path = REPO_ROOT) -> VerifyReport:
     for tspec in layout.trees:
         src_root = repo_root / tspec.src_rel
         dest_root = layout.root / tspec.dest_rel
-        _check_tree(report, src_root, dest_root, tspec.dir_mode, tspec.file_mode)
+        _check_tree(report, src_root, dest_root, tspec.dir_mode, tspec.file_mode, prune=tspec.prune)
 
     for sspec in layout.settings:
         dest = layout.root / sspec.dest_rel
         report.record(dest.exists(), f"missing: {dest}")
         _check_mode(report, dest, FILE_MODE)
-        _check_settings_contract(report, repo_root / sspec.src_rel, dest)
+        transform = (
+            _statusline_transform(layout, python=Path(sys.executable).as_posix())
+            if sspec.rewrite_statusline else None
+        )
+        _check_settings_contract(report, repo_root / sspec.src_rel, dest, transform=transform)
+
+    for rel in layout.retired_dests:
+        dest = layout.root / rel
+        if any(is_within(dest, managed) for managed in layout.managed_dirs):
+            report.record(not (dest.exists() or dest.is_symlink()), f"retired path drift: {dest}")
 
     return report
 

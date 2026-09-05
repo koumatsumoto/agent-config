@@ -146,7 +146,7 @@ python3 scripts/cli.py verify
 python scripts/cli.py verify
 ```
 
-検証対象はインストール時と同じ構成要素の選択規則に従う。通常はClaude、Codex、共用skillを検証し、`--claude-dir <dir>`を指定すると、そのディレクトリへのインストール結果を検証する。管理ファイルとスキルは配布元との内容一致、POSIXでは権限も確認する。`settings.json`はJSON object、必要なトップレベルキーと権限を確認し、設定値の完全一致は要求しない。
+検証対象はインストール時と同じ構成要素の選択規則に従う。通常はClaude、Codex、共用skillを検証し、`--claude-dir <dir>`を指定すると、そのディレクトリへのインストール結果を検証する。同じテンプレート・実行環境で直後にinstallしても管理状態が変わらないことを確認する。管理ファイルの内容・配置、スキル内の余分な項目、退役対象の残存、POSIX権限を検査する。`settings.json`は通常ファイルであることと、宣言したトップレベルキーの値をOS・配置先による変換後の期待値と比較する。未知の設定キー、JSONの空白・キー順、独自のトップレベルスキルと既存backupは対象外。
 
 配布CLI、Skill helper、HTMLテンプレートのbuild・CSP、文書の参照・一覧を検査するunittest（環境依存の項目は該当OSで実行）:
 
