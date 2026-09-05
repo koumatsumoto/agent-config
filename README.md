@@ -107,7 +107,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 つまり、`theme`のような個人設定はユーザー側で書き加えれば、次回のインストールでも消えない。一方、テンプレートが宣言するキーは実行時に一時変更しても、次回のインストールでリポジトリの値に戻る。恒久的に変える場合は`templates/settings.json`を編集する。
 
-配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。
+配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。`includeGitInstructions=false`でClaude組み込みのcommit・PR指示と開始時のGit statusスナップショットを外し、Git操作の契約は共通ガイドライン、`km-commit`、`km-github-workflow`で管理する。
 
 `*.config`や`appsettings.json`のような一般的なアプリ設定はglobal denyに含めない。これらに秘密情報を置くrepositoryでは、`.claude/settings.json`または`.claude/settings.local.json`でdenyを追加する。
 
@@ -160,7 +160,7 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.12 / 3.13 マトリクスで unittest と bash wrapper の smoke test を実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
+GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke test を実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
 
 ## クリーンアップ
 
@@ -231,7 +231,7 @@ python scripts/cli.py clean
 | `km-html-document` | 用意済みの内容を安全対策済みの単一HTMLにする |
 | `km-open-file` | Windows / WSL Ubuntuでローカルのファイル・フォルダを開く |
 | `km-japanese-refine` | 日本語の説明・指示文を、意味を保って自然で簡潔に推敲する |
-| `km-review` | 実装した変更をレビューして欠陥を洗い出す |
+| `km-review` | 実装した変更をread-onlyでレビューし、欠陥と品質判定を返す |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub リポジトリの採用前セキュリティレビュー |
 | `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub管理リポジトリの変更をissue・PRとして提出し、明示された場合はマージまで完了する |

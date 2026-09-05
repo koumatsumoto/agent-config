@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(inputs.os == 'all' && '["ubuntu-latest","macos-latest","windows-latest"]' || format('["{0}"]', inputs.os || 'ubuntu-latest')) }}
-        python-version: ["3.9", "3.12", "3.13"]
+        python-version: ["3.9", "3.13", "3.14"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
