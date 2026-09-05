@@ -160,7 +160,7 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.12 / 3.13 マトリクスで unittest と bash wrapper の smoke test を実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
+GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke test を実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
 
 ## クリーンアップ
 
