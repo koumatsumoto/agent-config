@@ -8,12 +8,16 @@
 
 証跡はURLと確認日（`YYYY-MM-DD`）を記録する。後から遡れない証跡は根拠に使わず、Review Confidenceを下げる。取得失敗は`unknown`として未確認事項と判定への影響を残し、`decision-rules.md`に従う。
 
-ソースが不在を明示した結果は取得失敗と区別し、「公開・配布の整合性」に反映する。
+不在の証跡は、対象repositoryへのアクセス可否とAPIが返す資源の範囲を確認して解釈する。
 
-- `GET /releases/latest`や`GET /tags`の`404` / 空配列はrelease / tag不在という確定的negative evidence
-- registry / marketplaceで明示された`yanked` / `deprecated` / `unpublished`も確定的negative evidence
+- GitHubの`404`だけではrelease / tag不在を確定しない。認証・アクセス権やURLの問題でも返るため、原因を確認できない場合は取得失敗として`unknown`を残す
+- `GET /repos/{owner}/{repo}/releases/latest`の対象は公開済みの非draft・非prereleaseである。対象の正式releaseがないと確認できても、prereleaseやtag全体の不在へ広げない
+- releases / tagsの一覧を正常取得し、アクセス範囲・フィルタ・ページ指定を確認した結果が空なら、その一覧の対象範囲で不在の証拠にできる。末尾の空ページだけを一覧全体の不在とみなさない
+- registry / marketplaceが対象成果物について明示した`yanked` / `deprecated` / `unpublished`は、その状態の確証として扱う
 
-これらは`unknown`ではなく、確証として判定に使う。
+確認できた不在・公開状態は`unknown`と区別し、「公開・配布の整合性」に反映する。最終判定への影響は`decision-rules.md`に従う。
+
+GitHub仕様: [404の扱い](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api#404-not-found-for-an-existing-resource)、[latest releaseの対象](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)。
 
 ## 1. 提供元と由来（`identity/provenance`）
 
