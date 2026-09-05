@@ -375,67 +375,6 @@ class PruneTreeTests(unittest.TestCase):
             cli.prune_tree(self.src_root, self.dest_root, boundary=self.dir / "other")
 
 
-class DecommissionedSkillsTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.home = Path(tempfile.mkdtemp(prefix="decom-test-"))
-        self.layout = cli.home_layout(self.home)
-        self.skills = self.home / ".claude" / "skills"
-        self.skills.mkdir(parents=True)
-
-    def tearDown(self) -> None:
-        shutil.rmtree(self.home, ignore_errors=True)
-
-    def test_deletes_decommissioned_skill_and_backup(self) -> None:
-        name = cli.DECOMMISSIONED_SKILLS[0]
-        old = self.skills / name
-        old.mkdir()
-        (old / "SKILL.md").write_text("old", encoding="utf-8")
-        backup = self.skills / f"{name}.bak"
-        backup.mkdir()
-        (backup / "SKILL.md").write_text("backup", encoding="utf-8")
-        archive = self.skills.parent / "retired-skills"
-        (archive / name).mkdir(parents=True)
-        (archive / name / "SKILL.md").write_text("archive", encoding="utf-8")
-        removed = cli.remove_decommissioned_skills(self.layout)
-        self.assertEqual(removed, [old, backup, archive])
-        self.assertFalse(old.exists())
-        self.assertFalse(backup.exists())
-        self.assertFalse(archive.exists())
-
-    def test_preserves_user_added_and_current_skills(self) -> None:
-        keep = self.skills / "my-skill"
-        keep.mkdir()
-        (keep / "SKILL.md").write_text("mine", encoding="utf-8")
-        self.assertEqual(cli.remove_decommissioned_skills(self.layout), [])
-        self.assertTrue((keep / "SKILL.md").exists())
-
-    def test_removes_from_every_skills_root(self) -> None:
-        name = cli.DECOMMISSIONED_SKILLS[0]
-        agents = self.home / ".agents" / "skills"
-        agents.mkdir(parents=True)
-        (self.skills / name).mkdir()
-        (agents / name).mkdir()
-        removed = cli.remove_decommissioned_skills(self.layout)
-        self.assertEqual(
-            sorted(removed), sorted([self.skills / name, agents / name])
-        )
-
-    @unittest.skipUnless(cli.is_posix(), "symlink behavior is POSIX-only")
-    def test_unlinks_obsolete_symlinks_without_following_them(self) -> None:
-        name = cli.DECOMMISSIONED_SKILLS[0]
-        outside = self.home / "outside"
-        outside.mkdir()
-        (outside / "keep.txt").write_text("keep", encoding="utf-8")
-        os.symlink(outside, self.skills / name)
-        os.symlink(outside, self.skills.parent / "retired-skills")
-
-        cli.remove_decommissioned_skills(self.layout)
-
-        self.assertFalse((self.skills / name).exists())
-        self.assertFalse((self.skills.parent / "retired-skills").exists())
-        self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "keep")
-
-
 class SkillMetadataTests(unittest.TestCase):
     def test_names_use_standard_format_and_match_directory(self) -> None:
         skills_root = cli.REPO_ROOT / "templates" / "skills"
@@ -932,43 +871,6 @@ class InstallTests(unittest.TestCase):
         self.assertTrue(orphan.with_name("__orphan__.md.bak").exists())
         self.assertIn("pruned:", out)
 
-    def test_install_deletes_legacy_skill_and_backup(self) -> None:
-        legacy_name = "commit"
-        roots = [self.home / ".claude/skills", self.home / ".agents/skills"]
-        for root in roots:
-            for source_name in (legacy_name, f"{legacy_name}.bak"):
-                source = root / source_name
-                source.mkdir(parents=True)
-                (source / "SKILL.md").write_text(source_name, encoding="utf-8")
-            archive = root.parent / "retired-skills" / legacy_name
-            archive.mkdir(parents=True)
-            (archive / "SKILL.md").write_text("archive", encoding="utf-8")
-
-        self._run_install()
-
-        for root in roots:
-            self.assertTrue((root / f"km-{legacy_name}/SKILL.md").is_file())
-            self.assertFalse((root / legacy_name).exists())
-            self.assertFalse((root / f"{legacy_name}.bak").exists())
-            self.assertFalse((root.parent / "retired-skills").exists())
-
-    def test_install_retires_decommissioned_destinations_with_backup(self) -> None:
-        # Destinations the manifest no longer maintains move to their
-        # single-generation .bak: recoverable, no longer discoverable.
-        legacy = [self.home / rel for rel in cli.DECOMMISSIONED_PATHS]
-        for path in legacy:
-            path.mkdir(parents=True)
-            (path / "marker.md").write_text("stale", encoding="utf-8")
-
-        out = self._run_install()
-
-        for path in legacy:
-            self.assertFalse(path.exists(), f"still present: {path}")
-            self.assertTrue(
-                path.with_name(path.name + ".bak").exists(), f"missing bak: {path}"
-            )
-        self.assertIn("removed (obsolete config):", out)
-
     def test_install_preserves_user_added_skill(self) -> None:
         self._run_install()
         user_skill = self.home / ".claude/skills/__my_custom__/SKILL.md"
@@ -1135,20 +1037,6 @@ class InstallTests(unittest.TestCase):
         with patch("sys.stdout", new=StringIO()):
             report = cli.verify(self.layout)
         self.assertIn(f"drift: {config}", report.failures)
-
-    def test_legacy_managed_default_rules_retired_only_when_unchanged(self) -> None:
-        legacy_source = cli.REPO_ROOT / cli.LEGACY_MANAGED_FILES[0][0]
-        target = self.home / cli.LEGACY_MANAGED_FILES[0][1]
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(legacy_source.read_bytes())
-        out = self._run_install()
-        self.assertFalse(target.exists())
-        self.assertTrue(target.with_name("default.rules.bak").exists())
-        self.assertIn("removed (legacy managed file):", out)
-
-        target.write_text("# user-owned\n", encoding="utf-8")
-        self._run_install()
-        self.assertEqual(target.read_text(encoding="utf-8"), "# user-owned\n")
 
     def test_global_guidelines_overwritten_when_present(self) -> None:
         # Machine-local edits belong in a *.local.md; the guideline files
@@ -1686,24 +1574,6 @@ class ClaudeDirInstallTests(unittest.TestCase):
         self._run_install()
         self.assertTrue(user_skill.exists())
 
-    def test_deletes_decommissioned_skill(self) -> None:
-        legacy = cli.DECOMMISSIONED_SKILLS[0]
-        stale = self.target / "skills" / legacy
-        stale.mkdir(parents=True)
-        (stale / "SKILL.md").write_text("old", encoding="utf-8")
-        self._run_install()
-        self.assertFalse(stale.exists())
-
-    def test_install_retires_legacy_rules_with_backup(self) -> None:
-        # A profile installed by an older version carries <dir>/rules/; the
-        # retirement is re-rooted with the rest of the Claude slice.
-        rules = self.target / "rules"
-        rules.mkdir(parents=True)
-        (rules / "legacy.md").write_text("stale", encoding="utf-8")
-        self._run_install()
-        self.assertFalse(rules.exists())
-        self.assertTrue((rules.with_name("rules.bak") / "legacy.md").is_file())
-
     def test_verify_passes_after_install(self) -> None:
         self._run_install()
         with patch("sys.stdout", new=StringIO()):
@@ -1730,6 +1600,46 @@ class ClaudeDirInstallTests(unittest.TestCase):
             (self.target / "settings.json").exists(),
             "clean() must keep settings.json (carries user values)",
         )
+
+
+class UserOwnedAssetsTests(unittest.TestCase):
+    def test_reinstall_preserves_unmanaged_names_and_paths(self) -> None:
+        for alternate in (False, True):
+            with self.subTest(alternate=alternate), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                target = home / (".claude-sub" if alternate else ".claude")
+                layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                with patch("sys.stdout", new=StringIO()):
+                    self.assertEqual(cli.install(layout), 0)
+                    self.assertEqual(cli.verify(layout).failures, [])
+
+                paths = [
+                    target / "skills/plan/SKILL.md",
+                    target / "rules/custom.md",
+                ]
+                if not alternate:
+                    paths.extend([
+                        home / ".agents/skills/review/SKILL.md",
+                        home / ".codex/full.config.toml",
+                        home / ".codex/rules/default.rules",
+                    ])
+                expected = {}
+                for path in paths:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    content = f"# user-owned {path.name}\n".encode()
+                    path.write_bytes(content)
+                    expected[path] = (content, path.stat().st_mtime_ns)
+
+                with patch("sys.stdout", new=StringIO()):
+                    self.assertEqual(cli.install(layout), 0)
+                    self.assertEqual(cli.verify(layout).failures, [])
+
+                for path, (content, mtime) in expected.items():
+                    with self.subTest(path=path.relative_to(home)):
+                        self.assertEqual(path.read_bytes(), content)
+                        self.assertEqual(path.stat().st_mtime_ns, mtime)
+                        self.assertFalse(path.with_name(path.name + ".bak").exists())
+                self.assertFalse((target / "rules.bak").exists())
 
 
 class OutputStyleRetirementTests(unittest.TestCase):
