@@ -6,11 +6,11 @@ findingの採用、severity、blockingには、先に `references/finding-contra
 
 ## status
 
-- `resolved` — メイン担当または後続修正で解消した
-- `unresolved` — 根拠が確定し、未修正
+- `resolved` — 以前のreviewで確定したfindingが、後続の対象変更後のrecheckで解消済みと確認された
+- `unresolved` — 根拠が確定し、現在の対象で未修正
 - `accepted-risk` — ユーザーが理由と条件を明示して残す
 
-棄却した指摘は最終件数へ含めない。メイン担当が独立レビュー前に修正した指摘も`resolved`として残す。
+棄却した指摘は最終件数へ含めない。初回reviewの新規findingをその場で`resolved`にしない。誤検出・根拠不足は棄却する。
 
 ## 判定
 
