@@ -22,10 +22,10 @@
       "Read(**/.ssh/**)",
       "Read(**/*.pubxml)",
       "Read(**/*.cscfg)",
-      "Read(**/*.config)",
       "Read(**/.npmrc)",
-      "Read(**/appsettings.json)",
-      "Read(**/local.settings.json)",
+      "Read(**/local.settings.json)"
+    ],
+    "ask": [
       "Bash(npx *)"
     ],
     "defaultMode": "auto"

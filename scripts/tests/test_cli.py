@@ -616,6 +616,35 @@ class StatuslineCommandTests(unittest.TestCase):
 # --------------------------------------------------------------------------- #
 # settings.json merge
 # --------------------------------------------------------------------------- #
+class ClaudePermissionPolicyTests(unittest.TestCase):
+    def test_global_permission_boundaries(self) -> None:
+        settings = json.loads(
+            (cli.REPO_ROOT / "templates/settings.json").read_text(encoding="utf-8")
+        )
+        permissions = settings["permissions"]
+        for rule in (
+            "Read(**/.env)",
+            "Read(**/.ssh/**)",
+            "Read(**/.npmrc)",
+            "Read(**/local.settings.json)",
+            "Read(**/env.php*)",
+            "Read(**/*.pubxml)",
+            "Read(**/*.cscfg)",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, permissions["deny"])
+        for rule in (
+            "Read(**/*.config)",
+            "Read(**/appsettings.json)",
+            "Bash(npx *)",
+        ):
+            with self.subTest(rule=rule):
+                self.assertNotIn(rule, permissions["deny"])
+        self.assertIn("Bash(npx *)", permissions["ask"])
+        self.assertNotIn("Bash(npx *)", permissions.get("allow", []))
+        self.assertEqual(permissions["defaultMode"], "auto")
+
+
 class MergeFunctionTests(unittest.TestCase):
     def test_template_wins_for_shared_keys(self) -> None:
         merged = cli.merge({"a": 1, "b": "tpl"}, {"a": 99})
