@@ -31,14 +31,12 @@ pip（PyPI）パッケージの採用前レビューで共通 8 観点に加え�
 
 - `dependencies`、`optional-dependencies`、`extras` の範囲を確認する
 - `requires-dist` と PyPI 側で表示される依存が一致するか
-- 依存 chain に既知の問題 package が含まれていないか
 - SLSA / in-toto attestation が公開されている場合、対象 version に対して有効か
 
 ## 配布の整合性
 
 - 対象 version が yanked になっていないか（`yanked` / `yanked_reason` を確認）
 - wheel / sdist の hash（`sha256`）が PyPI 上で参照できるか
-- version tag と GitHub tag / commit の対応が取れるか
 - GitHub Release の tarball と PyPI 上の sdist 内容が大きく乖離していないか
 
 ## 方針とライセンス
@@ -48,5 +46,4 @@ pip（PyPI）パッケージの採用前レビューで共通 8 観点に加え�
 
 ## 判定への反映
 
-- ここで確認した結果は、共通 8 観点のうち「提供元と由来」「実行権限と影響範囲」「依存関係と供給網」「公開・配布の整合性」「ライセンスと方針適合」の証跡として使う
 - ネイティブ拡張 / `.pth` 注入 / ビルド時ネットワーク取得のいずれかを確認した場合は、「利用環境への影響」でさらに厳しい判定を選ぶ

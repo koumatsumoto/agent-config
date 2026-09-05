@@ -2,7 +2,7 @@
 
 VS Code 拡張機能の採用前レビューで共通 8 観点に加えて確認する項目。`.vsix` のダウンロード・インストール・実行は行わず、Marketplace の掲載情報、`package.json` manifest、GitHub のソースツリーを静的に確認して判断する。
 
-## 対象の特定
+## 対象成果物の特定
 
 - `publisher.extension-id` と対象 version（Marketplace 上の正式 version）が特定できていること
 - Marketplace listing と GitHub repository の対応を確認したこと
@@ -18,7 +18,7 @@ VS Code 拡張機能の採用前レビューで共通 8 観点に加えて確認
 
 - Marketplace で配布される `.vsix` はビルド済みの成果物であり、インストール時に `scripts.postinstall` / `preinstall` / `prepare` などの npm スクリプトは実行されない。`package.json` の配布工程用スクリプトは開発者向けと見なし、拡張機能の実行時挙動を示す直接の証拠には使わない
 - 静的解析の対象は「`.vsix` に実際に含まれる成果物」に置く。対応 tag / release が特定できればその commit、特定できない場合は master または最新 commit を暫定対象とし、その旨をレポートに明記する
-- Marketplace version と GitHub tag / commit の対応を一次ソースで検証できない場合は、「配布の整合性」と `decision-rules.md` の必須判定規則（ソースとの対応を確認できなければ `ALLOW` と判定しない）を適用する
+- Marketplace version と GitHub tag / commit の対応を一次ソースで検証できない場合は、`decision-rules.md`の「許可できる範囲」を適用する
 
 ## サブディレクトリと language server の manifest
 
@@ -62,17 +62,12 @@ bundler 出力だけが公開されている場合は、該当 bundle のソー�
 
 ## 配布の整合性
 
-- 対象 version が Marketplace 上で unpublished / deprecated になっていないか
 - 直近の version が publisher 変更や所有者変更を伴っていないか
-- GitHub 上に対応 tag / release があるか
 
 ## 方針 / ライセンス
 
-- `license` フィールドと LICENSE ファイルの整合
-- 社内で許可されていない license でないか
 - Marketplace 上の "Privacy" / "License" 記載と実 license が一致するか
 
 ## 判定への反映
 
-- 上記の結果は、共通 8 観点のうち「提供元と由来」「実行権限と影響範囲」「依存関係と供給網」「配布の整合性」「ライセンスと方針適合」の証跡として使う
 - `実行形態=editor-extension` は判定を厳しくする条件の対象なので、高リスクの兆候があれば「利用環境への影響」にも反映する
