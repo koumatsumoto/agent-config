@@ -4,7 +4,15 @@
 
 ## 情報源と証跡
 
-一次情報はGitHubのrepository・tags・releases・commits・SECURITY.md・Actions状態・Security Advisories、npmのregistry・package page・provenance、PyPIのproject page・JSON API・Trusted Publishersメタデータ、VS Code Marketplaceのlisting・API、raw manifest・metadata。OpenSSF Scorecard、deps.dev、GitHub Advisory Database APIは補助二次ソースとして分ける。
+一次情報として使う情報源は次のとおり。
+
+- GitHub：repository・tags・releases・commits・SECURITY.md・Actions状態・Security Advisories
+- npm：registry・package page・provenance
+- PyPI：project page・JSON API・Trusted Publishersメタデータ
+- VS Code Marketplace：listing・API
+- raw manifest・metadata
+
+OpenSSF Scorecard、deps.dev、GitHub Advisory Database APIは補助二次ソースとして分ける。
 証跡にはURLと確認日（`YYYY-MM-DD`）を付ける。遡れない証跡は根拠にせずReview Confidenceを下げる。取得失敗は`unknown`とし、未確認事項と判定への影響を`decision-rules.md`に従って残す。
 
 不在はアクセス可否と取得範囲を確かめて判断する。
@@ -31,7 +39,7 @@ lifecycle hook（npm scripts、pip build backend、VS Code activationEvents）�
 
 ## 4. メンテナーとリポジトリの健全性（`maintainer/repo-health`）
 
-最新release日・commit日と乖離、SECURITY policy、CI・release automation、メンテナ構成、最近のpublisher変更・所有者交代・コミット頻度の急変、未メンテ期間の方針適合を確認する。日付の乖離が大きい場合（目安1年以上）は、配布artifactに未反映の変更が累積している可能性を示す。
+最新release日・commit日と両者の乖離、SECURITY policy、CI・release automation、メンテナ構成、最近のpublisher変更・所有者交代・コミット頻度の急変、未メンテ期間の方針適合を確認する。日付の乖離が大きい場合（目安1年以上）は、配布artifactに未反映の変更が累積している可能性を示す。
 
 ## 5. 依存関係と供給網（`dependency/supply-chain-surface`）
 

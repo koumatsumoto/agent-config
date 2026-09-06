@@ -31,11 +31,14 @@
 | コード | `<pre><code>`内の`& < >`を実体参照化。`</script>` / `</pre>`などの閉じ偽装を防ぐ |
 | 図ソース | `<pre class="mermaid">`はエスケープしない。未信頼文字列を入れず、値を入れるなら`% < > "`と改行を除去 |
 
-## CSP・SRIとレイアウト
+## CSP・SRI
 
 - CSPを削除・緩和しない。`default-src 'none'` / `connect-src 'none'`を保ち、script・imgに外部ホストを追加しない。imgは`blob:`と、画像埋め込み時の`data:`だけに限る
 - scriptは固定CDNのMermaidと図操作用inlineだけ。MermaidはSRI（`integrity`）と`crossorigin="anonymous"`付きUMDを使い、`securityLevel:'strict'`（内蔵DOMPurify）を維持する
 - `'unsafe-inline'`を許すため、CSPはinline scriptによるXSSを止めない。`connect-src`などはfetch / XHR / beaconや許可外のimg・scriptを制限するが、meta CSPでは`location`変更や`window.open`による外部遷移を防げない。CSPをエスケープの代わりにしない
 - `javascript:` URL、inlineイベントハンドラ、外部icon・フォントを使わず、資格情報・トークン・PIIを含めない
+
+## レイアウトと画像
+
 - スタイル変更には`document-template.css`を使い、印刷用の色保持・改ページ回避を保つ
 - 外部画像は使わない。スクリーンショットはBase64で埋め、その場合だけ`img-src blob: data:`にする。connect / form / defaultなどの`'none'`は変えない
