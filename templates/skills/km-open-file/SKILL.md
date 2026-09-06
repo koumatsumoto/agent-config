@@ -1,38 +1,24 @@
 ---
 name: km-open-file
-description: ローカルのファイル / フォルダを Windows 側で開く（Windows / WSL Ubuntu のみ）。"ブラウザで開いて" / "エクスプローラで開いて" のときに使う。
+description: ローカルのファイル・フォルダをWindows側で開く。「ブラウザで開いて」「エクスプローラで開いて」などの依頼で使う。Windows / WSL Ubuntuのみ対応。
 argument-hint: "[パス]"
 ---
 
 # Open File
 
-ローカルのファイルやフォルダを Windows 側で開く。対応環境は **Windows (Git Bash)** と **WSL (Ubuntu)** のみ。追加パッケージ（`wslview` 等）は前提にしない。
+Windows（Git Bash）とWSL（Ubuntu）で使う。Linux形式・Windows形式のパスを受け付け、`wslview`などの追加パッケージは前提にしない。
+フォルダはExplorer、HTML（`.html` / `.htm`）は既定ブラウザで開き、その他はExplorerで選択表示する。HTML以外は直接実行しない。
 
-入力パスは Linux 形式（`/home/...`, `./x`）でも Windows 形式（`C:\...`, `C:/...`, `\\...`）でも受け付ける。
+## 実行
 
-## Success Criteria
-
-- 対象種別に応じたWindows側の起動要求を送信する（フォルダ=Explorer / HTML=既定ブラウザ / その他=選択表示）
-- 存在しないパス・対応外環境では開かず、理由を伝えて止まる
-
-## Workflow
-
-1. 対象がユーザーの意図したローカルのパス / 既知のパスであることを確認する
-2. HTMLの場合は、作成元、外部資源、埋め込みスクリプト、秘密情報の有無を確認し、ユーザーが明示したHTMLまたはこのsessionで生成したHTMLだけを開く
-3. 読み込んだこの `SKILL.md` の実在directoryを基準に `scripts/open-file.sh` を解決し、skill directoryへ `cd` せず次の形で呼ぶ。対象pathはshell文字列へ埋め込まず、一つの引数として渡す
+1. ユーザーが意図したローカルのパスまたは既知のパスであることを確認する。
+2. HTMLは作成元・外部資源・埋め込みスクリプト・秘密情報を確認し、ユーザーが明示したものか、このセッションで生成したものだけを開く。ブラウザでスクリプトが動く可能性を考慮し、信頼判断をhelperに委ねない。
+3. 読み込んだ`SKILL.md`の実在directoryからhelperを解決する。そこへ`cd`せず、対象を一つの引数で渡す。パスをshell文字列へ埋め込まない。
 
 ```bash
 bash "<skill-directory>/scripts/open-file.sh" "<path>"
 ```
 
-相対パスは呼び出し時のworking directoryを基準にする。
-
-- helperが成功したら、Windows側へ起動要求をdispatchできたものとして対象の絶対pathを報告する
-- helperが失敗したら、その理由を報告して停止する
-
-成功は起動要求の送信を意味し、GUI表示完了を保証しない。
-
-## Safety Rules
-
-- HTML（`.html` / `.htm`）はブラウザでスクリプトが動く可能性がある。HTML以外のファイルは直接実行しない
-- HTMLの信頼判断とユーザー意図の確認をhelperへ委ねない
+相対パスの基準は呼び出し時のworking directory。
+存在しないパス・対応外環境では開かず、helperの失敗時は理由を報告して停止する。
+成功時は起動要求の送信と対象の絶対パスを報告する。GUI表示完了は保証しない。

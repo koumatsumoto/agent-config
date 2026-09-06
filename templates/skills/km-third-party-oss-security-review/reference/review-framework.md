@@ -1,75 +1,50 @@
 # Third-Party OSS Security Review Framework
 
-採用前レビューで確認する 8 観点。初出の括弧内は出力契約で使う固定 ID である。ecosystem を問わず日本語名で評価し、対象種別ごとの確認手順で補強する。
+採用前に確認する共通8観点。括弧内の固定IDを保ち、日本語名で評価する。ecosystem固有の手順で補強する。
 
 ## 情報源と証跡
 
-一次情報はGitHub repository / tags / releases / commits / SECURITY.md / Actions状態 / GitHub Security Advisories、npm registry / package page / provenance statement、PyPI project page / JSON API / Trusted Publishersメタデータ、VS Code Marketplace listing / API、raw manifest / metadataを使う。OpenSSF Scorecard、deps.dev、GitHub Advisory Database APIは補助二次ソースとして区別する。
+一次情報はGitHubのrepository・tags・releases・commits・SECURITY.md・Actions状態・Security Advisories、npmのregistry・package page・provenance、PyPIのproject page・JSON API・Trusted Publishersメタデータ、VS Code Marketplaceのlisting・API、raw manifest・metadata。OpenSSF Scorecard、deps.dev、GitHub Advisory Database APIは補助二次ソースとして分ける。
+証跡にはURLと確認日（`YYYY-MM-DD`）を付ける。遡れない証跡は根拠にせずReview Confidenceを下げる。取得失敗は`unknown`とし、未確認事項と判定への影響を`decision-rules.md`に従って残す。
 
-証跡はURLと確認日（`YYYY-MM-DD`）を記録する。後から遡れない証跡は根拠に使わず、Review Confidenceを下げる。取得失敗は`unknown`として未確認事項と判定への影響を残し、`decision-rules.md`に従う。
+不在はアクセス可否と取得範囲を確かめて判断する。
 
-不在の証跡は、対象repositoryへのアクセス可否とAPIが返す資源の範囲を確認して解釈する。
+- `404`だけでrelease / tag不在を断定しない。権限・URL等との区別がつかなければ取得失敗（`unknown`）とする。
+- `GET /repos/{owner}/{repo}/releases/latest`は公開済みの非draft・非prereleaseが対象。正式releaseの不在をprereleaseや全tagの不在へ広げない。
+- releases / tags一覧は、正常取得したアクセス範囲・フィルタ・ページを確認し、その範囲だけで不在を判断する。末尾の空ページだけでは全件不在としない。
+- registry / marketplaceが明示した`yanked` / `deprecated` / `unpublished`は確定状態として扱う。
 
-- GitHubの`404`だけではrelease / tag不在を確定しない。認証・アクセス権やURLの問題でも返るため、原因を確認できない場合は取得失敗として`unknown`を残す
-- `GET /repos/{owner}/{repo}/releases/latest`の対象は公開済みの非draft・非prereleaseである。対象の正式releaseがないと確認できても、prereleaseやtag全体の不在へ広げない
-- releases / tagsの一覧を正常取得し、アクセス範囲・フィルタ・ページ指定を確認した結果が空なら、その一覧の対象範囲で不在の証拠にできる。末尾の空ページだけを一覧全体の不在とみなさない
-- registry / marketplaceが対象成果物について明示した`yanked` / `deprecated` / `unpublished`は、その状態の確証として扱う
-
-確認できた不在・公開状態は`unknown`と区別し、「公開・配布の整合性」に反映する。最終判定への影響は`decision-rules.md`に従う。
-
-GitHub仕様: [404の扱い](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api#404-not-found-for-an-existing-resource)、[latest releaseの対象](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)。
+確認できた不在・公開状態は`unknown`と分けて「公開・配布の整合性」へ反映し、判定は`decision-rules.md`に従う。
+GitHub仕様：[404の扱い](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api#404-not-found-for-an-existing-resource)、[latest releaseの対象](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)。
 
 ## 1. 提供元と由来（`identity/provenance`）
 
-- registry / marketplace metadata の `repository` / `homepage` / publisher / maintainer 情報を確認したか
-- 対象成果物と GitHub リポジトリの対応が一次ソースで自然に説明できるか
-- repository URL が入力で渡された場合、registry metadata と矛盾していないか
-- typosquatting / impersonation の兆候がないか（類似名、作者なりすまし、人気 package の派生を装う名前）
+registry / marketplaceの`repository`・`homepage`・publisher・maintainerから成果物とGitHubの対応を確かめ、入力URLとの矛盾、typosquatting・impersonation（類似名、作者や人気package派生の偽装）の兆候を確認する。
 
 ## 2. 既知の脆弱性（`vulnerabilities`）
 
-- advisory の情報源（GitHub Security Advisories / ecosystem 固有 advisory / deps.dev）で対象成果物を確認したか
-- 未解決の `Critical` / `High` advisory が対象 version / tag に当たるか
+GitHub Security Advisories・ecosystem固有advisory・deps.devで対象成果物を確認し、未解決Critical / High advisoryが対象version / tagに当たるか調べる。
 
 ## 3. 実行権限と影響範囲（`execution/privilege-surface`）
 
-- lifecycle hook（npm `scripts`、pip build backend、VS Code `activationEvents`）に外部取得・shell 実行・自己更新の兆候があるか
-- 主要 entrypoint（`bin`、`main`、`console_scripts`、extension `main`）に外部通信、子プロセス起動、import 時副作用、eval / 動的コード読み込み、難読化された blob の兆候があるか
-- ecosystem 固有の高リスク機構（pip の `.pth` 注入、VS Code extension の `workspaceContains` 広域起動、npm の postinstall）を確認したか
+lifecycle hook（npm scripts、pip build backend、VS Code activationEvents）と主要entrypoint（bin、main、console_scripts等）を確認する。外部取得・通信、shell・子プロセス、自己更新、import時副作用、eval・動的読込、難読化blobを対象とする。`.pth`注入、`workspaceContains`広域起動、postinstallなど固有機構も確認する。
 
 ## 4. メンテナーとリポジトリの健全性（`maintainer/repo-health`）
 
-- 最新 release 日と最新 commit 日を確認したか
-- 最新 release 日と最新 commit 日の乖離を確認したか。大きな乖離（目安: 1 年以上）は「配布済 artifact に未反映の変更が累積している」可能性として記述する
-- `SECURITY.md` / SECURITY policy の有無を確認したか
-- CI / release automation の有無を確認したか
-- メンテナ構成、最近の publisher 変更（突然の所有者交代、コミット頻度の急変）を確認したか
-- 利用方針に対して未メンテ期間が長すぎないか
+最新release日・commit日と乖離、SECURITY policy、CI・release automation、メンテナ構成、最近のpublisher変更・所有者交代・コミット頻度の急変、未メンテ期間の方針適合を確認する。日付の乖離が大きい場合（目安1年以上）は、配布artifactに未反映の変更が累積している可能性を示す。
 
 ## 5. 依存関係と供給網（`dependency/supply-chain-surface`）
 
-- 直接依存、任意依存、peer dependency、ビルド依存の規模を確認したか
-- 依存が用途に対して過剰でないか
-- 供給網の証明の有無を確認したか（npm provenance statement / SLSA / PyPI Trusted Publishers / VS Code signing 情報）
-- 証明が存在する場合、対象成果物に対して有効か
-- 依存関係に既知の問題があるパッケージが含まれていないか
+直接・任意・peer・ビルド依存の規模と用途に対する過剰さ、既知の問題を確認する。npm provenance・SLSA・PyPI Trusted Publishers・VS Code signing等の証明があるか、ある場合は対象成果物に有効かを確かめる。
 
 ## 6. 公開・配布の整合性（`release/distribution-integrity`）
 
-- registry / marketplace 上で対象成果物が yanked / deprecated / unpublished にされていないか
-- version tag と GitHub tag / commit の対応が取れるか
-- リリースバイナリ / wheel / vsix とリポジトリのソースとの対応関係を確認できるか
-- 過去リリースの公開停止や version hijack の兆候がないか
+yanked・deprecated・unpublished、version tagとGitHub tag / commitの対応、バイナリ・wheel・vsixとソースの対応、過去の公開停止・version hijackの兆候を確認する。
 
 ## 7. ライセンスと方針適合（`license/policy-fit`）
 
-- 宣言されたライセンスと SPDX 表記を確認したか
-- 実際のソースツリーにある LICENSE ファイルと宣言されたライセンスが整合しているか
-- 社内禁止ライセンスに該当しないか
+宣言ライセンス・SPDX・ソースツリーのLICENSEの整合と、社内禁止ライセンスへの該当を確認する。
 
 ## 8. 利用環境への影響（`usage-context-impact`）
 
-- `production` / `development` の違いを反映しているか
-- `実行形態` の違いによってリスクの意味が変わるか（`editor-extension` / `ci` / `cli` は IDE / 実行基盤への権限影響が大きい）
-- `secrets_access=true` と `data_sensitivity=high` を判定に反映しているか
-- 高権限・高機密な文脈では保守的に止めているか（`decision-rules.md`の厳格化に従う）
+production / development、実行形態（特にeditor-extension / ci / cliのIDE・実行基盤への権限）、`secrets_access=true`、`data_sensitivity=high`を反映する。高権限・高機密な文脈の厳格化は`decision-rules.md`に従う。

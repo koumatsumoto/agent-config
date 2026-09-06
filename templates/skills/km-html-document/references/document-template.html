@@ -7,7 +7,7 @@
   <!--
     Content Security Policy（meta で有効なディレクティブのみ）。
     - 外部資源は固定版のMermaidだけを許可し、SRIで検証する。
-    - connect-srcとdefault-srcで外部送信を禁止し、img-srcは図の画像化に必要なblob:だけを許可する。
+    - connect-srcとdefault-srcで許可外の通信・資源読込を制限し、img-srcは図の画像化に必要なblob:だけを許可する。
     - Mermaidを更新するときは、script要素、CSPのバージョンパス、SRIを同時に変更する。
   -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/ 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src blob:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
@@ -80,7 +80,7 @@ flowchart TD
     </section>
 
     <footer class="doc-footer">
-      <p>単一の自己完結HTML文書として生成。</p>
+      <p>CSSと図操作用JavaScriptを同梱したHTML文書。図の描画にはCDN接続が必要。</p>
     </footer>
 
   </div>

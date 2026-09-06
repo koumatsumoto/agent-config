@@ -1,48 +1,41 @@
 # HTML Document — 作成ガイド
 
-`km-html-document` で本文を組むときの詳細リファレンス。図種の選び方、エスケープ規律、セキュリティ基盤（CSP/SRI）、スタイル調整をまとめる。SKILL.md の Workflow から参照する。
+図・埋め込み・スタイル・安全対策の該当箇所を、作成直前に読む。
 
 ## 図（Mermaid）
 
-カタログの型に限る（外部 icon/フォントを取得する `architecture-beta` や icon パックは使わない）。
+次の型だけを使い、外部icon・フォントを取得する`architecture-beta`やiconパックは使わない。
 
 | 用途 | 図種 |
 | --- | --- |
-| 処理フロー | `flowchart` |
-| 構成・アーキテクチャ | `flowchart` + `subgraph`（グルーピングで層/コンテナを表す） |
+| 処理・構成・アーキテクチャ | `flowchart`。層・コンテナは`subgraph`で分ける |
 | 時系列のやり取り | `sequenceDiagram` |
 | 状態遷移 | `stateDiagram-v2` |
-| データモデル/関連 | `erDiagram` |
-| 構造/クラス関係 | `classDiagram` |
+| データモデル・関連 | `erDiagram` |
+| 構造・クラス関係 | `classDiagram` |
 | スケジュール | `gantt` |
 | 分解 | `mindmap` |
 | 年表 | `timeline` |
 
-- 図は `<figure class="diagram"><pre class="mermaid">...</pre><figcaption>図N: ...</figcaption></figure>` で置く。`<pre>` にすると読込失敗・JS 無効時もソースが読める
-- ノードのラベルは要約した短文にする（長いログ・エラー文字列をそのまま貼らない）
-- `mindmap` / `timeline` は字下げに敏感。`<pre class="mermaid">` 内は相対インデントを揃え、末尾に空白だけの行を残さない
+`<figure class="diagram"><pre class="mermaid">...</pre><figcaption>図N: ...</figcaption></figure>`で配置する。`pre`により読込失敗・JS無効時もソースを読める。ラベルは短く要約し、長いログ・エラーを貼らない。`mindmap` / `timeline`は相対インデントをそろえ、末尾に空白だけの行を残さない。
 
-## エスケープ
+## 埋め込みとエスケープ
 
-埋め込むデータは文脈ごとにエスケープする。エスケープを一次防御とし、CSPは外部送信を防ぐ補助策として使う。`script-src`は図操作のため`'unsafe-inline'`を許可しており、要素内のスクリプト実行を止めない。未信頼データをスクリプトや属性に流し込まない。
+エスケープを一次防御とする。未信頼データをスクリプトや属性へ流し込まない。
 
-| 文脈 | 規律 |
+| 文脈 | 規則 |
 | --- | --- |
-| 本文テキスト | `& < > " '` を実体参照化 |
-| 属性値 | 値をクォートし `& < > " '` を実体参照化 |
-| URL | 同一文書内 `#anchor` は可。外部は `https:` のみ + `rel="noopener noreferrer"`。`javascript:`/`data:`/`vbscript:` は不可 |
-| コードブロック | `<pre><code>` 内で `& < >` を実体参照化（`</script>`/`</pre>` 等の閉じ偽装に注意） |
-| 図ソース | `<pre class="mermaid">` はエスケープしない領域。未信頼文字列を入れない。値を入れるなら `% < > "` と改行を除去する |
+| 本文 | `& < > " '`を実体参照化 |
+| 属性 | 値をクォートし、`& < > " '`を実体参照化 |
+| URL | 文書内`#anchor`または`https:`のみ。外部リンクに`rel="noopener noreferrer"`を付け、`javascript:` / `data:` / `vbscript:`を使わない |
+| コード | `<pre><code>`内の`& < >`を実体参照化。`</script>` / `</pre>`などの閉じ偽装を防ぐ |
+| 図ソース | `<pre class="mermaid">`はエスケープしない。未信頼文字列を入れず、値を入れるなら`% < > "`と改行を除去 |
 
-## セキュリティ（CSP / SRI）
+## CSP・SRIとレイアウト
 
-- CSPの`<meta>`による外部送信の防止策（`default-src 'none'` / `connect-src 'none'`、`img-src`は`blob:`と`data:`のみ、script/imgに外部ホストを足さない）を削除・緩和しない。これが外部送信を防ぐ補助策の本体である
-- script は固定 CDN の mermaid と図操作の inline script だけ。`script-src` に外部ホストを足さない。Mermaid は SRI(`integrity`) + `crossorigin="anonymous"` 付き UMD で読み、既定 `securityLevel:'strict'`（内蔵 DOMPurify）で自動描画する。`loose` 化しない
-- `'unsafe-inline'` を許可しているため inline script は XSS backstop にならない。`connect-src 'none'` 等は fetch/XHR/beacon と外部 img/script を塞ぐが、top-level navigation（`location` 変更・`window.open` の外部 URL）は meta CSPでは塞げない。未信頼データを埋める運用では**エスケープ規律が一次防御線**（CSP は受動経路の backstop）。`javascript:` URL・inline イベントハンドラ・外部 icon/フォントは使わない
-- 秘密情報（資格情報・トークン・PII）を含めない
-
-## スタイル / レイアウト
-
-- スタイル変更が必要な場合は`document-template.css`を使う
-- 外部画像は無効（`img-src blob:` は図の画像化用のローカル blob のみ）。スクリーンショットを埋める場合は `img-src blob: data:` にし、インラインのBase64データで埋める（connect/form/default 等の `'none'` は触らない）
-- 印刷/PDF を想定し、`document-template.css` の print CSS（色保持・改ページ回避）を保つ
+- CSPを削除・緩和しない。`default-src 'none'` / `connect-src 'none'`を保ち、script・imgに外部ホストを追加しない。imgは`blob:`と、画像埋め込み時の`data:`だけに限る。
+- scriptは固定CDNのMermaidと図操作用inlineだけ。MermaidはSRI（`integrity`）と`crossorigin="anonymous"`付きUMDを使い、`securityLevel:'strict'`（内蔵DOMPurify）を維持する。
+- `'unsafe-inline'`を許すため、CSPはinline scriptによるXSSを止めない。`connect-src`などはfetch / XHR / beaconや許可外のimg・scriptを制限するが、meta CSPでは`location`変更や`window.open`による外部遷移を防げない。CSPをエスケープの代わりにしない。
+- `javascript:` URL、inlineイベントハンドラ、外部icon・フォントを使わず、資格情報・トークン・PIIを含めない。
+- スタイル変更には`document-template.css`を使い、印刷用の色保持・改ページ回避を保つ。
+- 外部画像は使わない。スクリーンショットはBase64で埋め、その場合だけ`img-src blob: data:`にする。connect / form / defaultなどの`'none'`は変えない。
