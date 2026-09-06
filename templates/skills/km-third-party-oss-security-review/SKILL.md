@@ -1,6 +1,6 @@
 ---
 name: km-third-party-oss-security-review
-description: npm・Pythonパッケージ、VS Code拡張機能、GitHubリポジトリの採用前安全性を評価する。対象を明示した依頼で使う。
+description: npm・Pythonパッケージ、VS Code拡張機能、GitHubリポジトリの安全性を採用前に評価する。対象を明示した依頼で使う。
 argument-hint: "[npm:pkg@ver | pip:pkg==ver | vscode:publisher.ext | <repo-url>]"
 disable-model-invocation: true
 ---

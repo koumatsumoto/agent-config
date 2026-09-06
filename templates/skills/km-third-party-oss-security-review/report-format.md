@@ -44,4 +44,6 @@ VS Code Marketplaceの`Verified Domain`バッジがないpublisherは、提供�
 
 日本語で書き、主要指摘は`## <severity>: <要約>`に観点・問題・根拠・推奨対応を付ける。証跡にはURLと確認日（`YYYY-MM-DD`）を付け、不在が論点なら「該当なし（確認日: YYYY-MM-DD）」と書く。
 判定理由は原則2〜4点にまとめ、独立理由が増える場合も主要理由へ畳む。安全を断言せず、確認済み範囲と未確認事項を分ける。
-`ALLOW_WITH_CONDITIONS`の運用条件は「必要条件」へ、`NEEDS_HUMAN_REVIEW`の不足情報と確認主体は「人間確認が必要な点」へ書く。`REJECT`の理由は`policy` / `vulnerability` / `provenance` / `behavior` / `privilege`で分類する。
+- `ALLOW_WITH_CONDITIONS`：運用条件を「必要条件」へ書く
+- `NEEDS_HUMAN_REVIEW`：不足情報と確認主体を「人間確認が必要な点」へ書く
+- `REJECT`：理由を`policy` / `vulnerability` / `provenance` / `behavior` / `privilege`で分類する
