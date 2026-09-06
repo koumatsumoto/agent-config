@@ -17,12 +17,12 @@ VS Code 拡張機能の採用前レビューで共通 8 観点に加えて確認
 ## 配布工程の注記
 
 - Marketplace で配布される `.vsix` はビルド済みの成果物であり、インストール時に `scripts.postinstall` / `preinstall` / `prepare` などの npm スクリプトは実行されない。`package.json` の配布工程用スクリプトは開発者向けと見なし、拡張機能の実行時挙動を示す直接の証拠には使わない
-- 静的解析の対象は「`.vsix` に実際に含まれる成果物」に置く。対応 tag / release が特定できればその commit、特定できない場合は master または最新 commit を暫定対象とし、その旨をレポートに明記する
+- 静的解析の対象は配布 version に対応する tag / release / commit のソースとし、配布物との対応の根拠と、VSIX の内容を直接確認していない限界を示す。対応を特定できない場合は master または最新 commit を暫定対象とし、その旨をレポートに明記する
 - Marketplace version と GitHub tag / commit の対応を一次ソースで検証できない場合は、`decision-rules.md`の「許可できる範囲」を適用する
 
 ## サブディレクトリと language server の manifest
 
-- extension が language server を同梱する場合（`vscode-languageclient` / `vscode-languageserver` に依存）、client 側と server 側で別プロセスが動作する
+- language server は client / server の起動箇所・実行ホスト・通信方法を確認する。`vscode-languageclient` / `vscode-languageserver` への依存だけで別 OS プロセスと断定しない。Web Worker で動く server もある
 - ルートの `package.json` に加えて、`client/` / `server/` / `gclient/` / `gserver/` などのサブディレクトリにある `package.json` をすべて列挙し、それぞれの `dependencies` / `devDependencies` / `main` を「依存関係と供給網」と「実行権限と影響範囲」の両方に反映する
 - サブディレクトリが存在するものの内容を取得できない場合は、その旨を「不確実性 / 未確認事項」に残し、`decision-rules.md`の「ecosystem固有の判定影響」を適用する
 
@@ -34,7 +34,7 @@ VS Code 拡張機能の採用前レビューで共通 8 観点に加えて確認
 
 ## manifest（`package.json`）解析
 
-- `main` / `activationEvents` / `contributes` / `capabilities` を確認する
+- 対象環境に応じて `main` / `browser` / `extensionKind` / `activationEvents` / `contributes` / `capabilities` を確認する。VS Code 1.74 以降は一部 contribution に明示的な `activationEvents` が不要なため、その有無だけで実行入口を判断しない
 - `activationEvents` に広域トリガ（`*`、`onStartupFinished`、`workspaceContains:**` 等）が使われていないか
 - `contributes` が次に該当する場合は「実行権限と影響範囲」を高リスクとして扱う
   - `commands` がファイル書き換えや外部プロセス起動を伴う
@@ -66,7 +66,7 @@ bundler 出力だけが公開されている場合は、該当 bundle のソー�
 
 ## 方針 / ライセンス
 
-- Marketplace 上の "Privacy" / "License" 記載と実 license が一致するか
+- Marketplace 上の "License" は repository / package metadata 等の実 license と、"Privacy" は確認できたデータ取得・利用・送信の挙動と照合する
 
 ## 評価への引き渡し
 
