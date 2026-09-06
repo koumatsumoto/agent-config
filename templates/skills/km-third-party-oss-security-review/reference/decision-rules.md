@@ -11,28 +11,28 @@
 
 次のいずれかなら`NEEDS_HUMAN_REVIEW`とし、`ALLOW` / `ALLOW_WITH_CONDITIONS`を選ばない。
 
-- `Artifact Resolution Status != resolved`（tag未特定、複数候補を含む）。
-- ecosystemが不明・曖昧、または推測で絞り込まれている。
-- registry / marketplaceを取得できない。
+- `Artifact Resolution Status != resolved`（tag未特定、複数候補を含む）
+- ecosystemが不明・曖昧、または推測で絞り込まれている
+- registry / marketplaceを取得できない
 
 ## 2. 採用阻害要因
 
 次のいずれかが対象成果物に当たれば`REJECT`。
 
-- 組織の方針違反。
-- 未解決Critical advisory。
-- 明確に危険な実行権限・影響範囲。
-- 信頼できない由来（typosquatting、impersonation、publisher不整合）。
+- 組織の方針違反
+- 未解決Critical advisory
+- 明確に危険な実行権限・影響範囲
+- 信頼できない由来（typosquatting、impersonation、publisher不整合）
 
 ## 3. 許可できる範囲
 
 `ALLOW`は、第2節に該当せず、次をすべて満たす場合だけ。
 
-- 成果物・GitHub repository・ソース（tag / release / commit、vsix等）の対応を一次ソースで検証済み。
-- advisory情報源を確認済みで、対象に未解決Critical / High advisoryがない。
-- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）に未確認事項がない。
-- `yanked` / `deprecated` / `unpublished`ではない。
-- 供給網証明のあるecosystemで、証明欠落とpublisher不整合が同時に生じていない。
+- 成果物・GitHub repository・ソース（tag / release / commit、vsix等）の対応を一次ソースで検証済み
+- advisory情報源を確認済みで、対象に未解決Critical / High advisoryがない
+- 主要観点（提供元と由来、脆弱性、実行権限と影響範囲、公開・配布の整合性）に未確認事項がない
+- `yanked` / `deprecated` / `unpublished`ではない
+- 供給網証明のあるecosystemで、証明欠落とpublisher不整合が同時に生じていない
 
 阻害要因がなく、運用可能な条件で採用できる場合は`ALLOW_WITH_CONDITIONS`。条件の例はversion / tag固定、devDependency / build-time限定、install scripts無効化、本番非投入、secretsアクセス制限。
 証跡や主要要素の欠落、repository対応の未解決・曖昧さ、高いトレードオフ、権限・データ影響を機械的に止めきれない場合など、画一的に決められなければ`NEEDS_HUMAN_REVIEW`。repository対応が曖昧な状態を`ALLOW`にしない。
@@ -40,12 +40,12 @@
 
 ## ecosystem固有の判定影響
 
-- **npm**：新規パッケージで期待されるprovenance statementが欠落するなど、不確実性が残る場合は厳しい判定を選ぶ。
-- **pip**：ネイティブ拡張（C / Rust / Cython）は「実行権限と影響範囲」を一段高いリスクとして扱う。ネイティブ拡張・`.pth`注入・ビルド時ネットワーク取得のいずれかがあれば「利用環境への影響」でも厳しい判定を選ぶ。
+- **npm**：新規パッケージで期待されるprovenance statementが欠落するなど、不確実性が残る場合は厳しい判定を選ぶ
+- **pip**：ネイティブ拡張（C / Rust / Cython）は「実行権限と影響範囲」を一段高いリスクとして扱う。ネイティブ拡張・`.pth`注入・ビルド時ネットワーク取得のいずれかがあれば「利用環境への影響」でも厳しい判定を選ぶ
 
 ここでのリスク評価を最終判定へ反映する段階数と、利用文脈との重複加算は未決。自動的な段階数・加算順を作らず、確認事実と未決の判定影響を分けて示す。
 
-- **VS Code extension**：存在するclient / server等の内容、またはbundler出力の対応ソースを確認できなければ`NEEDS_HUMAN_REVIEW`。
+- **VS Code extension**：存在するclient / server等の内容、またはbundler出力の対応ソースを確認できなければ`NEEDS_HUMAN_REVIEW`
 
 ## 判定を厳しくする条件
 

@@ -6,13 +6,13 @@
 
 冒頭に次のキーを必ず出力する。
 
-- `対象`：入力識別子。
-- `種別 / ecosystem`：`npm` / `pip` / `vscode-extension` / `github-repo`。
-- `Resolved Artifact`：特定した成果物。未解決なら`未特定`。
-- `Artifact Resolution Status`：`resolved` / `candidate` / `unresolved`。
-- `Repository`：解決済みGitHub URL。未解決なら`未特定`。
-- `最終判定`：`ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`。
-- `Review Confidence`：`High` / `Medium` / `Low`。
+- `対象`：入力識別子
+- `種別 / ecosystem`：`npm` / `pip` / `vscode-extension` / `github-repo`
+- `Resolved Artifact`：特定した成果物。未解決なら`未特定`
+- `Artifact Resolution Status`：`resolved` / `candidate` / `unresolved`
+- `Repository`：解決済みGitHub URL。未解決なら`未特定`
+- `最終判定`：`ALLOW` / `ALLOW_WITH_CONDITIONS` / `NEEDS_HUMAN_REVIEW` / `REJECT`
+- `Review Confidence`：`High` / `Medium` / `Low`
 
 ## 必須セクション
 
@@ -34,9 +34,9 @@
 
 ## Review Confidence
 
-- `High`：全8観点が一次ソースで裏付けられ、`Artifact Resolution Status = resolved`。
-- `Medium`：主要観点は一次ソースで確認済みだが、一部に補助ソースまたはunknownが残る。
-- `Low`：`Artifact Resolution Status != resolved`、または主要観点の一次ソースが欠落。
+- `High`：全8観点が一次ソースで裏付けられ、`Artifact Resolution Status = resolved`
+- `Medium`：主要観点は一次ソースで確認済みだが、一部に補助ソースまたはunknownが残る
+- `Low`：`Artifact Resolution Status != resolved`、または主要観点の一次ソースが欠落
 
 VS Code Marketplaceの`Verified Domain`バッジがないpublisherは、提供元の信頼性の不確実要素として確信度を下げる。
 

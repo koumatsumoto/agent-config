@@ -9,10 +9,10 @@
 
 不在はアクセス可否と取得範囲を確かめて判断する。
 
-- `404`だけでrelease / tag不在を断定しない。権限・URL等との区別がつかなければ取得失敗（`unknown`）とする。
-- `GET /repos/{owner}/{repo}/releases/latest`は公開済みの非draft・非prereleaseが対象。正式releaseの不在をprereleaseや全tagの不在へ広げない。
-- releases / tags一覧は、正常取得したアクセス範囲・フィルタ・ページを確認し、その範囲だけで不在を判断する。末尾の空ページだけでは全件不在としない。
-- registry / marketplaceが明示した`yanked` / `deprecated` / `unpublished`は確定状態として扱う。
+- `404`だけでrelease / tag不在を断定しない。権限・URL等との区別がつかなければ取得失敗（`unknown`）とする
+- `GET /repos/{owner}/{repo}/releases/latest`は公開済みの非draft・非prereleaseが対象。正式releaseの不在をprereleaseや全tagの不在へ広げない
+- releases / tags一覧は、正常取得したアクセス範囲・フィルタ・ページを確認し、その範囲だけで不在を判断する。末尾の空ページだけでは全件不在としない
+- registry / marketplaceが明示した`yanked` / `deprecated` / `unpublished`は確定状態として扱う
 
 確認できた不在・公開状態は`unknown`と分けて「公開・配布の整合性」へ反映し、判定は`decision-rules.md`に従う。
 GitHub仕様：[404の扱い](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api#404-not-found-for-an-existing-resource)、[latest releaseの対象](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)。
