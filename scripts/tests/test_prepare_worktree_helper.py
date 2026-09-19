@@ -130,6 +130,98 @@ class PrepareWorktreeHelperTests(unittest.TestCase):
         self.assertFalse(other.exists())
         self.assertTrue((self.destination / "tracked.txt").is_file())
 
+    def test_existing_remote_tracking_branch_is_materialized(self) -> None:
+        self._commit_fixture(create_worktree=False)
+        remote = self.root / "remote.git"
+        self._git(self.root, "init", "--bare", "-q", os.fspath(remote))
+        self._git(self.repo, "remote", "add", "origin", os.fspath(remote))
+        self._git(self.repo, "push", "-q", "origin", "HEAD:refs/heads/work")
+        self._git(self.repo, "fetch", "-q", "origin")
+
+        copied, skipped = prepare_worktree_helper.setup(
+            self.repo, self.destination, "work", existing=True
+        )
+
+        self.assertEqual((copied, skipped), (0, 0))
+        self.assertEqual(
+            self._git(self.destination, "branch", "--show-current").stdout.strip(),
+            "work",
+        )
+        upstream = self._git(
+            self.destination, "rev-parse", "--abbrev-ref", "@{upstream}"
+        ).stdout.strip()
+        self.assertEqual(upstream, "origin/work")
+
+    def test_ambiguous_remote_tracking_branch_is_rejected(self) -> None:
+        self._commit_fixture(create_worktree=False)
+        for name in ("origin", "upstream"):
+            remote = self.root / f"{name}.git"
+            self._git(self.root, "init", "--bare", "-q", os.fspath(remote))
+            self._git(self.repo, "remote", "add", name, os.fspath(remote))
+            self._git(self.repo, "push", "-q", name, "HEAD:refs/heads/work")
+            self._git(self.repo, "fetch", "-q", name)
+
+        with self.assertRaisesRegex(
+            prepare_worktree_helper.PreparationError, "複数"
+        ):
+            prepare_worktree_helper.setup(
+                self.repo, self.destination, "work", existing=True
+            )
+        self.assertFalse(self.destination.exists())
+
+    def test_remote_tracking_branch_requires_exact_branch_name(self) -> None:
+        self._commit_fixture(create_worktree=False)
+        remote = self.root / "remote.git"
+        self._git(self.root, "init", "--bare", "-q", os.fspath(remote))
+        self._git(self.repo, "remote", "add", "origin", os.fspath(remote))
+        self._git(
+            self.repo,
+            "push",
+            "-q",
+            "origin",
+            "HEAD:refs/heads/archive/feat/123-x",
+        )
+        self._git(self.repo, "fetch", "-q", "origin")
+
+        with self.assertRaisesRegex(
+            prepare_worktree_helper.PreparationError, "見つかりません"
+        ):
+            prepare_worktree_helper.setup(
+                self.repo, self.destination, "feat/123-x", existing=True
+            )
+        self.assertFalse(self.destination.exists())
+
+    def test_remote_branch_cannot_select_source_local_files(self) -> None:
+        self._commit_fixture(
+            include=None, extra_ignore="private.env\n", create_worktree=False
+        )
+        remote = self.root / "remote.git"
+        attacker = self.root / "attacker"
+        self._git(self.root, "init", "--bare", "-q", os.fspath(remote))
+        self._git(self.repo, "remote", "add", "origin", os.fspath(remote))
+        self._git(
+            self.repo,
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            "attacker",
+            os.fspath(attacker),
+        )
+        (attacker / ".worktreeinclude").write_text("private.env\n", encoding="utf-8")
+        self._git(attacker, "add", ".worktreeinclude")
+        self._git(attacker, "commit", "-qm", "malicious include")
+        self._git(attacker, "push", "-q", "origin", "HEAD:refs/heads/work")
+        self._git(self.repo, "fetch", "-q", "origin")
+        (self.repo / "private.env").write_text("source secret", encoding="utf-8")
+
+        copied, skipped = prepare_worktree_helper.setup(
+            self.repo, self.destination, "work", existing=True
+        )
+
+        self.assertEqual((copied, skipped), (0, 0))
+        self.assertFalse((self.destination / "private.env").exists())
+
     def test_invalid_base_does_not_create_worktree_or_branch(self) -> None:
         self._commit_fixture(create_worktree=False)
         with self.assertRaises(prepare_worktree_helper.PreparationError):

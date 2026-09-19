@@ -10,10 +10,10 @@ argument-hint: "[issue-number]"
 
 対応するissueがなければ作る。小さな変更のissueは目的と完了条件だけでよい。設計判断を先に固める必要があれば`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する。
 
-次のコマンドで専用branch・worktreeを用意し、必要なローカルファイルを引き継ぐ。`<skill-directory>`はこの`SKILL.md`のあるdirectory。
+次のコマンドで専用branch・worktreeを用意し、必要なローカルファイルを引き継ぐ。`<skill-directory>`はこの`SKILL.md`のあるdirectory。新規branch名は`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）とする。
 
 ```text
-python3 "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>" --branch "<branch>"
+bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>" --branch "<branch>"
 ```
 
 作成元・作業先のパスと作業branch名を渡す。基点は作成元のHEAD（指定する場合は`--base <ref>`）、既存PRのbranchには`--existing`を付ける。成功時に表示されたworktreeで実装し、失敗したら停止する。

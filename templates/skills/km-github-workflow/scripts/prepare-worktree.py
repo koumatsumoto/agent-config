@@ -165,17 +165,19 @@ def prepare(source_arg: Path, destination_arg: Path) -> tuple[int, int]:
     if _common_dir(source) != _common_dir(destination):
         raise PreparationError("sourceとdestinationは同じGit repositoryに属していません")
 
-    include = destination / ".worktreeinclude"
-    if not _is_tracked(destination, ".worktreeinclude"):
+    # The source worktree is the trusted policy owner. An existing PR branch
+    # must not choose which ignored source files are copied into its worktree.
+    include = source / ".worktreeinclude"
+    if not _is_tracked(source, ".worktreeinclude"):
         return 0, 0
     try:
         include_stat = include.lstat()
     except FileNotFoundError as exc:
-        raise PreparationError("tracked .worktreeincludeが見つかりません") from exc
+        raise PreparationError("sourceのtracked .worktreeincludeが見つかりません") from exc
     if not stat.S_ISREG(include_stat.st_mode) or not _within(
-        include.resolve(strict=True), destination
+        include.resolve(strict=True), source
     ):
-        raise PreparationError(".worktreeincludeはworktree内の通常fileである必要があります")
+        raise PreparationError(".worktreeincludeはsource worktree内の通常fileである必要があります")
 
     planned: list[tuple[Path, Path]] = []
     skipped = 0
@@ -248,8 +250,32 @@ def setup(
             raise PreparationError("destinationは別のbranchです")
     elif existing:
         # No force: Git rejects a branch checked out in another worktree.
-        _git(source, "show-ref", "--verify", f"refs/heads/{branch}")
-        _git(source, "worktree", "add", "--", os.fspath(destination), branch)
+        local_ref = f"refs/heads/{branch}"
+        if _git_predicate(source, "show-ref", "--verify", "--quiet", local_ref):
+            _git(source, "worktree", "add", "--", os.fspath(destination), branch)
+        else:
+            remotes = _git(source, "remote").stdout.decode().splitlines()
+            candidates = [f"refs/remotes/{remote}/{branch}" for remote in remotes]
+            matches = sorted(
+                ref
+                for ref in candidates
+                if _git_predicate(source, "show-ref", "--verify", "--quiet", ref)
+            )
+            if not matches:
+                raise PreparationError("既存branchがlocalにもremote-trackingにも見つかりません")
+            if len(matches) > 1:
+                raise PreparationError("同名のremote-tracking branchが複数あります")
+            _git(
+                source,
+                "worktree",
+                "add",
+                "--track",
+                "-b",
+                branch,
+                "--",
+                os.fspath(destination),
+                matches[0],
+            )
     else:
         _git(source, "worktree", "add", "-b", branch, "--", os.fspath(destination), base)
 

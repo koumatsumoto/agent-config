@@ -17,10 +17,15 @@ class SkillHelperContractTests(unittest.TestCase):
     def test_worktree_helper_invocation_contract(self) -> None:
         skill = (SKILLS / "km-github-workflow/SKILL.md").read_text(encoding="utf-8")
         self.assertIn(
-            'python3 "<skill-directory>/scripts/prepare-worktree.py" '
+            'bash "<skill-directory>/scripts/run-python.sh" '
+            '"<skill-directory>/scripts/prepare-worktree.py" '
             '"<source-root>" "<destination-root>" --branch "<branch>"',
             skill,
         )
+        self.assertIn(
+            '`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）', skill
+        )
+        self.assertTrue((SKILLS / "km-github-workflow/scripts/run-python.sh").is_file())
         self.assertTrue((SKILLS / "km-github-workflow/scripts/prepare-worktree.py").is_file())
 
 
