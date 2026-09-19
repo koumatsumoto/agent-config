@@ -27,6 +27,13 @@ class SkillHelperContractTests(unittest.TestCase):
         )
         self.assertTrue((SKILLS / "km-github-workflow/scripts/run-python.sh").is_file())
         self.assertTrue((SKILLS / "km-github-workflow/scripts/prepare-worktree.py").is_file())
+        self.assertIn(
+            'bash "<skill-directory>/scripts/run-python.sh" '
+            '"<skill-directory>/scripts/cleanup-worktree.py" '
+            '"<source-root>" "<destination-root>" --branch "<branch>"',
+            skill,
+        )
+        self.assertTrue((SKILLS / "km-github-workflow/scripts/cleanup-worktree.py").is_file())
 
 
 if __name__ == "__main__":

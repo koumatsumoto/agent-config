@@ -36,7 +36,13 @@ non-blockingの解消だけを目的に反復しない。
 - issueを完了するPRには独立行で`Closes #N`、中間PRには`Refs #N`を書く
 - CIを確認し、PR URL・変更の要約・検証結果を報告する。未確認・失敗も明示する
 
-現在または元の依頼にマージが含まれる場合だけマージする。完了確認後に基点branch側のworktreeへ戻り、今回のworktreeを削除して結果を報告する。削除前に対象パスと未コミット変更がないことを確認し、強制削除しない。
+現在または元の依頼にマージが含まれる場合だけマージする。review・CIを満たしてGitHub上のマージ完了を確認した後、基点branch側のworktreeから次のコマンドを実行する。
+
+```text
+bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/cleanup-worktree.py" "<source-root>" "<destination-root>" --branch "<branch>"
+```
+
+sourceには基点branch側のworktree root、destinationには今回作成したworktree root、branchには今回の作業branch名を渡す。成功したら削除結果を報告し、失敗したら作業内容が保持された状態で停止して理由を報告する。
 
 ## GitHub操作の制約
 
