@@ -16,8 +16,6 @@ class SkillHelperContractTests(unittest.TestCase):
 
     def test_worktree_helper_has_deterministic_invocation_contract(self) -> None:
         skill = (SKILLS / "km-github-workflow/SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("(references/worktree.md)", skill)
-        skill = (SKILLS / "km-github-workflow/references/worktree.md").read_text(encoding="utf-8")
         self.assertLess(skill.index("`python3`"), skill.index("`python`"))
         self.assertIn("sys.version_info >= (3, 9)", skill)
         self.assertIn(
