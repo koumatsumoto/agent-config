@@ -127,6 +127,8 @@ INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 # a --claude-dir profile retires the same slice it used to receive.
 DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".claude/output-styles/fable-like.md",
+    ".claude/skills/km-commit/SKILL.md",
+    ".agents/skills/km-commit/SKILL.md",
 )
 
 

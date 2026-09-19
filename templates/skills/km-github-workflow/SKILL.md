@@ -1,61 +1,47 @@
 ---
 name: km-github-workflow
-description: GitHubリポジトリの変更をissue・PRとして提出する。「PRにして」などの依頼で使い、明示された場合だけマージまで行う。
+description: GitHub管理リポジトリの変更の実装・PR提出に使う。issueから提出まで進め、明示された場合だけマージする。計画のみ・レビューのみ・コミットのみの依頼は対象外。
 argument-hint: "[issue-number]"
 ---
 
 # GitHub Workflow
 
-issueからPR提出までを管理する。計画は`km-plan`、読み取り専用レビューは`km-review`、commitは`km-commit`へ委ねる。レビュー後の修正・再確認はこのスキルが管理する。
+## 準備
 
-## Issueと作業場所
+対応するissueと作業branch・worktreeを確認し、不足分を用意する。小さな変更のissueは目的と完了条件だけでよい。設計判断を先に固める必要があれば`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する。
 
-- 変更ごとにissueを作り、PRと対応させる。論点が少なければ目的と完了条件だけでよい。複雑で誤方向の手戻りが大きい場合は`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する
-- 着手前に既存worktree・branch・配置先を確認し、基点branchから作業branchと専用worktreeを作る。既存worktreeを削除せず、別作業のbranchを再利用しない
-- branch名は`<type>/<issue番号>-<slug>`、issueがなければ`<type>/<slug>`。既存PRの更新にはそのbranch専用のworktreeを使い、なければ作成する
-- 実装は専用worktree内だけで行う。基点branch側や別作業のworktreeを使わない
+実装は専用branch・worktreeで行う。既存PRはそのbranchを使い、新規branchは基点branchから作る。名前は`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）とする。既存worktreeを削除せず、別作業のbranchを再利用しない。
 
-### worktreeの準備
-
-作成直後に、`python3`、次に`python`で`-c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'`を実行し、最初に成功したinterpreterを使う。どちらも失敗したら停止する。
-読み込んだ`SKILL.md`の実在directoryからhelperを解決し、そこへ`cd`せず、作成元と作成先のworktree rootを渡す。
+worktreeを作成した場合は、`python3`、次に`python`で`-c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'`を試し、最初に成功したinterpreterで次を実行する。`<skill-directory>`はこの`SKILL.md`の実在directoryとし、そこへ`cd`しない。
 
 ```text
 "<python>" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>"
 ```
 
-正常終了（no-op / matchなしを含む）なら実装へ進む。失敗したworktreeでは作業を始めない。
+interpreterが見つからない、またはhelperが失敗した場合は停止する。no-opを含む正常終了なら実装へ進む。
 
-## 実装・検証・レビュー
+## 実装・レビュー
 
-依頼範囲を実装し、完了条件・差分・テスト結果を確認して`km-review`を実行する。判定を受け取った時点でレビュー工程を終える。
+実装と検証を終えたら`km-review`を使い、判定に応じて進める。
 
-- `PASS`：提出へ進む
-- `BLOCKED`：issueの範囲内で未解決blockerを最小限修正し、関連検証を実行して`km-review --recheck`で再確認する
-- `NOOP`：対象と完了条件を照合する。提出すべき変更がなければ終了し、対象の指定漏れなら指定を直してレビューする
+- `PASS`：提出する
+- `BLOCKED`：issueの範囲内でblockerを修正し、関連検証後に`km-review --recheck`で確認する。安全に修正できない、必要な検証ができない、またはユーザー判断が必要なら論点を報告して停止する
+- `NOOP`：提出すべき変更がなければ終了する。対象の指定漏れなら指定を直してレビューする
 
-MEDIUM・LOWのnon-blockingをゼロにするために反復しない。既存の権限・要件内で安全に解消できない、必要な検証ができない、またはユーザー判断が必要な場合は`BLOCKED`として論点を報告して停止する。
+non-blockingの解消だけを目的に反復しない。
 
-## 提出・マージ
+## 提出
 
-### PRの提出
+レビュー済みの変更を、一つの目的で説明・取り消せる単位でcommitする。作業branchをpushし、PRを作成または更新する。
 
-`km-commit`でcommitし、作業branchをpushしてPRを作成または更新する。CIを確認し、未確認・失敗もそのまま報告する。マージ依頼がなければマージ工程へは進まず、最後の報告を行う。
+- 本文には変更の背景・主要な判断・検証結果を書く。issueの`実装時確認事項`があれば、確認結果または対応しない理由も含める
+- issueを完了するPRには独立行で`Closes #N`、中間PRには`Refs #N`を書く
+- CIを確認し、PR URL・変更の要約・検証結果を報告する。未確認・失敗も明示する
 
-### マージと後片付け
+現在または元の依頼にマージが含まれる場合だけマージする。完了確認後に基点branch側のworktreeへ戻り、今回のworktreeを削除して結果を報告する。削除前に対象パスと未コミット変更がないことを確認し、強制削除しない。
 
-現在の依頼または元の作業指示にマージが含まれる場合だけ、レビューを完了したPRをマージする。
-マージ完了を確認してから基点branch側のworktreeへ戻る。削除するのは今回の専用worktreeだけとし、対象パスと未コミット変更の有無を確認する。未コミット変更がなければ削除し、失敗しても強制削除しない。
+## GitHub操作の制約
 
-### 最後の報告
-
-PR URL、変更の要約、検証結果、マージした場合はその結果を報告する。
-
-## GitHubへの反映
-
-- 基点branchへの取り込みはPR経由に限る。基点branchへ直接commit・push・mergeせず、force pushもしない
-- PR本文には最終差分の背景・主要な判断・検証結果だけを書く。内部タスク、逐次ログ、レビュー対応履歴は残さない
-- `km-plan`管理issueの`実装時確認事項`があれば、各項目の確認結果または対応しない理由をPR本文へ書く
-- issueを完了するPRには独立行で`Closes #N`を書く。中間PRは`Refs #N`とする
-- 無関係な未コミット変更を含めず、issue・PRに秘密情報、非公開情報、個人環境を識別できる情報を載せない
-- issue・PR本文は`--body-file`で渡す。`--body`とクォートなしheredocは使わない
+- 基点branchへの取り込みはPR経由に限り、直接commit・push・mergeやforce pushをしない
+- 無関係な変更を含めず、issue・PRに秘密情報、非公開情報、個人環境を識別できる情報を載せない
+- issue・PR本文は一時ファイルから`--body-file`で渡す。`--body`とクォートなしheredocは使わない

@@ -14,10 +14,15 @@
 
 ## ワークフロー
 
-GitHub管理リポジトリの変更依頼は、PRへの言及がなくても`km-github-workflow`に従ってissueからPR提出まで進める。複雑で誤方向の手戻りが大きい計画には`km-plan`を使う。
+GitHub管理リポジトリの実装・提出は`km-github-workflow`に従う。
 
-完了条件との照合と、read-only quality gateとしての`km-review`はどちらも省略しない。レビュー判定後の修正・再確認・提出は`km-github-workflow`が管理する。
+実装後は完了条件と照合し、`km-review`で読み取り専用のレビューを行う。
 
 ## 記録方針
 
-コードコメントやドキュメントには現在の動作と設計理由を書く。変更の経緯・作業履歴・過去状態は commit / PR に残し、現在の設計説明へ混ぜない。履歴自体を扱う CHANGELOG、migration guide、deprecation は除く。
+コードコメントやドキュメントには現在の動作と設計理由を書く。変更の履歴は commit / PR や CHANGELOG に残す。内部タスク・逐次ログ・レビュー往復は成果物へ混ぜない。
+
+## コミット規約
+
+件名は `type: 日本語の要約` または `type(scope): 日本語の要約`。type / scope は英語、scope は実在する directory / package / skill 名とする。本文には必要な設計判断の理由、末尾には関連 issue の `Refs #N` を書く。
+必要なファイルを個別にステージし、`git add -A` / `git add .` と `git commit --no-verify` は使わない。

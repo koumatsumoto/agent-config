@@ -1578,6 +1578,23 @@ class VerifyTests(unittest.TestCase):
             self.assertEqual(cli.verify(self.layout).failures, [])
         self.assertFalse(settings.is_symlink())
 
+    def test_retired_commit_skill_is_backed_up_in_each_layout(self) -> None:
+        for alternate in (False, True):
+            layout = cli.claude_dir_layout(self.home / "other", self.home) if alternate else self.layout
+            with self.subTest(alternate=alternate), patch("sys.stdout", new=StringIO()):
+                cli.install(layout)
+                retired = [layout.root / rel for rel in layout.retired_dests if rel.endswith("/km-commit/SKILL.md")]
+                self.assertEqual(len(retired), 1 if alternate else 2)
+                for skill in retired:
+                    skill.parent.mkdir(parents=True)
+                    skill.write_text("old commit skill", encoding="utf-8")
+                cli.install(layout)
+                cli.install(layout)
+                for skill in retired:
+                    self.assertFalse(skill.exists())
+                    self.assertEqual(skill.with_name(skill.name + ".bak").read_text(encoding="utf-8"), "old commit skill")
+                self.assertEqual(cli.verify(layout).failures, [])
+
     def test_retired_path_is_not_converged(self) -> None:
         for alternate in (False, True):
             layout = cli.claude_dir_layout(self.home / "other", self.home) if alternate else self.layout
