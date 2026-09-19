@@ -3,6 +3,19 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+const GIT_TARGET_ENVIRONMENT = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_COMMON_DIR",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_CONFIG",
+  "GIT_CONFIG_GLOBAL",
+  "GIT_CONFIG_SYSTEM",
+  "GIT_CONFIG_COUNT",
+];
+
 export class PrepareReviewError extends Error {
   constructor(message, exitCode) {
     super(message);
@@ -15,10 +28,27 @@ function fail(message, exitCode) {
   throw new PrepareReviewError(message, exitCode);
 }
 
+function removeEnvironmentVariable(environment, variable) {
+  if (process.platform !== "win32") {
+    delete environment[variable];
+    return;
+  }
+  for (const key of Object.keys(environment)) {
+    if (key.toUpperCase() === variable.toUpperCase()) delete environment[key];
+  }
+}
+
 export function runCommand(command, args, options = {}) {
   const environment = { ...process.env, ...options.env };
-  for (const variable of options.unsetEnv ?? []) delete environment[variable];
-  if (command === "git") environment.GIT_OPTIONAL_LOCKS = "0";
+  for (const variable of options.unsetEnv ?? []) {
+    removeEnvironmentVariable(environment, variable);
+  }
+  if (command === "git") {
+    for (const variable of GIT_TARGET_ENVIRONMENT) {
+      removeEnvironmentVariable(environment, variable);
+    }
+    environment.GIT_OPTIONAL_LOCKS = "0";
+  }
   return spawnSync(command, args, {
     cwd: options.cwd,
     encoding: "utf8",

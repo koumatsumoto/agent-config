@@ -108,6 +108,35 @@ test("worktree mode separates clean, changes, ignored files, and status errors",
   });
 });
 
+test("Git target environment cannot redirect the helper away from cwd", (t) => {
+  const root = createRepository(t);
+  const redirected = createRepository(t);
+  const tempBase = fs.mkdtempSync(path.join(os.tmpdir(), "prepare-review-git-env-test-"));
+  t.after(() => fs.rmSync(tempBase, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(redirected, "tracked.txt"), "redirected\n");
+  git(redirected, "commit", "-am", "redirected");
+
+  const pollutedRunner = (name, args, options) => runCommand(name, args, {
+    ...options,
+    env: name === "git"
+      ? {
+        GIT_DIR: path.join(redirected, ".git"),
+        GIT_WORK_TREE: redirected,
+      }
+      : options.env,
+  });
+  const expectedHead = git(root, "rev-parse", "HEAD");
+  const descriptor = prepareReview(["HEAD"], {
+    cwd: root,
+    runner: pollutedRunner,
+    tempDirectory: tempBase,
+  });
+  assert.equal(descriptor.repositoryRoot, root);
+  assert.equal(descriptor.headSha, expectedHead);
+  assert.equal(descriptor.target.sha, expectedHead);
+  t.after(() => fs.rmSync(descriptor.workspaceDir, { recursive: true, force: true }));
+});
+
 test("commit resolution uses --end-of-options and never falls back", (t) => {
   const root = createRepository(t);
   const repository = repositoryDescriptor(root);
