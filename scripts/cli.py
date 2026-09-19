@@ -129,6 +129,8 @@ DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".claude/output-styles/fable-like.md",
     ".claude/skills/km-commit/SKILL.md",
     ".agents/skills/km-commit/SKILL.md",
+    ".claude/skills/km-third-party-oss-security-review",
+    ".agents/skills/km-third-party-oss-security-review",
 )
 
 
@@ -520,25 +522,37 @@ def prune_tree(src_root: Path, dest_root: Path, *, boundary: Path) -> list[Path]
     return pruned
 
 
-def remove_decommissioned_paths(layout: Layout) -> list[Path]:
+def decommissioned_backup_path(target: Path) -> Path:
+    """Keep retired skill directories outside the discovery root."""
+    if target.parent.name == "skills":
+        return target.parent.with_name(target.parent.name + ".bak") / target.name
+    return target.with_name(target.name + ".bak")
+
+
+def remove_decommissioned_paths(layout: Layout) -> list[tuple[Path, Path]]:
     """Retire deployed destinations the manifest no longer maintains.
 
-    Each retired path (file or directory) is moved to its single-generation
-    .bak (recoverable), mirroring how clean() removes managed paths. Absent
-    paths are skipped.
+    Each retired path is moved to a single-generation recoverable backup.
+    Skill directories are backed up outside the discovery root, mirroring how
+    clean() removes managed skills. Absent paths are skipped.
 
     Retirements are global constants carried by the layout rather than
     per-component specs, so they are filtered by the layout's managed dirs
     like every other write: retiring something under a component this layout
     does not select must not reach into that component's directory.
     """
-    removed: list[Path] = []
+    removed: list[tuple[Path, Path]] = []
     for rel in layout.retired_dests:
         target = layout.root / rel
         if not any(is_within(target, managed) for managed in layout.managed_dirs):
             continue
-        if remove_with_backup(target) == "backed_up":
-            removed.append(target)
+        bak = decommissioned_backup_path(target)
+        if bak.parent.is_symlink() or (bak.parent.exists() and not bak.parent.is_dir()):
+            raise PermissionError(f"refusing to use non-directory backup root: {bak.parent}")
+        if not any(is_within(bak, managed) for managed in layout.managed_dirs):
+            raise PermissionError(f"refusing to back up outside install dirs: {bak}")
+        if backup(target, destination=bak) is not None:
+            removed.append((target, bak))
     return removed
 
 
@@ -882,8 +896,8 @@ def install(layout: Layout, repo_root: Path = REPO_ROOT) -> int:
             for dest in prune_tree(src_root, dest_root, boundary=boundary):
                 print(f"pruned: {dest}")
 
-    for dest in remove_decommissioned_paths(layout):
-        print(f"backup: {dest}.bak")
+    for dest, bak in remove_decommissioned_paths(layout):
+        print(f"backup: {bak}")
         print(f"removed (obsolete config): {dest}")
 
     # `sys.executable` is the interpreter running this installer: guaranteed to
