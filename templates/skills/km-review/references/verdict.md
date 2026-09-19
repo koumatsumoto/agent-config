@@ -18,7 +18,7 @@
 
 ## レポート
 
-OSまたは実行環境の一時領域に実行ごとの一意なディレクトリを作り、`integration.md`を置く。固定パス・特定OSを前提にせず、リポジトリ、`.gitignore`、`.git/info/exclude`を変更しない。subagentへは絶対パスで渡し、一時ファイルをセッションをまたぐ正本にしない。
+helperが返した`integrationPath`へ`integration.md`を保存する。隔離した検証用コピーには同じdescriptorの`workspaceDir`を使う。subagentへは絶対パスで渡し、一時ファイルをセッションをまたぐ正本にしない。
 
 次を報告し、該当しない項目は省く。
 
