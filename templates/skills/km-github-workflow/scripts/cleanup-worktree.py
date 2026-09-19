@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -14,13 +17,19 @@ class CleanupError(RuntimeError):
     pass
 
 
-def _git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[bytes]:
+def _git(
+    root: Path,
+    *args: str,
+    check: bool = True,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[bytes]:
     try:
         return subprocess.run(
             ["git", "-C", os.fspath(root), *args],
             check=check,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=env,
         )
     except FileNotFoundError as exc:
         raise CleanupError("git commandが見つかりません") from exc
@@ -60,18 +69,187 @@ def _checked_branch(source: Path, branch: str) -> str:
     return f"refs/heads/{branch}"
 
 
-def _has_hidden_tracked_state(root: Path) -> bool:
+def _git_predicate(root: Path, *args: str) -> bool:
+    result = _git(root, *args, check=False)
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    message = result.stderr.decode("utf-8", errors="replace").strip()
+    raise CleanupError(message or f"git {' '.join(args)} に失敗しました")
+
+
+def _exists_without_following(path: Path) -> bool:
+    try:
+        path.lstat()
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def _hidden_tracked_changes(root: Path) -> bool:
     entries = _git(root, "ls-files", "-v", "-z").stdout.split(b"\0")
+    checks: list[tuple[str, bool, bool]] = []
     for entry in entries:
         if not entry:
             continue
         if len(entry) < 3 or entry[1:2] != b" ":
             raise CleanupError("tracked fileのindex状態を確認できません")
         tag = entry[0]
-        # `S` is skip-worktree; lowercase tags mean assume-unchanged.
-        if tag == ord("S") or ord("a") <= tag <= ord("z"):
+        skip_worktree = tag in (ord("S"), ord("s"))
+        assume_unchanged = ord("a") <= tag <= ord("z")
+        if not skip_worktree and not assume_unchanged:
+            continue
+        relative = entry[2:].decode("utf-8", errors="surrogateescape")
+        # An absent skip-worktree entry is the normal sparse-checkout state.
+        if skip_worktree and not _exists_without_following(root / relative):
+            continue
+        checks.append((relative, skip_worktree, assume_unchanged))
+
+    if not checks:
+        return False
+
+    index_value = _git(
+        root, "rev-parse", "--path-format=absolute", "--git-path", "index"
+    ).stdout.decode().strip()
+    index = Path(index_value).resolve(strict=True)
+    temporary_fd, temporary_name = tempfile.mkstemp(prefix="cleanup-worktree-index-")
+    os.close(temporary_fd)
+    temporary_index = Path(temporary_name)
+    try:
+        shutil.copyfile(index, temporary_index)
+        temporary_env = os.environ.copy()
+        temporary_env["GIT_INDEX_FILE"] = os.fspath(temporary_index)
+        for relative, skip_worktree, assume_unchanged in checks:
+            if skip_worktree:
+                _git(
+                    root,
+                    "update-index",
+                    "--no-skip-worktree",
+                    "--",
+                    relative,
+                    env=temporary_env,
+                )
+            if assume_unchanged:
+                _git(
+                    root,
+                    "update-index",
+                    "--no-assume-unchanged",
+                    "--",
+                    relative,
+                    env=temporary_env,
+                )
+        result = _git(
+            root,
+            "diff-files",
+            "--quiet",
+            "--ignore-submodules=none",
+            "--",
+            check=False,
+            env=temporary_env,
+        )
+        if result.returncode == 0:
+            return False
+        if result.returncode == 1:
             return True
-    return False
+        message = result.stderr.decode("utf-8", errors="replace").strip()
+        raise CleanupError(message or "index flagで隠れた変更の確認に失敗しました")
+    finally:
+        temporary_index.unlink(missing_ok=True)
+
+
+def _ignored_untracked(root: Path) -> list[str]:
+    result = _git(
+        root,
+        "ls-files",
+        "--others",
+        "--ignored",
+        "-z",
+        "--exclude-standard",
+    )
+    return [
+        item.decode("utf-8", errors="surrogateescape")
+        for item in result.stdout.split(b"\0")
+        if item
+    ]
+
+
+def _matching_source_files(source: Path, include: Path) -> set[str]:
+    result = _git(
+        source,
+        "ls-files",
+        "--others",
+        "--ignored",
+        "-z",
+        f"--exclude-from={include}",
+    )
+    return {
+        item.decode("utf-8", errors="surrogateescape")
+        for item in result.stdout.split(b"\0")
+        if item
+    }
+
+
+def _same_regular_file(left: Path, right: Path, left_root: Path, right_root: Path) -> bool:
+    try:
+        left_stat = left.lstat()
+        right_stat = right.lstat()
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(left_stat.st_mode) or not stat.S_ISREG(right_stat.st_mode):
+        return False
+    try:
+        if not left.resolve(strict=True).is_relative_to(left_root):
+            return False
+        if not right.resolve(strict=True).is_relative_to(right_root):
+            return False
+    except (OSError, RuntimeError):
+        return False
+
+    with left.open("rb") as left_file, right.open("rb") as right_file:
+        while True:
+            left_chunk = left_file.read(1024 * 1024)
+            right_chunk = right_file.read(1024 * 1024)
+            if left_chunk != right_chunk:
+                return False
+            if not left_chunk:
+                return True
+
+
+def _ignored_files_are_disposable(source: Path, destination: Path) -> bool:
+    ignored = _ignored_untracked(destination)
+    if not ignored:
+        return True
+
+    include = source / ".worktreeinclude"
+    if not _git_predicate(source, "ls-files", "--error-unmatch", "--", ".worktreeinclude"):
+        return False
+    try:
+        include_stat = include.lstat()
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(include_stat.st_mode) or not include.resolve(
+        strict=True
+    ).is_relative_to(source):
+        return False
+
+    matching = _matching_source_files(source, include)
+    for relative in ignored:
+        path = Path(relative)
+        if path.is_absolute() or ".." in path.parts or relative not in matching:
+            return False
+        if _git_predicate(source, "ls-files", "--error-unmatch", "--", relative):
+            return False
+        if not _git_predicate(source, "check-ignore", "-q", "--", relative):
+            return False
+        if not _same_regular_file(
+            source / relative,
+            destination / relative,
+            source,
+            destination,
+        ):
+            return False
+    return True
 
 
 def cleanup(source_arg: Path, destination_arg: Path, branch: str) -> Path:
@@ -92,21 +270,19 @@ def cleanup(source_arg: Path, destination_arg: Path, branch: str) -> Path:
     if current.stdout.decode().strip() != expected_ref:
         raise CleanupError("destinationは別のbranchです")
 
-    if _has_hidden_tracked_state(destination):
-        raise CleanupError(
-            "destinationに変更を隠すindex flagが設定されたtracked fileがあります"
-        )
-
     status = _git(
         destination,
         "status",
         "--porcelain=v1",
         "-z",
         "--untracked-files=all",
-        "--ignored=matching",
     )
     if status.stdout:
         raise CleanupError("destinationに未コミットまたは未追跡の作業があります")
+    if _hidden_tracked_changes(destination):
+        raise CleanupError("destinationにindex flagで隠れた変更があります")
+    if not _ignored_files_are_disposable(source, destination):
+        raise CleanupError("destinationに削除可能と確認できないignored fileがあります")
 
     _git(source, "worktree", "remove", "--", os.fspath(destination))
     return destination

@@ -17,6 +17,13 @@ SPEC = importlib.util.spec_from_file_location("cleanup_worktree_helper", HELPER)
 assert SPEC is not None and SPEC.loader is not None
 cleanup_worktree_helper = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cleanup_worktree_helper)
+PREPARE_HELPER = REPO_ROOT / "templates/skills/km-github-workflow/scripts/prepare-worktree.py"
+PREPARE_SPEC = importlib.util.spec_from_file_location(
+    "prepare_worktree_helper_for_cleanup", PREPARE_HELPER
+)
+assert PREPARE_SPEC is not None and PREPARE_SPEC.loader is not None
+prepare_worktree_helper = importlib.util.module_from_spec(PREPARE_SPEC)
+PREPARE_SPEC.loader.exec_module(prepare_worktree_helper)
 
 
 class CleanupWorktreeHelperTests(unittest.TestCase):
@@ -117,6 +124,19 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
             (self.destination / "tracked.txt").read_text(), "hidden change"
         )
 
+    def test_clean_assume_unchanged_file_is_allowed(self) -> None:
+        self._git(
+            self.destination,
+            "update-index",
+            "--assume-unchanged",
+            "tracked.txt",
+        )
+
+        result = self._run()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.destination.exists())
+
     def test_skip_worktree_file_is_rejected(self) -> None:
         self._git(
             self.destination,
@@ -133,6 +153,22 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
         self.assertEqual(
             (self.destination / "tracked.txt").read_text(), "hidden change"
         )
+
+    def test_clean_sparse_checkout_is_allowed(self) -> None:
+        (self.destination / "included").mkdir()
+        (self.destination / "included/file.txt").write_text("included", encoding="utf-8")
+        (self.destination / "excluded").mkdir()
+        (self.destination / "excluded/file.txt").write_text("excluded", encoding="utf-8")
+        self._git(self.destination, "add", "included", "excluded")
+        self._git(self.destination, "commit", "-qm", "sparse fixture")
+        self._git(self.destination, "sparse-checkout", "init", "--cone")
+        self._git(self.destination, "sparse-checkout", "set", "included")
+        self.assertFalse((self.destination / "excluded/file.txt").exists())
+
+        result = self._run()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.destination.exists())
 
     def test_untracked_file_is_rejected(self) -> None:
         marker = self.destination / "new.txt"
@@ -156,6 +192,38 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assert_destination_preserved()
         self.assertEqual(marker.read_text(), "keep")
+
+    def test_prepare_copy_is_disposable_but_changed_copy_is_rejected(self) -> None:
+        self._git(self.repo, "worktree", "remove", os.fspath(self.destination))
+        self._git(self.repo, "branch", "-D", "work")
+        (self.repo / ".gitignore").write_text(".env\n", encoding="utf-8")
+        (self.repo / ".worktreeinclude").write_text(".env\n", encoding="utf-8")
+        self._git(self.repo, "add", ".gitignore", ".worktreeinclude")
+        self._git(self.repo, "commit", "-qm", "prepare policy")
+        (self.repo / ".env").write_text("source value", encoding="utf-8")
+
+        copied, skipped = prepare_worktree_helper.setup(
+            self.repo, self.destination, "work"
+        )
+        self.assertEqual((copied, skipped), (1, 0))
+        self.assertEqual((self.destination / ".env").read_text(), "source value")
+        removed = cleanup_worktree_helper.cleanup(
+            self.repo, self.destination, "work"
+        )
+        self.assertEqual(removed, self.destination)
+        self.assertFalse(self.destination.exists())
+
+        changed = self.root / "changed"
+        copied, skipped = prepare_worktree_helper.setup(
+            self.repo, changed, "work-changed"
+        )
+        self.assertEqual((copied, skipped), (1, 0))
+        (changed / ".env").write_text("changed value", encoding="utf-8")
+        with self.assertRaises(cleanup_worktree_helper.CleanupError):
+            cleanup_worktree_helper.cleanup(
+                self.repo, changed, "work-changed"
+            )
+        self.assertEqual((changed / ".env").read_text(), "changed value")
 
     def test_different_branch_is_rejected(self) -> None:
         result = self._run(branch="other")
@@ -206,11 +274,14 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
 
     def test_remove_failure_preserves_destination_and_branch(self) -> None:
         def fail_remove(
-            root: Path, *args: str, check: bool = True
+            root: Path,
+            *args: str,
+            check: bool = True,
+            env: dict[str, str] | None = None,
         ) -> subprocess.CompletedProcess[bytes]:
             if args[:2] == ("worktree", "remove"):
                 raise cleanup_worktree_helper.CleanupError("injected failure")
-            return original_git(root, *args, check=check)
+            return original_git(root, *args, check=check, env=env)
 
         original_git = cleanup_worktree_helper._git
         with patch.object(cleanup_worktree_helper, "_git", side_effect=fail_remove):
@@ -228,10 +299,13 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
         original_git = cleanup_worktree_helper._git
 
         def record_git(
-            root: Path, *args: str, check: bool = True
+            root: Path,
+            *args: str,
+            check: bool = True,
+            env: dict[str, str] | None = None,
         ) -> subprocess.CompletedProcess[bytes]:
             calls.append(args)
-            return original_git(root, *args, check=check)
+            return original_git(root, *args, check=check, env=env)
 
         with patch.object(cleanup_worktree_helper, "_git", side_effect=record_git):
             cleanup_worktree_helper.cleanup(self.repo, self.destination, "work")
