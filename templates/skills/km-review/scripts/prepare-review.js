@@ -16,13 +16,13 @@ function fail(message, exitCode) {
 }
 
 export function runCommand(command, args, options = {}) {
-  const gitEnvironment = command === "git"
-    ? { ...process.env, ...options.env, GIT_OPTIONAL_LOCKS: "0" }
-    : { ...process.env, ...options.env };
+  const environment = { ...process.env, ...options.env };
+  for (const variable of options.unsetEnv ?? []) delete environment[variable];
+  if (command === "git") environment.GIT_OPTIONAL_LOCKS = "0";
   return spawnSync(command, args, {
     cwd: options.cwd,
     encoding: "utf8",
-    env: gitEnvironment,
+    env: environment,
     shell: false,
   });
 }
@@ -72,15 +72,19 @@ export function parseArguments(args) {
   return result;
 }
 
-function commandFailure(result, message, exitCode) {
-  if (result.error || result.status === null) fail(message, exitCode);
-  if (result.status !== 0) fail(message, exitCode);
+function commandFailure(result, message, nonZeroExitCode) {
+  if (result.error || result.status === null) fail(message, 4);
+  if (result.status !== 0) fail(message, nonZeroExitCode);
   return result.stdout.trim();
 }
 
-function isWithin(candidate, root) {
-  const relative = path.relative(root, candidate);
-  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== "..");
+export function isWithin(candidate, root, pathApi = path) {
+  const relative = pathApi.relative(root, candidate);
+  return relative === "" || (
+    !pathApi.isAbsolute(relative)
+    && !relative.startsWith(`..${pathApi.sep}`)
+    && relative !== ".."
+  );
 }
 
 export function resolveRepository(cwd, runner = runCommand) {
@@ -171,7 +175,7 @@ export function resolvePr(input, repositoryRoot, runner = runCommand) {
   const identityResult = runner(
     "gh",
     ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
-    { cwd: repositoryRoot },
+    { cwd: repositoryRoot, unsetEnv: ["GH_REPO"] },
   );
   const nameWithOwner = commandFailure(
     identityResult,

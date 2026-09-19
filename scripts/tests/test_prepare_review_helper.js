@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 import {
   PrepareReviewError,
   createWorkspace,
+  isWithin,
   parseArguments,
   parseRange,
   prepareReview,
@@ -123,6 +124,11 @@ test("commit resolution uses --end-of-options and never falls back", (t) => {
     () => resolveTarget(parseArguments(["missing-revision"]), repository, recordingRunner),
     3,
   );
+  const spawnFailure = () => ({ status: null, stdout: "", stderr: "", error: new Error("spawn") });
+  expectPrepareError(
+    () => resolveTarget(parseArguments(["HEAD"]), repository, spawnFailure),
+    4,
+  );
 });
 
 test("two-dot and three-dot ranges resolve immutable SHAs and detect emptiness", (t) => {
@@ -149,9 +155,13 @@ test("two-dot and three-dot ranges resolve immutable SHAs and detect emptiness",
 
 test("PR resolution supports quoted shorthand and same-repository URLs", () => {
   const calls = [];
-  const runner = (name, args) => {
-    calls.push([name, args]);
-    if (args[0] === "repo") return { status: 0, stdout: "owner/repo\n", stderr: "" };
+  let changedFiles = 2;
+  const runner = (name, args, options) => {
+    calls.push([name, args, options]);
+    if (args[0] === "repo") {
+      assert.deepEqual(options.unsetEnv, ["GH_REPO"]);
+      return { status: 0, stdout: "owner/repo\n", stderr: "" };
+    }
     if (args[0] === "api") {
       return {
         status: 0,
@@ -160,7 +170,7 @@ test("PR resolution supports quoted shorthand and same-repository URLs", () => {
           html_url: "https://github.com/owner/repo/pull/123",
           base: { sha: "a".repeat(40) },
           head: { sha: "b".repeat(40) },
-          changed_files: 2,
+          changed_files: changedFiles,
         }),
         stderr: "",
       };
@@ -173,6 +183,8 @@ test("PR resolution supports quoted shorthand and same-repository URLs", () => {
     assert.equal(result.empty, false);
     assert.equal(result.target.number, 123);
   }
+  changedFiles = 0;
+  assert.equal(resolvePr("#123", "/repo", runner).empty, true);
   assert.deepEqual(parseArguments(["#123"]).target, "#123");
   expectPrepareError(
     () => resolvePr("https://github.com/elsewhere/repo/pull/123", "/repo", runner),
@@ -184,6 +196,22 @@ test("PR resolution supports quoted shorthand and same-repository URLs", () => {
   };
   expectPrepareError(() => resolvePr("#123", "/repo", failingApi), 3);
   assert.ok(calls.some(([name, args]) => name === "gh" && args[0] === "api"));
+});
+
+test("runCommand can remove GH_REPO from the child environment", () => {
+  const result = runCommand(
+    process.execPath,
+    ["--eval", "process.stdout.write(process.env.GH_REPO ?? '')"],
+    { env: { GH_REPO: "owner/wrong-repository" }, unsetEnv: ["GH_REPO"] },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "");
+});
+
+test("containment rejects Windows cross-drive paths", () => {
+  assert.equal(isWithin("C:\\repo\\nested", "C:\\repo", path.win32), true);
+  assert.equal(isWithin("C:\\outside", "C:\\repo", path.win32), false);
+  assert.equal(isWithin("D:\\outside", "C:\\repo", path.win32), false);
 });
 
 test("repo mode preserves the subtree and rejects missing or escaping paths", (t) => {
