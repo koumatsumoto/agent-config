@@ -12,14 +12,13 @@ argument-hint: "[issue-number]"
 
 実装は専用branch・worktreeで行う。既存PRはそのbranchを使い、新規branchは基点branchから作る。名前は`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）とする。既存worktreeを削除せず、別作業のbranchを再利用しない。
 
-新規worktreeで`.worktreeinclude`がGit管理されている場合は、指定されたGit管理外のローカルファイルを作成元から引き継ぐため、次を実行する。指定がなければこの手順は不要。
-`<python>`はPython 3.9以上のコマンド、`<skill-directory>`はこの`SKILL.md`のあるdirectory。
+worktree作成後、同梱スクリプトでローカルファイルの引き継ぎを準備する（`<skill-directory>`はこの`SKILL.md`のあるdirectory）。
 
 ```text
-"<python>" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>"
+python3 "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>"
 ```
 
-引数は作成元・作成先worktreeのroot。正常終了なら実装へ進み、実行できない・失敗した場合は停止する。
+引数は作成元・作成先worktreeのroot。成功したら実装へ進み、失敗したら停止する。
 
 ## 実装・レビュー
 

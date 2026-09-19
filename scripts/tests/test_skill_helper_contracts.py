@@ -17,7 +17,7 @@ class SkillHelperContractTests(unittest.TestCase):
     def test_worktree_helper_invocation_contract(self) -> None:
         skill = (SKILLS / "km-github-workflow/SKILL.md").read_text(encoding="utf-8")
         self.assertIn(
-            '"<python>" "<skill-directory>/scripts/prepare-worktree.py" '
+            'python3 "<skill-directory>/scripts/prepare-worktree.py" '
             '"<source-root>" "<destination-root>"',
             skill,
         )
