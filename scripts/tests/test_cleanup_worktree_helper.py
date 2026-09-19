@@ -154,6 +154,21 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
             (self.destination / "tracked.txt").read_text(), "hidden change"
         )
 
+    def test_missing_skip_worktree_file_outside_sparse_checkout_is_rejected(self) -> None:
+        self._git(
+            self.destination,
+            "update-index",
+            "--skip-worktree",
+            "tracked.txt",
+        )
+        (self.destination / "tracked.txt").unlink()
+
+        result = self._run()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(self.destination.is_dir())
+        self.assertFalse((self.destination / "tracked.txt").exists())
+
     def test_clean_sparse_checkout_is_allowed(self) -> None:
         (self.destination / "included").mkdir()
         (self.destination / "included/file.txt").write_text("included", encoding="utf-8")
@@ -278,10 +293,13 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
             *args: str,
             check: bool = True,
             env: dict[str, str] | None = None,
+            input_data: bytes | None = None,
         ) -> subprocess.CompletedProcess[bytes]:
             if args[:2] == ("worktree", "remove"):
                 raise cleanup_worktree_helper.CleanupError("injected failure")
-            return original_git(root, *args, check=check, env=env)
+            return original_git(
+                root, *args, check=check, env=env, input_data=input_data
+            )
 
         original_git = cleanup_worktree_helper._git
         with patch.object(cleanup_worktree_helper, "_git", side_effect=fail_remove):
@@ -303,9 +321,12 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
             *args: str,
             check: bool = True,
             env: dict[str, str] | None = None,
+            input_data: bytes | None = None,
         ) -> subprocess.CompletedProcess[bytes]:
             calls.append(args)
-            return original_git(root, *args, check=check, env=env)
+            return original_git(
+                root, *args, check=check, env=env, input_data=input_data
+            )
 
         with patch.object(cleanup_worktree_helper, "_git", side_effect=record_git):
             cleanup_worktree_helper.cleanup(self.repo, self.destination, "work")

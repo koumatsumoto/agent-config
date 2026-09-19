@@ -22,6 +22,7 @@ def _git(
     *args: str,
     check: bool = True,
     env: dict[str, str] | None = None,
+    input_data: bytes | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     try:
         return subprocess.run(
@@ -30,6 +31,7 @@ def _git(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
+            input=input_data,
         )
     except FileNotFoundError as exc:
         raise CleanupError("git commandが見つかりません") from exc
@@ -87,6 +89,35 @@ def _exists_without_following(path: Path) -> bool:
     return True
 
 
+def _sparse_checkout_excludes(root: Path, relative: str) -> bool:
+    enabled = _git(root, "config", "--bool", "core.sparseCheckout", check=False)
+    if enabled.returncode == 1:
+        return False
+    if enabled.returncode != 0:
+        message = enabled.stderr.decode("utf-8", errors="replace").strip()
+        raise CleanupError(message or "sparse-checkout設定の確認に失敗しました")
+    if enabled.stdout.strip() != b"true":
+        return False
+
+    encoded = relative.encode("utf-8", errors="surrogateescape") + b"\0"
+    result = _git(
+        root,
+        "sparse-checkout",
+        "check-rules",
+        "-z",
+        check=False,
+        input_data=encoded,
+    )
+    if result.returncode != 0:
+        message = result.stderr.decode("utf-8", errors="replace").strip()
+        raise CleanupError(message or "sparse-checkout ruleの確認に失敗しました")
+    if not result.stdout:
+        return True
+    if result.stdout == encoded:
+        return False
+    raise CleanupError("sparse-checkout ruleの確認結果を解釈できません")
+
+
 def _hidden_tracked_changes(root: Path) -> bool:
     entries = _git(root, "ls-files", "-v", "-z").stdout.split(b"\0")
     checks: list[tuple[str, bool, bool]] = []
@@ -101,8 +132,11 @@ def _hidden_tracked_changes(root: Path) -> bool:
         if not skip_worktree and not assume_unchanged:
             continue
         relative = entry[2:].decode("utf-8", errors="surrogateescape")
-        # An absent skip-worktree entry is the normal sparse-checkout state.
-        if skip_worktree and not _exists_without_following(root / relative):
+        if (
+            skip_worktree
+            and not _exists_without_following(root / relative)
+            and _sparse_checkout_excludes(root, relative)
+        ):
             continue
         checks.append((relative, skip_worktree, assume_unchanged))
 
