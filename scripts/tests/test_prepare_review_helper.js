@@ -131,7 +131,10 @@ test("Git target environment cannot redirect the helper away from cwd", (t) => {
     runner: pollutedRunner,
     tempDirectory: tempBase,
   });
-  assert.equal(descriptor.repositoryRoot, root);
+  const expectedRootStats = fs.statSync(root);
+  const actualRootStats = fs.statSync(descriptor.repositoryRoot);
+  assert.equal(actualRootStats.dev, expectedRootStats.dev);
+  assert.equal(actualRootStats.ino, expectedRootStats.ino);
   assert.equal(descriptor.headSha, expectedHead);
   assert.equal(descriptor.target.sha, expectedHead);
   t.after(() => fs.rmSync(descriptor.workspaceDir, { recursive: true, force: true }));
