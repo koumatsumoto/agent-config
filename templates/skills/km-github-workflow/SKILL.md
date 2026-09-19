@@ -8,17 +8,15 @@ argument-hint: "[issue-number]"
 
 ## 準備
 
-対応するissueと作業branch・worktreeを確認し、不足分を用意する。小さな変更のissueは目的と完了条件だけでよい。設計判断を先に固める必要があれば`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する。
+対応するissueがなければ作る。小さな変更のissueは目的と完了条件だけでよい。設計判断を先に固める必要があれば`km-plan`を使う。ユーザーがissue不要と明示した場合は省略する。
 
-実装は専用branch・worktreeで行う。既存PRはそのbranchを使い、新規branchは基点branchから作る。名前は`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）とする。既存worktreeを削除せず、別作業のbranchを再利用しない。
-
-worktreeを作成した場合は、`python3`、次に`python`で`-c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'`を試し、最初に成功したinterpreterで次を実行する。`<skill-directory>`はこの`SKILL.md`の実在directoryとし、そこへ`cd`しない。
+次のコマンドで専用branch・worktreeを用意し、必要なローカルファイルを引き継ぐ。`<skill-directory>`はこの`SKILL.md`のあるdirectory。新規branch名は`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）とする。
 
 ```text
-"<python>" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>"
+bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/prepare-worktree.py" "<source-root>" "<destination-root>" --branch "<branch>"
 ```
 
-interpreterが見つからない、またはhelperが失敗した場合は停止する。no-opを含む正常終了なら実装へ進む。
+作成元・作業先のパスと作業branch名を渡す。基点は作成元のHEAD（指定する場合は`--base <ref>`）、既存PRのbranchには`--existing`を付ける。成功時に表示されたworktreeで実装し、失敗したら停止する。
 
 ## 実装・レビュー
 
