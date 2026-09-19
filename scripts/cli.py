@@ -129,6 +129,8 @@ DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".claude/output-styles/fable-like.md",
     ".claude/skills/km-commit/SKILL.md",
     ".agents/skills/km-commit/SKILL.md",
+    ".claude/skills/km-third-party-oss-security-review",
+    ".agents/skills/km-third-party-oss-security-review",
 )
 
 
