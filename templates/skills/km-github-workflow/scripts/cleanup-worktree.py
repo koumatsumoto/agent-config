@@ -89,38 +89,45 @@ def _exists_without_following(path: Path) -> bool:
     return True
 
 
-def _sparse_checkout_excludes(root: Path, relative: str) -> bool:
+def _sparse_checkout_excluded(root: Path, relatives: list[str]) -> set[str]:
+    if not relatives:
+        return set()
     enabled = _git(root, "config", "--bool", "core.sparseCheckout", check=False)
     if enabled.returncode == 1:
-        return False
+        return set()
     if enabled.returncode != 0:
         message = enabled.stderr.decode("utf-8", errors="replace").strip()
         raise CleanupError(message or "sparse-checkout設定の確認に失敗しました")
     if enabled.stdout.strip() != b"true":
-        return False
+        return set()
 
-    encoded = relative.encode("utf-8", errors="surrogateescape") + b"\0"
+    encoded = {
+        relative.encode("utf-8", errors="surrogateescape"): relative
+        for relative in relatives
+    }
+    input_data = b"\0".join(encoded) + b"\0"
     result = _git(
         root,
         "sparse-checkout",
         "check-rules",
         "-z",
         check=False,
-        input_data=encoded,
+        input_data=input_data,
     )
     if result.returncode != 0:
         message = result.stderr.decode("utf-8", errors="replace").strip()
         raise CleanupError(message or "sparse-checkout ruleの確認に失敗しました")
-    if not result.stdout:
-        return True
-    if result.stdout == encoded:
-        return False
-    raise CleanupError("sparse-checkout ruleの確認結果を解釈できません")
+    included_bytes = {item for item in result.stdout.split(b"\0") if item}
+    if not included_bytes.issubset(encoded):
+        raise CleanupError("sparse-checkout ruleの確認結果を解釈できません")
+    included = {encoded[item] for item in included_bytes}
+    return set(relatives) - included
 
 
 def _hidden_tracked_changes(root: Path) -> bool:
     entries = _git(root, "ls-files", "-v", "-z").stdout.split(b"\0")
     checks: list[tuple[str, bool, bool]] = []
+    missing_skip_worktree: list[tuple[str, bool, bool]] = []
     for entry in entries:
         if not entry:
             continue
@@ -132,13 +139,19 @@ def _hidden_tracked_changes(root: Path) -> bool:
         if not skip_worktree and not assume_unchanged:
             continue
         relative = entry[2:].decode("utf-8", errors="surrogateescape")
-        if (
-            skip_worktree
-            and not _exists_without_following(root / relative)
-            and _sparse_checkout_excludes(root, relative)
-        ):
+        if skip_worktree and not _exists_without_following(root / relative):
+            missing_skip_worktree.append(
+                (relative, skip_worktree, assume_unchanged)
+            )
             continue
         checks.append((relative, skip_worktree, assume_unchanged))
+
+    excluded = _sparse_checkout_excluded(
+        root, [relative for relative, _, _ in missing_skip_worktree]
+    )
+    checks.extend(
+        entry for entry in missing_skip_worktree if entry[0] not in excluded
+    )
 
     if not checks:
         return False

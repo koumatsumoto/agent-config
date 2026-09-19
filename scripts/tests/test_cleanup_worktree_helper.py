@@ -172,17 +172,46 @@ class CleanupWorktreeHelperTests(unittest.TestCase):
     def test_clean_sparse_checkout_is_allowed(self) -> None:
         (self.destination / "included").mkdir()
         (self.destination / "included/file.txt").write_text("included", encoding="utf-8")
+        excluded_paths = {
+            f"excluded/file-{number}.txt" for number in range(3)
+        }
         (self.destination / "excluded").mkdir()
-        (self.destination / "excluded/file.txt").write_text("excluded", encoding="utf-8")
+        for relative in excluded_paths:
+            (self.destination / relative).write_text("excluded", encoding="utf-8")
         self._git(self.destination, "add", "included", "excluded")
         self._git(self.destination, "commit", "-qm", "sparse fixture")
         self._git(self.destination, "sparse-checkout", "init", "--cone")
         self._git(self.destination, "sparse-checkout", "set", "included")
-        self.assertFalse((self.destination / "excluded/file.txt").exists())
+        for relative in excluded_paths:
+            self.assertFalse((self.destination / relative).exists())
 
-        result = self._run()
+        check_rules_inputs: list[bytes] = []
+        original_git = cleanup_worktree_helper._git
 
-        self.assertEqual(result.returncode, 0, result.stderr)
+        def record_git(
+            root: Path,
+            *args: str,
+            check: bool = True,
+            env: dict[str, str] | None = None,
+            input_data: bytes | None = None,
+        ) -> subprocess.CompletedProcess[bytes]:
+            if args[:2] == ("sparse-checkout", "check-rules"):
+                assert input_data is not None
+                check_rules_inputs.append(input_data)
+            return original_git(
+                root, *args, check=check, env=env, input_data=input_data
+            )
+
+        with patch.object(cleanup_worktree_helper, "_git", side_effect=record_git):
+            cleanup_worktree_helper.cleanup(self.repo, self.destination, "work")
+
+        self.assertEqual(len(check_rules_inputs), 1)
+        checked = {
+            item.decode("utf-8")
+            for item in check_rules_inputs[0].split(b"\0")
+            if item
+        }
+        self.assertEqual(checked, excluded_paths)
         self.assertFalse(self.destination.exists())
 
     def test_untracked_file_is_rejected(self) -> None:
