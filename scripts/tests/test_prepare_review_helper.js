@@ -45,7 +45,7 @@ function git(cwd, ...args) {
 }
 
 function createRepository(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "prepare-review-test-"));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "prepare-review-test-")));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   git(root, "init");
   git(root, "config", "user.name", "Test User");
