@@ -1606,14 +1606,23 @@ class VerifyTests(unittest.TestCase):
                 for skill in retired:
                     skill.mkdir(parents=True)
                     (skill / "SKILL.md").write_text("old review skill", encoding="utf-8")
+                    (skill / "reference").mkdir()
+                    (skill / "reference/decision-rules.md").write_text("old rules", encoding="utf-8")
                 cli.install(layout)
                 cli.install(layout)
                 for skill in retired:
                     self.assertFalse(skill.exists())
+                    backup = skill.parent.with_name("skills.bak") / skill.name
+                    self.assertNotEqual(backup.parent, skill.parent)
                     self.assertEqual(
-                        (skill.with_name(skill.name + ".bak") / "SKILL.md").read_text(encoding="utf-8"),
+                        (backup / "SKILL.md").read_text(encoding="utf-8"),
                         "old review skill",
                     )
+                    self.assertEqual(
+                        (backup / "reference/decision-rules.md").read_text(encoding="utf-8"),
+                        "old rules",
+                    )
+                    self.assertFalse((skill.with_name(skill.name + ".bak") / "SKILL.md").exists())
                 self.assertEqual(cli.verify(layout).failures, [])
 
     def test_retired_path_is_not_converged(self) -> None:
