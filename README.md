@@ -29,7 +29,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `templates/` - 配布対象テンプレート
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
-- `scripts/tests/` - `scripts/cli.py` の unittest
+- `scripts/tests/` - Python unittest / Node helper test
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
 - `.github/workflows/` - GitHub Actions CI 設定
 

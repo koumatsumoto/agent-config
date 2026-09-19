@@ -159,10 +159,10 @@ export function resolveRange(input, repositoryRoot, runner = runCommand) {
 
 function parsePrTarget(input) {
   const shorthand = /^#([1-9]\d*)$/.exec(input);
-  if (shorthand) return { number: Number(shorthand[1]), repository: null };
+  if (shorthand) return { number: Number(shorthand[1]), repository: null, host: null };
   const url = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/([1-9]\d*)\/?$/.exec(input);
   if (!url) return null;
-  return { number: Number(url[3]), repository: `${url[1]}/${url[2]}` };
+  return { number: Number(url[3]), repository: `${url[1]}/${url[2]}`, host: "github.com" };
 }
 
 export function isPrTarget(input) {
@@ -174,21 +174,36 @@ export function resolvePr(input, repositoryRoot, runner = runCommand) {
   if (!parsed) fail(`invalid pull request target: ${input}`, 2);
   const identityResult = runner(
     "gh",
-    ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
-    { cwd: repositoryRoot, unsetEnv: ["GH_REPO"] },
+    ["repo", "view", "--json", "nameWithOwner,url"],
+    { cwd: repositoryRoot, unsetEnv: ["GH_REPO", "GH_HOST"] },
   );
-  const nameWithOwner = commandFailure(
+  const identityOutput = commandFailure(
     identityResult,
     "could not determine the local GitHub repository",
     4,
   );
+  let repositoryIdentity;
+  let repositoryHost;
+  try {
+    repositoryIdentity = JSON.parse(identityOutput);
+    repositoryHost = new URL(repositoryIdentity.url).hostname;
+  } catch {
+    fail("gh repo view returned invalid repository identity", 4);
+  }
+  const nameWithOwner = repositoryIdentity.nameWithOwner;
+  if (typeof nameWithOwner !== "string" || !nameWithOwner || !repositoryHost) {
+    fail("gh repo view returned incomplete repository identity", 4);
+  }
   if (parsed.repository && parsed.repository.toLowerCase() !== nameWithOwner.toLowerCase()) {
     fail(`pull request belongs to another repository: ${parsed.repository}`, 3);
   }
+  if (parsed.host && parsed.host.toLowerCase() !== repositoryHost.toLowerCase()) {
+    fail(`pull request belongs to another GitHub host: ${parsed.host}`, 3);
+  }
   const apiResult = runner(
     "gh",
-    ["api", `repos/${nameWithOwner}/pulls/${parsed.number}`],
-    { cwd: repositoryRoot },
+    ["api", "--hostname", repositoryHost, `repos/${nameWithOwner}/pulls/${parsed.number}`],
+    { cwd: repositoryRoot, unsetEnv: ["GH_REPO", "GH_HOST"] },
   );
   if (apiResult.error || apiResult.status === null) {
     fail("could not run gh api", 4);

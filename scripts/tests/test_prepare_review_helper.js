@@ -159,10 +159,22 @@ test("PR resolution supports quoted shorthand and same-repository URLs", () => {
   const runner = (name, args, options) => {
     calls.push([name, args, options]);
     if (args[0] === "repo") {
-      assert.deepEqual(options.unsetEnv, ["GH_REPO"]);
-      return { status: 0, stdout: "owner/repo\n", stderr: "" };
+      assert.deepEqual(options.unsetEnv, ["GH_REPO", "GH_HOST"]);
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          nameWithOwner: "owner/repo",
+          url: "https://github.com/owner/repo",
+        }),
+        stderr: "",
+      };
     }
     if (args[0] === "api") {
+      assert.deepEqual(
+        args,
+        ["api", "--hostname", "github.com", "repos/owner/repo/pulls/123"],
+      );
+      assert.deepEqual(options.unsetEnv, ["GH_REPO", "GH_HOST"]);
       return {
         status: 0,
         stdout: JSON.stringify({
@@ -191,21 +203,70 @@ test("PR resolution supports quoted shorthand and same-repository URLs", () => {
     3,
   );
   const failingApi = (name, args) => {
-    if (args[0] === "repo") return { status: 0, stdout: "owner/repo\n", stderr: "" };
+    if (args[0] === "repo") {
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          nameWithOwner: "owner/repo",
+          url: "https://github.com/owner/repo",
+        }),
+        stderr: "",
+      };
+    }
     return { status: 1, stdout: "", stderr: "missing" };
   };
   expectPrepareError(() => resolvePr("#123", "/repo", failingApi), 3);
   assert.ok(calls.some(([name, args]) => name === "gh" && args[0] === "api"));
 });
 
-test("runCommand can remove GH_REPO from the child environment", () => {
+test("PR resolution pins the local host despite GH_HOST contamination", () => {
+  const enterpriseRunner = (name, args, options) => {
+    assert.deepEqual(options.unsetEnv, ["GH_REPO", "GH_HOST"]);
+    if (args[0] === "repo") {
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          nameWithOwner: "owner/repo",
+          url: "https://local.example/owner/repo",
+        }),
+        stderr: "",
+      };
+    }
+    assert.deepEqual(
+      args,
+      ["api", "--hostname", "local.example", "repos/owner/repo/pulls/123"],
+    );
+    return {
+      status: 0,
+      stdout: JSON.stringify({
+        number: 123,
+        html_url: "https://local.example/owner/repo/pull/123",
+        base: { sha: "a".repeat(40) },
+        head: { sha: "b".repeat(40) },
+        changed_files: 1,
+      }),
+      stderr: "",
+    };
+  };
+  assert.equal(resolvePr("#123", "/repo", enterpriseRunner).target.number, 123);
+  expectPrepareError(
+    () => resolvePr("https://github.com/owner/repo/pull/123", "/repo", enterpriseRunner),
+    3,
+  );
+
   const result = runCommand(
     process.execPath,
-    ["--eval", "process.stdout.write(process.env.GH_REPO ?? '')"],
-    { env: { GH_REPO: "owner/wrong-repository" }, unsetEnv: ["GH_REPO"] },
+    [
+      "--eval",
+      "process.stdout.write(`${process.env.GH_REPO ?? ''}:${process.env.GH_HOST ?? ''}`)",
+    ],
+    {
+      env: { GH_REPO: "owner/wrong-repository", GH_HOST: "wrong.example" },
+      unsetEnv: ["GH_REPO", "GH_HOST"],
+    },
   );
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout, "");
+  assert.equal(result.stdout, ":");
 });
 
 test("containment rejects Windows cross-drive paths", () => {

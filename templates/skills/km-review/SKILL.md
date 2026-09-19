@@ -20,7 +20,9 @@ node "<skill-directory>/scripts/prepare-review.js" "<target>"
 
 targetを省略する場合は未コミット差分、`--repo "<subtree>"`は差分ではなく現状コード全体、`--recheck`は`references/recheck.md`に従う再確認を表す。`--previous-integration "<path>"`は`--recheck`とともにだけ使う。
 
-helperが非0で終了したらレビューを開始せず、target解決またはworkspace準備のエラーとして報告する。成功時はJSON descriptorを使い、`empty: true`の場合だけ`NOOP`とする。`empty: false`ならdescriptorの`mode`と`target`を維持してレビューし、`workspaceDir`を隔離した検証用コピーに、`integrationPath`を最終統合レポートの保存先に使う。
+helperが非0で終了したらレビューを開始せず、target解決またはworkspace準備のエラーとして報告する。ただし`--recheck`で前回のintegrationが利用不能と判明した場合だけ、`references/recheck.md`に従って通常レビューへ切り替え、同じtargetから`--recheck`と`--previous-integration`を除いてhelperを1回だけ呼び直す。この呼び直しも失敗した場合はerrorとして停止する。
+
+成功時はJSON descriptorを使い、`empty: true`の場合だけ`NOOP`とする。`empty: false`ならdescriptorの`mode`と`target`を維持してレビューし、`workspaceDir`を隔離した検証用コピーに、`integrationPath`を最終統合レポートの保存先に使う。
 
 - `--repo <subtree>`：差分ではなく現状コード全体を対象にする
 - `--recheck`：target解決方法を変えず、直前のblockerの解消を確認する
