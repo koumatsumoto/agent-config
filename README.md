@@ -107,7 +107,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 つまり、`theme`のような個人設定はユーザー側で書き加えれば、次回のインストールでも消えない。一方、テンプレートが宣言するキーは実行時に一時変更しても、次回のインストールでリポジトリの値に戻る。恒久的に変える場合は`templates/settings.json`を編集する。
 
-配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。`includeGitInstructions=false`でClaude組み込みのcommit・PR指示と開始時のGit statusスナップショットを外し、Git操作の契約は共通ガイドライン、`km-commit`、`km-github-workflow`で管理する。
+配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。`includeGitInstructions=false`でClaude組み込みのcommit・PR指示と開始時のGit statusスナップショットを外し、Git操作の契約は共通ガイドラインと`km-github-workflow`で管理する。
 
 `*.config`や`appsettings.json`のような一般的なアプリ設定はglobal denyに含めない。これらに秘密情報を置くrepositoryでは、`.claude/settings.json`または`.claude/settings.local.json`でdenyを追加する。
 
@@ -236,7 +236,6 @@ python scripts/cli.py clean
 | `km-japanese-refine` | 意味と書き手の声を保ち、直訳調・不自然な言い回し・文のつながりを整える |
 | `km-review` | 実装した変更をread-onlyでレビューし、欠陥と品質判定を返す |
 | `km-third-party-oss-security-review` | npm / pip / VS Code extension / GitHub リポジトリの採用前セキュリティレビュー |
-| `km-commit` | Conventional Commits 形式で git commit |
 | `km-github-workflow` | GitHub管理リポジトリの変更をissue・PRとして提出し、明示された場合はマージまで完了する |
 | `km-skill-eval` | 挙動資産の変更効果を、明示依頼に基づいて実シナリオで評価する |
 | `km-plan` | 複雑で誤方向の手戻りが大きい変更について、背景と設計判断を含む実装計画を作成し、GitHub issueにする |

@@ -1,6 +1,6 @@
 ---
 name: km-plan
-description: 複雑で、方針を誤ると手戻りが大きい変更の実装計画を、背景・設計判断とともにGitHub issueへまとめる。「計画を作って」などの依頼で使う。
+description: 複雑で、方針を誤ると手戻りが大きい変更の実装計画を、背景・設計判断とともにGitHub issueへまとめる。計画を依頼されたときや、実装前に設計判断を固める必要があるときに使う。
 argument-hint: "[title-or-topic | issue-number]"
 ---
 
