@@ -18,7 +18,7 @@
 
 GitHub管理リポジトリの変更依頼は、PRへの言及がなくても`km-github-workflow`に従ってissueからPR提出まで進める。計画のみ・レビューのみ・コミットのみの依頼では、依頼された作業だけを行う。
 
-完了条件との照合と、read-only quality gateとしての`km-review`はどちらも省略しない。レビュー判定後の修正・再確認・提出は`km-github-workflow`が管理する。
+実装後は完了条件と照合し、`km-review`で読み取り専用のレビューを行う。
 
 ## 記録方針
 
