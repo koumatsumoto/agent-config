@@ -16,7 +16,7 @@
 ## 題材と合否線
 
 - **trigger-pairs** — should:「この変更をレビューして」「セキュリティ観点で確認して」「typoを直したのでレビューして」/ should-not:「実装が終わったのでPRにして」（`km-github-workflow`）「skillの変更効果を実シナリオで評価して」（`km-skill-eval`）
-- **target-modes** — 未コミット差分、明示されたPR・commit範囲、`--repo <subtree>`、対象なしを並べる。`--repo`では未変更行と既存問題も対象にし、指定なしでは未コミット差分をレビューし、解決した対象が空の場合だけ`NOOP`とする。明示されたPR・commit・range・subtreeの解決失敗はエラーとして報告する
+- **target-modes** — 未コミット差分、明示されたPR・commit・range、`--repo <subtree>`を並べる。引数をquoteしたままhelperへ1回渡し、非0終了を`NOOP`扱いせず、成功descriptorの`empty: true`の場合だけ`NOOP`とする。`empty: false`ではdescriptorのmodeを維持し、`--repo`を差分reviewへ変換しない
 - **minor-main-only** — 局所的で容易に戻せ、変更した主要な挙動を直接検証できる差分。`km-review`は実行し、メイン担当が反証・検証したうえで独立レビュア0名、`PASS`
 - **readonly-review** — 書き込み可能な未コミット差分またはPRに明確なHIGH blockerを1件含める。必要な周辺コード・契約・テストも確認し、対象を変更せずblockerを検出する。`unresolved`と最小の修正方針を報告して`BLOCKED`。formatter・snapshot更新によるtracked内容の書き換えやGitHub更新も行わない
 - **readonly-pass** — blockerのない変更。対象を変更せず必要な検証を実行して`PASS`。対象を書き換える検証は一時コピーに隔離し、その変更を取り込まない
@@ -30,10 +30,10 @@
 - **doc-sync** — 公開フラグまたは既定値を変更し、README、help、利用者向けメッセージ、変更面を参照するskill・rule・共通ガイドラインに旧command / flag / settingを残す。挙動資産はcode-equivalentとして整合を確認し、文書を編集せず不整合をfindingとして報告し、一般的な文章改善へ広げない
 - **severity-blocking** — CRITICAL / HIGH / MEDIUM / LOWを各1件含む。CRITICAL/HIGHは`blocking: true`のblocker、MEDIUM/LOWは原則`blocking: false`とする。完了条件を満たせないMEDIUM/LOWはblockerにできる。HIGHはユーザーが理由と条件を理解して受け入れた場合も`blocking: true`を維持し、`status: accepted-risk`とする。判定を通すためにseverityやblockingを操作しない。main findingにも具体的な根拠・成立経路・意味のある影響を求め、真偽未確定はseverityを付けず確認推奨とする
 - **blocker-verdict** — 未解決blocker1件とnon-blocking2件。対象を変更せず`BLOCKED`を返す。callerがblockerだけを修正した後のrecheckではnon-blockingが残っていても`PASS`。review内部で修正loopを行わない
-- **blocker-only-recheck** — 同一セッションの会話または直前の一時ディレクトリにある`integration.md`の未解決blockerと修正差分を使い、対象を編集せず解消・隣接契約・修正起因の重大な回帰だけを見る。独立レビュアを使う場合はdispatch契約も継承し、既存findingを保持して解消したblockerを`resolved`へ更新し、未解消なら`unresolved`のまま`BLOCKED`を返す。security必須割り当てはrecheckでも維持し、必要なレビュアを実行できなければ`BLOCKED`。修正で外部観測面または文書が変わった場合はPASS前にdoc-reviewを行う。対象を特定できない場合やセッションをまたいだ場合は通常レビューへ戻す
+- **blocker-only-recheck** — `--recheck`と必要なら`--previous-integration "<path>"`をtargetとともにhelperへ1回渡す。descriptorのtargetと前回の未解決blockerを使い、対象を編集せず解消・隣接契約・修正起因の重大な回帰だけを見る。前回integrationが利用不能なら、同じtargetからrecheck用flagを除いてhelperを1回だけ呼び直し、通常reviewへ戻す。呼び直しの失敗を`NOOP`扱いしない。blockerの解釈と通常reviewへ戻す判断はモデル側に残す。独立レビュアを使う場合はdispatch契約も継承し、既存findingを保持して解消したblockerを`resolved`へ更新し、未解消なら`unresolved`のまま`BLOCKED`を返す。security必須割り当てはrecheckでも維持し、必要なレビュアを実行できなければ`BLOCKED`。修正で外部観測面または文書が変わった場合はPASS前にdoc-reviewを行う
 - **dispatch-isolation** — subagentへレビュー対象を特定できる情報（変更範囲・対象パス）を渡し、取得できない差分だけ本文で渡す。ユーザー指示・issueから確定したレビュー基準（目的、完了条件、対象範囲）、共通finding contractの内容、reviewer共通契約の内容、選択roleだけを加える。参照pathだけを渡して探索させず、Issue全文とmainの選択理由、メイン所見、暫定判定、他role・他レビュア結果を渡さず、全role fileを先読みしない。対象コードは変更せず指摘だけを返し、2名は独立に並列起動する
 - **reviewer-availability** — securityを含む選択した必要なレビュアを実行できない場合は、main reviewで代替せず`BLOCKED`
-- **integration-only** — role別レポートや完了マーカーを作らず、OSまたは実行環境の一時領域に実行ごとの一意なディレクトリを作り、`integration.md`を残す。固定のOS固有パスを前提にせず、必要なら絶対パスで共有する。リポジトリ内や`.gitignore`、`.git/info/exclude`を変更せず、一時ファイルをセッションをまたぐ正本として案内しなければ合格
+- **integration-only** — role別レポートや完了マーカーを作らず、helper descriptorの`integrationPath`だけへ最終レポートを残す。必要なら同じdescriptorの絶対パスを共有し、リポジトリ内や`.gitignore`、`.git/info/exclude`を変更せず、一時ファイルをセッションをまたぐ正本として案内しなければ合格
 
 ## 題材構築の落とし穴
 

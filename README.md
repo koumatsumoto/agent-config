@@ -29,7 +29,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `templates/` - 配布対象テンプレート
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
-- `scripts/tests/` - `scripts/cli.py` の unittest
+- `scripts/tests/` - Python unittest / Node helper test
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
 - `.github/workflows/` - GitHub Actions CI 設定
 
@@ -162,7 +162,13 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke test を実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
+km-reviewのNode helperはNode.js 24以上で次を実行する。
+
+```bash
+node --test scripts/tests/test_prepare_review_helper.js
+```
+
+GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke testを実行し、独立したjobでNode helper testも実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
 
 ## クリーンアップ
 

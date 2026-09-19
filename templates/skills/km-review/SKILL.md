@@ -12,10 +12,20 @@ argument-hint: "[target]"
 
 ## 対象
 
-既定は未コミット差分。指定があればその対象を使い、対象がなければ`NOOP`とする。指定されたPR・commit・range・subtreeの取得・解決失敗はエラーとして報告し、`NOOP`にしない。
+最初に引数をそのまま次のhelperへ渡し、targetとworkspaceを1回だけ準備する。targetとpathは必ず1引数としてquoteし、PR shorthandの`#123`もquoteする。
+
+```text
+node "<skill-directory>/scripts/prepare-review.js" "<target>"
+```
+
+targetを省略する場合は未コミット差分、`--repo "<subtree>"`は差分ではなく現状コード全体、`--recheck`は`references/recheck.md`に従う再確認を表す。`--previous-integration "<path>"`は`--recheck`とともにだけ使う。
+
+helperが非0で終了したらレビューを開始せず、target解決またはworkspace準備のエラーとして報告する。ただし`--recheck`で前回のintegrationが利用不能と判明した場合だけ、`references/recheck.md`に従って通常レビューへ切り替え、同じtargetから`--recheck`と`--previous-integration`を除いてhelperを1回だけ呼び直す。この呼び直しも失敗した場合はerrorとして停止する。
+
+成功時はJSON descriptorを使い、`empty: true`の場合だけ`NOOP`とする。`empty: false`ならdescriptorの`mode`と`target`を維持してレビューし、`workspaceDir`を隔離した検証用コピーに、`integrationPath`を最終統合レポートの保存先に使う。
 
 - `--repo <subtree>`：差分ではなく現状コード全体を対象にする
-- `--recheck`：`references/recheck.md`に従い、直前のblockerの解消を確認する
+- `--recheck`：target解決方法を変えず、直前のblockerの解消を確認する
 
 ## メインレビュー
 
