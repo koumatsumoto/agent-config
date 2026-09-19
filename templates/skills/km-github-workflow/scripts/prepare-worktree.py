@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Copy selected ignored files into a newly-created Git worktree."""
+"""Create an isolated Git worktree and prepare its local files."""
 
 from __future__ import annotations
 
@@ -218,19 +218,65 @@ def prepare(source_arg: Path, destination_arg: Path) -> tuple[int, int]:
     return copied, skipped
 
 
+def setup(
+    source_arg: Path,
+    destination_arg: Path,
+    branch: str,
+    *,
+    base: str = "HEAD",
+    existing: bool = False,
+) -> tuple[int, int]:
+    source = _worktree_root(source_arg)
+    # check-ref-format --branch expands @{-N}; require a literal branch name.
+    checked = _git(source, "check-ref-format", "--branch", branch).stdout.decode().strip()
+    if checked != branch:
+        raise PreparationError("branchには省略記法ではなく名前を指定してください")
+    destination = destination_arg.absolute()
+    if destination.is_symlink():
+        raise PreparationError("destinationのsymlinkは使用できません")
+    destination = destination.resolve()
+    if _within(destination, source):
+        raise PreparationError("destinationはsource worktreeの外に指定してください")
+
+    if _exists_without_following(destination):
+        # Re-running is allowed only for the exact worktree and branch.
+        _worktree_root(destination)
+        if _common_dir(source) != _common_dir(destination):
+            raise PreparationError("destinationは別のGit repositoryです")
+        current = _git(destination, "symbolic-ref", "--quiet", "HEAD").stdout.decode().strip()
+        if current != f"refs/heads/{branch}":
+            raise PreparationError("destinationは別のbranchです")
+    elif existing:
+        # No force: Git rejects a branch checked out in another worktree.
+        _git(source, "show-ref", "--verify", f"refs/heads/{branch}")
+        _git(source, "worktree", "add", "--", os.fspath(destination), branch)
+    else:
+        _git(source, "worktree", "add", "-b", branch, "--", os.fspath(destination), base)
+
+    # Keep a created worktree on failure; re-running retries preparation
+    # without resetting the branch, cleaning files, or overwriting local data.
+    return prepare(source, destination)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Copy .worktreeinclude-selected ignored files between Git worktrees."
+        description="Create a worktree and copy .worktreeinclude-selected local files."
     )
-    parser.add_argument("source", type=Path)
-    parser.add_argument("destination", type=Path)
+    parser.add_argument("source", type=Path, help="source worktree root")
+    parser.add_argument("destination", type=Path, help="dedicated worktree path")
+    parser.add_argument("--branch", required=True, help="work branch name")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--base", default="HEAD", help="new branch starting ref (default: source HEAD)")
+    mode.add_argument("--existing", action="store_true", help="use an existing PR branch")
     args = parser.parse_args(argv)
     try:
-        copied, skipped = prepare(args.source, args.destination)
+        copied, skipped = setup(
+            args.source, args.destination, args.branch, base=args.base, existing=args.existing
+        )
     except (OSError, PreparationError) as exc:
         print(f"prepare-worktree: {exc}", file=sys.stderr)
         return 1
-    print(f"prepare-worktree: copied={copied} skipped={skipped}")
+    print(f"prepare-worktree: ready={args.destination.resolve()} copied={copied} skipped={skipped}")
     return 0
 
 

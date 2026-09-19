@@ -18,7 +18,7 @@ class SkillHelperContractTests(unittest.TestCase):
         skill = (SKILLS / "km-github-workflow/SKILL.md").read_text(encoding="utf-8")
         self.assertIn(
             'python3 "<skill-directory>/scripts/prepare-worktree.py" '
-            '"<source-root>" "<destination-root>"',
+            '"<source-root>" "<destination-root>" --branch "<branch>"',
             skill,
         )
         self.assertTrue((SKILLS / "km-github-workflow/scripts/prepare-worktree.py").is_file())
