@@ -29,7 +29,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Node helper tests
-        run: node --test scripts/tests/test_prepare_review_helper.js
+        run: >-
+          node --test
+          scripts/tests/test_prepare_review_helper.js
+          scripts/tests/test_prepare_plan_helper.js
 
   unittest:
     strategy:

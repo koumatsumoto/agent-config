@@ -162,10 +162,10 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-km-reviewのNode helperはNode.js 24以上で次を実行する。
+km-reviewとkm-planのNode helperは次を実行する。
 
 ```bash
-node --test scripts/tests/test_prepare_review_helper.js
+node --test scripts/tests/test_prepare_review_helper.js scripts/tests/test_prepare_plan_helper.js
 ```
 
 GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke testを実行し、独立したjobでNode helper testも実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
