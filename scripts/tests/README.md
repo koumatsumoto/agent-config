@@ -17,7 +17,7 @@ python3 -m unittest discover -s scripts/tests -t scripts
 python -m unittest discover -s scripts/tests -t scripts
 ```
 
-km-reviewとkm-planのNode helper testはNode.js 24以上で実行する。
+km-reviewとkm-planのNode helper testは次を実行する。
 
 ```bash
 node --test scripts/tests/test_prepare_review_helper.js scripts/tests/test_prepare_plan_helper.js
