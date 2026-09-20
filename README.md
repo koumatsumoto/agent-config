@@ -30,7 +30,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
 - `scripts/tests/` - Python unittest / Node helper test
-- `evals/` - 挙動資産ごとの評価シナリオ集。配布せず、`km-skill-eval`の回帰評価で必要な項目だけ使う
+- `evals/` - 挙動資産ごとの評価シナリオ集。配布しない
 - `.github/workflows/` - GitHub Actions CI 設定
 
 ## セットアップ
@@ -242,7 +242,6 @@ python scripts/cli.py clean
 | `km-japanese-refine` | 意味と書き手の声を保ち、直訳調・不自然な言い回し・文のつながりを整える |
 | `km-review` | 実装した変更をread-onlyでレビューし、欠陥と品質判定を返す |
 | `km-github-workflow` | 変更を実装・検証・レビューしてPRへ届け、依頼された場合はマージまで完了する |
-| `km-skill-eval` | 挙動資産の変更効果を、明示依頼に基づいて実シナリオで評価する |
 | `km-plan` | 複雑で誤方向の手戻りが大きい変更について、背景と設計判断を含む実装計画を作成し、GitHub issueにする |
 
 ## ライセンス

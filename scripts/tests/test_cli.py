@@ -1620,6 +1620,36 @@ class VerifyTests(unittest.TestCase):
                     self.assertFalse((skill.with_name(skill.name + ".bak") / "SKILL.md").exists())
                 self.assertEqual(cli.verify(layout).failures, [])
 
+    def test_retired_skill_eval_is_backed_up_in_each_layout(self) -> None:
+        suffix = "skills/km-skill-eval"
+        for alternate in (False, True):
+            layout = cli.claude_dir_layout(self.home / "other", self.home) if alternate else self.layout
+            with self.subTest(alternate=alternate), patch("sys.stdout", new=StringIO()):
+                cli.install(layout)
+                retired = [layout.root / rel for rel in layout.retired_dests if rel.endswith(suffix)]
+                self.assertEqual(len(retired), 1 if alternate else 2)
+                for skill in retired:
+                    skill.mkdir(parents=True)
+                    (skill / "SKILL.md").write_text("old skill eval", encoding="utf-8")
+                    (skill / "references").mkdir()
+                    (skill / "references/comparison.md").write_text("old comparison", encoding="utf-8")
+                cli.install(layout)
+                cli.install(layout)
+                for skill in retired:
+                    self.assertFalse(skill.exists())
+                    backup = skill.parent.with_name("skills.bak") / skill.name
+                    self.assertNotEqual(backup.parent, skill.parent)
+                    self.assertEqual(
+                        (backup / "SKILL.md").read_text(encoding="utf-8"),
+                        "old skill eval",
+                    )
+                    self.assertEqual(
+                        (backup / "references/comparison.md").read_text(encoding="utf-8"),
+                        "old comparison",
+                    )
+                    self.assertFalse((skill.with_name(skill.name + ".bak") / "SKILL.md").exists())
+                self.assertEqual(cli.verify(layout).failures, [])
+
     def test_retired_path_is_not_converged(self) -> None:
         for alternate in (False, True):
             layout = cli.claude_dir_layout(self.home / "other", self.home) if alternate else self.layout
