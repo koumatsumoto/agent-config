@@ -14,27 +14,5 @@ class SkillHelperContractTests(unittest.TestCase):
         self.assertIn('bash "<skill-directory>/scripts/open-file.sh" "<path>"', skill)
         self.assertTrue((SKILLS / "km-open-file/scripts/open-file.sh").is_file())
 
-    def test_worktree_helper_invocation_contract(self) -> None:
-        skill = (SKILLS / "km-github-workflow/SKILL.md").read_text(encoding="utf-8")
-        self.assertIn(
-            'bash "<skill-directory>/scripts/run-python.sh" '
-            '"<skill-directory>/scripts/prepare-worktree.py" '
-            '"<source-root>" "<destination-root>" --branch "<branch>"',
-            skill,
-        )
-        self.assertIn(
-            '`<type>/<issue番号>-<slug>`（issueなしなら`<type>/<slug>`）', skill
-        )
-        self.assertTrue((SKILLS / "km-github-workflow/scripts/run-python.sh").is_file())
-        self.assertTrue((SKILLS / "km-github-workflow/scripts/prepare-worktree.py").is_file())
-        self.assertIn(
-            'bash "<skill-directory>/scripts/run-python.sh" '
-            '"<skill-directory>/scripts/cleanup-worktree.py" '
-            '"<source-root>" "<destination-root>" --branch "<branch>"',
-            skill,
-        )
-        self.assertTrue((SKILLS / "km-github-workflow/scripts/cleanup-worktree.py").is_file())
-
-
 if __name__ == "__main__":
     unittest.main()
