@@ -18,7 +18,14 @@ argument-hint: "[title-or-topic | issue-number]"
 - リポジトリと一次情報では確定できず、外すと高くつく前提
 
 それ以外の可逆な判断は既存設計と最小方針から決める。`references/goal-contract.md`を読み、計画を作る。
-作業ファイルはリポジトリ外の、OSまたは実行環境の一時領域に実行ごとの一意なディレクトリを作って置く。固定パス・特定OSを前提にせず、他エージェントや外部コマンドへは絶対パスを渡す。
+
+対象repository rootを確定し、次のhelperでplan artifactを初期化する。
+
+```text
+bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/plan-artifact.py" init --repo-root "<absolute-repository-root>"
+```
+
+stdoutで返った絶対pathの`plan.md`だけをlocal plan sourceとして編集する。計画のレビューと修正も同じfileへ反映する。temporary directory名、file名、managed markerを自分で組み立てない。
 
 ## 計画のレビュー
 
@@ -43,5 +50,11 @@ argument-hint: "[title-or-topic | issue-number]"
 ## 公開・報告
 
 実装前に解くべき重大な未決がなくなったら、GitHub管理リポジトリでのみ`references/issue.md`に従って公開する。既存issueの更新が明示されていなければ新規作成する。
-共有上の正本はGitHub issueとし、一時ファイルをセッションをまたぐ正本にしない。同じMarkdownを`--body-file`で反映し、`--body`や本文の再構成は使わない。
+公開直前に、編集してきた同じfileを検証する。
+
+```text
+bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/plan-artifact.py" validate --repo-root "<absolute-repository-root>" "<absolute-plan-file>"
+```
+
+共有上の正本はGitHub issueとし、一時ファイルをセッションをまたぐ正本にしない。validateが成功して返した同一pathを`gh issue create/edit --body-file`へ渡す。`--body`、stdinからの本文再構成、validate後の別fileへのcopyは使わない。GitHub writeをhelperへ任せない。
 反映失敗を成功扱いせず、issue URL、実装時確認事項、重要な残存リスクを報告する。
