@@ -2,6 +2,45 @@
 
 図・埋め込み・スタイル・安全対策の該当箇所を、作成直前に読む。
 
+## 本文fragment
+
+source fileには`<div class="container">`の内側だけを書く。`<!doctype html>`、`html`、`head`、`body`、CSP、Mermaid loader、CSS / JavaScriptの`BUILD:INLINE` marker、`RENDER:TITLE` / `RENDER:CONTENT` markerは複製しない。`--title`はplain textで渡し、render helperがHTML escapeする。通常は最上位の`h1`と同じ文言にする。
+
+必要な部品だけを次のように組み合わせる。`nav`、callout、table、code、Mermaid、footerは内容に応じて省略できる。
+
+```html
+<header class="doc-header">
+  <h1>ドキュメントタイトル</h1>
+  <p class="subtitle">サブタイトル / 一文サマリー</p>
+  <p class="meta">生成日: YYYY-MM-DD</p>
+</header>
+
+<nav class="toc">
+  <strong>目次</strong>
+  <ul><li><a href="#section-1">1. セクション</a></li></ul>
+</nav>
+
+<section>
+  <h2 id="section-1">1. セクション</h2>
+  <p>本文。</p>
+  <div class="callout callout-note">
+    <p class="callout-title">Note</p>
+    <p>補足や前提。色分けは note / warning / important。</p>
+  </div>
+  <table>
+    <thead><tr><th>項目</th><th>値</th></tr></thead>
+    <tbody><tr><td>例</td><td>説明</td></tr></tbody>
+  </table>
+  <pre><code>if (a &lt; b &amp;&amp; b &gt; 0) {
+  return true;
+}</code></pre>
+</section>
+
+<footer class="doc-footer">
+  <p>文書の補足。</p>
+</footer>
+```
+
 ## 図（Mermaid）
 
 次の型だけを使い、外部icon・フォントを取得する`architecture-beta`やiconパックは使わない。
@@ -41,4 +80,4 @@
 ## レイアウトと画像
 
 - スタイル変更には`document-template.css`を使い、印刷用の色保持・改ページ回避を保つ
-- 外部画像は使わない。スクリーンショットはBase64で埋め、その場合だけ`img-src blob: data:`にする。connect / form / defaultなどの`'none'`は変えない
+- 外部画像は使わない。スクリーンショットはBase64で埋める。trusted shellの`img-src blob: data:`を保ち、connect / form / defaultなどの`'none'`は変えない

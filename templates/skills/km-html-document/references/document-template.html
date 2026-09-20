@@ -7,87 +7,22 @@
   <!--
     Content Security Policy（meta で有効なディレクティブのみ）。
     - 外部資源は固定版のMermaidだけを許可し、SRIで検証する。
-    - connect-srcとdefault-srcで許可外の通信・資源読込を制限し、img-srcは図の画像化に必要なblob:だけを許可する。
+    - connect-srcとdefault-srcで許可外の通信・資源読込を制限し、img-srcは図の画像化と埋め込み画像に必要なblob:とdata:だけを許可する。
     - Mermaidを更新するときは、script要素、CSPのバージョンパス、SRIを同時に変更する。
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/ 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src blob:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
-  <title>ドキュメントタイトル</title>
-  <!-- ビルドで document-template.css を <style> へ挿入する。内容作成時は本文だけ編集し、このマーカーは残す -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net/npm/mermaid@11.15.0/ 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src blob: data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title><!-- RENDER:TITLE --></title>
+  <!-- render helperが document-template.css を <style> へ挿入する -->
   <style>/* BUILD:INLINE document-template.css */</style>
 </head>
 <body>
   <div class="container">
-
-    <header class="doc-header">
-      <h1>ドキュメントタイトル</h1>
-      <p class="subtitle">サブタイトル / 一文サマリー</p>
-      <p class="meta">生成日: YYYY-MM-DD</p>
-    </header>
-
-    <!-- 目次（任意の部品）。使う場合は各見出しの id に対応させる -->
-    <nav class="toc">
-      <strong>目次</strong>
-      <ul>
-        <li><a href="#section-1">1. セクション</a></li>
-        <li><a href="#section-2">2. 図解の例</a></li>
-      </ul>
-    </nav>
-
-    <section>
-      <h2 id="section-1">1. セクション</h2>
-      <p>本文。埋め込むデータは文脈ごとにエスケープする（<code>&amp; &lt; &gt; &quot; &#39;</code>）。</p>
-
-      <ul>
-        <li>箇条書き</li>
-        <li>箇条書き</li>
-      </ul>
-
-      <div class="callout callout-note">
-        <p class="callout-title">Note</p>
-        <p>補足や前提。色分けは note / warning / important。</p>
-      </div>
-
-      <table>
-        <thead>
-          <tr><th>項目</th><th>値</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>例</td><td>説明</td></tr>
-          <tr><td>例</td><td>説明</td></tr>
-        </tbody>
-      </table>
-
-      <pre><code>// コードは HTML エスケープしてから入れる（&amp; &lt; &gt;）
-if (a &lt; b &amp;&amp; b &gt; 0) {
-  return true;
-}</code></pre>
-    </section>
-
-    <section>
-      <h2 id="section-2">2. 図解の例</h2>
-      <p>説明に図が要る箇所だけ Mermaid を使う。図の隣に必ず本文の補足を置く。</p>
-
-      <figure class="diagram">
-        <pre class="mermaid">
-flowchart TD
-    A[入力] --> B{判定}
-    B -->|Yes| C[処理]
-    B -->|No| D[終了]
-    C --> D
-</pre>
-        <figcaption>図1: 処理フローの例</figcaption>
-      </figure>
-    </section>
-
-    <footer class="doc-footer">
-      <p>CSSと図操作用JavaScriptを同梱したHTML文書。図の描画にはCDN接続が必要。</p>
-    </footer>
-
+    <!-- RENDER:CONTENT -->
   </div>
 
   <!-- Mermaid（UMDオールインワン版をバージョン固定とSRI付きで読み込む。直後に挿入されるdocument-template.jsが初期化と図操作を行う。処理はクライアント内で完結し、外部送信は行わない） -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js" integrity="sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF" crossorigin="anonymous"></script>
-  <!-- ビルドで document-template.js を <script> へ挿入する。このマーカーは残す -->
+  <!-- render helperが document-template.js を <script> へ挿入する -->
   <script>/* BUILD:INLINE document-template.js */</script>
 </body>
 </html>

@@ -1,21 +1,8 @@
-"""Guards the security invariants of the km-html-document HTML template.
+"""Guards the render and security contracts of km-html-document.
 
-The template ships as a skeleton (document-template.html) plus separate asset
-files (document-template.css, document-template.js) that build.js inlines into a
-single report; Mermaid itself is loaded from its pinned CDN. The diagram tools (wheel zoom, drag, PNG/WebP
-export) run as an inline script, so script-src allows 'unsafe-inline' — the
-security floor here is no external egress, not inline-script blocking.
-
-These tests assemble the real output and fail fast when a passive-egress control
-is dropped or widened to a remote host: default-src and connect-src must stay
-'none', img-src must stay local (blob:/data:), and the only remote host
-script-src/img-src may name is the pinned Mermaid CDN. (Top-level navigation is
-not blockable by a meta CSP, so escaping untrusted content is the primary defense
-— see authoring-guide.md.) They also fail when the build markers go missing or a
-Mermaid version bump leaves the CSP script-src path out of sync with the
-<script src> URL. Verifying that the SRI
-sha384 matches the CDN bytes needs the network and is out of scope here, so a
-version bump still requires a manual SRI recompute.
+The trusted shell and assets stay separate from caller-authored HTML fragments.
+render.js validates all shell markers and combines those inputs into the final
+single-file report. Mermaid remains pinned to its CDN with SRI.
 
 Run with the scripts/ dir as the top-level import root:
     python3 -m unittest discover -s scripts/tests -t scripts
@@ -29,6 +16,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
 
 REF = (
     Path(__file__).resolve().parents[2]
@@ -37,30 +25,15 @@ REF = (
     / "km-html-document"
     / "references"
 )
+SKILL = REF.parent
 SKELETON = REF / "document-template.html"
 CSS = REF / "document-template.css"
 JS = REF / "document-template.js"
-BUILD_JS = REF / "build.js"
-
-def _marker(name: str) -> str:
-    # build.js を正本にしてマーカー定数を抽出する（テスト側に複製して drift させない）。
-    src = BUILD_JS.read_text(encoding="utf-8")
-    match = re.search(rf"{name} = '([^']*)'", src)
-    assert match is not None, f"{name} not found in build.js"
-    return match.group(1)
-
-
-CSS_MARKER = _marker("CSS_MARKER")
-JS_MARKER = _marker("JS_MARKER")
-
-
-def _assemble(skeleton: str, css: str, js: str) -> str:
-    """build.js と同じく <style>/<script> タグごと置換して組み立てる（不変条件チェック用）。"""
-    css_tag = f"<style>{CSS_MARKER}</style>"
-    js_tag = f"<script>{JS_MARKER}</script>"
-    return skeleton.replace(css_tag, f"<style>\n{css}\n</style>").replace(
-        js_tag, f"<script>\n{js}\n</script>"
-    )
+RENDER_JS = SKILL / "scripts" / "render.js"
+TITLE_MARKER = "<!-- RENDER:TITLE -->"
+CONTENT_MARKER = "<!-- RENDER:CONTENT -->"
+CSS_MARKER = "<style>/* BUILD:INLINE document-template.css */</style>"
+JS_MARKER = "<script>/* BUILD:INLINE document-template.js */</script>"
 
 
 class HtmlDocumentTemplateTests(unittest.TestCase):
@@ -69,55 +42,23 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
         cls.skeleton = SKELETON.read_text(encoding="utf-8")
         cls.css = CSS.read_text(encoding="utf-8")
         cls.js = JS.read_text(encoding="utf-8")
-        # The real artifact is the assembled single file; assert invariants on it.
-        cls.html = _assemble(cls.skeleton, cls.css, cls.js)
+        cls.html = cls.skeleton + cls.css + cls.js
 
     def test_sources_exist(self) -> None:
-        for path in (SKELETON, CSS, JS, BUILD_JS):
+        for path in (SKELETON, CSS, JS, RENDER_JS):
             self.assertTrue(path.is_file(), f"missing template source: {path}")
 
-    def test_skeleton_keeps_build_markers(self) -> None:
-        # The skeleton must keep both placeholders (marker wrapped in its tag) so
-        # build.js can inline the assets. The agent edits body content only.
-        self.assertIn(f"<style>{CSS_MARKER}</style>", self.skeleton, "CSS build placeholder missing")
-        self.assertIn(f"<script>{JS_MARKER}</script>", self.skeleton, "JS build placeholder missing")
-
-    def test_assembly_consumes_markers(self) -> None:
-        # After assembly the single file carries the css/js and no leftover markers.
-        self.assertNotIn("BUILD:INLINE", self.html, "assembly left an un-inlined marker")
-        self.assertIn("--content-width: 1400px", self.html, "css not inlined")
-        self.assertIn("mermaid.initialize", self.html, "js (mermaid init) not inlined")
-
-    @unittest.skipUnless(shutil.which("node"), "node not available")
-    def test_build_js_matches_assembly(self) -> None:
-        # build.js must produce exactly the assembled output (no markers left).
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "out.html"
-            out.write_text(self.skeleton, encoding="utf-8")
-            subprocess.run(
-                ["node", str(BUILD_JS), str(out)], check=True, capture_output=True
-            )
-            built = out.read_text(encoding="utf-8")
-        self.assertNotIn("BUILD:INLINE", built)
-        self.assertEqual(built, self.html, "build.js output diverges from assembly")
-
-    @unittest.skipUnless(shutil.which("node"), "node not available")
-    def test_build_js_requires_markers(self) -> None:
-        # build.js must fail loudly when a marker is absent, so a broken skeleton is
-        # caught at build time rather than silently shipping an unstyled report.
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "out.html"
-            out.write_text("<html>no markers</html>", encoding="utf-8")
-            result = subprocess.run(
-                ["node", str(BUILD_JS), str(out)], capture_output=True
-            )
-        self.assertNotEqual(result.returncode, 0, "build.js should fail on missing markers")
+    def test_skeleton_keeps_exactly_one_of_each_marker(self) -> None:
+        for marker in (TITLE_MARKER, CONTENT_MARKER, CSS_MARKER, JS_MARKER):
+            with self.subTest(marker=marker):
+                self.assertEqual(self.skeleton.count(marker), 1)
 
     def test_security_tokens_present(self) -> None:
         required = [
             "http-equiv=\"Content-Security-Policy\"",
             "default-src 'none'",
             "connect-src 'none'",
+            "img-src blob: data:",
             'name="referrer" content="no-referrer"',
             "integrity=\"sha384-",
             'crossorigin="anonymous"',
@@ -204,6 +145,190 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
         self.assertIn("toBlob", self.html, "canvas raster export (toBlob) is missing")
         self.assertIn("image/webp", self.html, "WebP export target is missing")
         self.assertIn("htmlLabels: false", self.html, "htmlLabels:false (export-safe SVG) is missing")
+
+
+@unittest.skipUnless(shutil.which("node"), "node not available")
+class HtmlDocumentRenderTests(unittest.TestCase):
+    def run_render(
+        self,
+        source: Path,
+        output: Path,
+        *,
+        title: str = "A & B < C \"quote\" 'single'",
+        overwrite: bool = False,
+        render_js: Path = RENDER_JS,
+        cwd: Optional[Path] = None,
+    ) -> subprocess.CompletedProcess[bytes]:
+        command = [
+            "node",
+            str(render_js),
+            "--source",
+            str(source),
+            "--output",
+            str(output),
+            "--title",
+            title,
+        ]
+        if overwrite:
+            command.append("--overwrite")
+        return subprocess.run(command, cwd=cwd, capture_output=True)
+
+    def test_renders_fragment_assets_and_escaped_title_from_any_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source $ fragment.html"
+            output = root / "output $ document.html"
+            fragment = '<header class="doc-header"><h1>本文</h1></header>'
+            source.write_text(fragment, encoding="utf-8")
+            result = self.run_render(source, output, cwd=root)
+
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            html = output.read_text(encoding="utf-8")
+            self.assertIn(fragment, html)
+            self.assertIn("<title>A &amp; B &lt; C &quot;quote&quot; &#39;single&#39;</title>", html)
+            self.assertIn("--content-width: 1400px", html)
+            self.assertIn("mermaid.initialize", html)
+            for marker in ("RENDER:TITLE", "RENDER:CONTENT", "BUILD:INLINE"):
+                self.assertNotIn(marker, html)
+
+    def test_preserves_dollar_replacement_tokens_in_all_inputs(self) -> None:
+        token_text = "$& $$ $` $'"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copied_skill = root / "skill"
+            shutil.copytree(SKILL, copied_skill)
+            copied_css = copied_skill / "references" / "document-template.css"
+            copied_js = copied_skill / "references" / "document-template.js"
+            copied_css.write_text(copied_css.read_text(encoding="utf-8") + f"\n/* {token_text} */\n", encoding="utf-8")
+            copied_js.write_text(copied_js.read_text(encoding="utf-8") + f"\n// {token_text}\n", encoding="utf-8")
+            source = root / "source.html"
+            output = root / "output.html"
+            fragment = f"<pre>{token_text}</pre>"
+            title = f"Title {token_text}"
+            source.write_text(fragment, encoding="utf-8")
+
+            result = self.run_render(
+                source,
+                output,
+                title=title,
+                render_js=copied_skill / "scripts" / "render.js",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            html = output.read_text(encoding="utf-8")
+            self.assertIn(fragment, html)
+            self.assertIn("<title>Title $&amp; $$ $` $&#39;</title>", html)
+            self.assertIn(f"/* {token_text} */", html)
+            self.assertIn(f"// {token_text}", html)
+
+    def test_existing_output_requires_explicit_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.html"
+            output = root / "output.html"
+            source.write_text("<section>new</section>", encoding="utf-8")
+            output.write_text("sentinel", encoding="utf-8")
+
+            refused = self.run_render(source, output)
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertEqual(output.read_text(encoding="utf-8"), "sentinel")
+
+            replaced = self.run_render(source, output, overwrite=True)
+            self.assertEqual(replaced.returncode, 0, replaced.stderr.decode())
+            self.assertIn("<section>new</section>", output.read_text(encoding="utf-8"))
+
+    def test_rejects_same_source_and_output_as_usage_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "same.html"
+            source.write_text("<section>content</section>", encoding="utf-8")
+            result = self.run_render(source, source)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn(b"usage:", result.stderr)
+
+    def test_rejects_blank_source_without_creating_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "blank.html"
+            output = Path(tmp) / "output.html"
+            source.write_text(" \n\t", encoding="utf-8")
+            result = self.run_render(source, output)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(output.exists())
+
+    def test_marker_text_inside_fragment_is_inserted_raw(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.html"
+            output = root / "output.html"
+            fragment = f"<pre>{TITLE_MARKER} {CONTENT_MARKER} {CSS_MARKER} {JS_MARKER}</pre>"
+            source.write_text(fragment, encoding="utf-8")
+            result = self.run_render(source, output)
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            self.assertIn(fragment, output.read_text(encoding="utf-8"))
+
+    def test_rejects_each_missing_or_duplicate_shell_marker(self) -> None:
+        markers = (TITLE_MARKER, CONTENT_MARKER, CSS_MARKER, JS_MARKER)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for mode in ("missing", "duplicate"):
+                for index, marker in enumerate(markers):
+                    with self.subTest(mode=mode, marker=marker):
+                        copied_skill = root / f"skill-{mode}-{index}"
+                        shutil.copytree(SKILL, copied_skill)
+                        template = copied_skill / "references" / "document-template.html"
+                        text = template.read_text(encoding="utf-8")
+                        replacement = "" if mode == "missing" else marker + marker
+                        template.write_text(text.replace(marker, replacement), encoding="utf-8")
+                        source = root / f"source-{mode}-{index}.html"
+                        output = root / f"output-{mode}-{index}.html"
+                        source.write_text("<section>content</section>", encoding="utf-8")
+
+                        result = self.run_render(
+                            source,
+                            output,
+                            render_js=copied_skill / "scripts" / "render.js",
+                        )
+                        self.assertEqual(result.returncode, 1)
+                        self.assertFalse(output.exists())
+
+    def test_overwrite_preserves_existing_output_when_render_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copied_skill = root / "skill"
+            shutil.copytree(SKILL, copied_skill)
+            template = copied_skill / "references" / "document-template.html"
+            template.write_text(
+                template.read_text(encoding="utf-8").replace(TITLE_MARKER, ""),
+                encoding="utf-8",
+            )
+            source = root / "source.html"
+            output = root / "output.html"
+            source.write_text("<section>content</section>", encoding="utf-8")
+            output.write_text("sentinel", encoding="utf-8")
+
+            result = self.run_render(
+                source,
+                output,
+                overwrite=True,
+                render_js=copied_skill / "scripts" / "render.js",
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(output.read_text(encoding="utf-8"), "sentinel")
+
+    def test_usage_errors_return_two(self) -> None:
+        cases = [
+            [],
+            ["--source"],
+            ["--unknown", "value"],
+            ["--source", "a", "--source", "b", "--output", "c", "--title", "d"],
+            ["--source", "a", "--output", "b", "--title", "   "],
+            ["--source", "a", "--output", "b", "--title", "c", "--overwrite", "--overwrite"],
+        ]
+        for arguments in cases:
+            with self.subTest(arguments=arguments):
+                result = subprocess.run(["node", str(RENDER_JS), *arguments], capture_output=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(b"usage:", result.stderr)
 
 
 if __name__ == "__main__":
