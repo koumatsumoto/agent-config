@@ -9,7 +9,10 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LAUNCHER = REPO_ROOT / "templates/skills/km-github-workflow/scripts/run-python.sh"
+LAUNCHERS = (
+    REPO_ROOT / "templates/skills/km-github-workflow/scripts/run-python.sh",
+    REPO_ROOT / "templates/skills/km-plan/scripts/run-python.sh",
+)
 
 
 @unittest.skipUnless(shutil.which("bash"), "bash is required")
@@ -35,11 +38,11 @@ printf '%%s\\n' "$0" "$@"
         path.write_text(body, encoding="utf-8")
         path.chmod(0o755)
 
-    def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def _run(self, launcher: Path, *args: str) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["PATH"] = os.fspath(self.bin)
         return subprocess.run(
-            [self.bash, os.fspath(LAUNCHER), *args],
+            [self.bash, os.fspath(launcher), *args],
             env=env,
             text=True,
             stdout=subprocess.PIPE,
@@ -50,35 +53,39 @@ printf '%%s\\n' "$0" "$@"
         self._candidate("python3", supports=True)
         self._candidate("python", supports=True)
 
-        result = self._run("script.py", "value with spaces", "--flag")
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(
-            result.stdout.splitlines(),
-            [os.fspath(self.bin / "python3"), "script.py", "value with spaces", "--flag"],
-        )
+        for launcher in LAUNCHERS:
+            with self.subTest(launcher=launcher):
+                result = self._run(launcher, "script.py", "value with spaces", "--flag")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(
+                    result.stdout.splitlines(),
+                    [os.fspath(self.bin / "python3"), "script.py", "value with spaces", "--flag"],
+                )
 
     def test_falls_back_to_compatible_python(self) -> None:
         self._candidate("python3", supports=False)
         self._candidate("python", supports=True)
 
-        result = self._run("script.py")
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.splitlines()[0], os.fspath(self.bin / "python"))
+        for launcher in LAUNCHERS:
+            with self.subTest(launcher=launcher):
+                result = self._run(launcher, "script.py")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines()[0], os.fspath(self.bin / "python"))
 
     def test_fails_without_compatible_python(self) -> None:
         self._candidate("python3", supports=False)
 
-        result = self._run("script.py")
-
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("Python 3.9+ not found", result.stderr)
+        for launcher in LAUNCHERS:
+            with self.subTest(launcher=launcher):
+                result = self._run(launcher, "script.py")
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("Python 3.9+ not found", result.stderr)
 
     def test_requires_script_argument(self) -> None:
         self._candidate("python3", supports=True)
 
-        result = self._run()
-
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("script is required", result.stderr)
+        for launcher in LAUNCHERS:
+            with self.subTest(launcher=launcher):
+                result = self._run(launcher)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("script is required", result.stderr)
