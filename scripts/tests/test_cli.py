@@ -469,11 +469,6 @@ class SkillMetadataTests(unittest.TestCase):
                     dangling.append(f"{doc.relative_to(cli.REPO_ROOT)} -> {rel}")
         self.assertEqual(dangling, [])
 
-    def test_plan_issue_template_contains_managed_marker(self) -> None:
-        issue = cli.REPO_ROOT / "templates/skills/km-plan/references/issue.md"
-        self.assertIn("<!-- km:plan:managed -->", issue.read_text(encoding="utf-8"))
-
-
 class BackupTests(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="fs-test-"))

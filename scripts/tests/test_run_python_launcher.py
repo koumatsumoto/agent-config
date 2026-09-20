@@ -11,7 +11,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LAUNCHERS = (
     REPO_ROOT / "templates/skills/km-github-workflow/scripts/run-python.sh",
-    REPO_ROOT / "templates/skills/km-plan/scripts/run-python.sh",
 )
 
 
