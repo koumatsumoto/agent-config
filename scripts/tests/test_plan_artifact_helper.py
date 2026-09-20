@@ -6,7 +6,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -67,6 +69,22 @@ class PlanArtifactHelperTests(unittest.TestCase):
         self.assertEqual(result.stdout, "")
         self.assertIn("outside", result.stderr)
         self.assertEqual(list(self.repo.iterdir()), [])
+
+    def test_init_reports_cleanup_failure_as_runtime_failure(self) -> None:
+        spec = spec_from_file_location("plan_artifact_test_module", HELPER)
+        assert spec is not None and spec.loader is not None
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        created = self.repo / "km-plan-forced"
+        created.mkdir()
+        cleanup_error = OSError("cleanup failed")
+
+        with (
+            mock.patch.object(module.tempfile, "mkdtemp", return_value=os.fspath(created)),
+            mock.patch.object(module.shutil, "rmtree", side_effect=cleanup_error),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "cannot remove temporary directory"):
+                module.init_artifact(os.fspath(self.repo))
 
     def test_validate_accepts_valid_artifact_without_modifying_bytes(self) -> None:
         artifact = self._artifact()

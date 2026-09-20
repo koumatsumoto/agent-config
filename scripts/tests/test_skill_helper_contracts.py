@@ -23,6 +23,14 @@ class SkillHelperContractTests(unittest.TestCase):
             '--repo-root "<absolute-repository-root>" "<absolute-plan-file>"',
             skill,
         )
+        self.assertIn('`<skill-directory>`はこの`SKILL.md`のあるdirectory', skill)
+        self.assertIn(
+            'gh issue create ... --body-file "<validated-plan-file>"', skill
+        )
+        self.assertIn(
+            'gh issue edit <issue-number> ... --body-file "<validated-plan-file>"',
+            skill,
+        )
         self.assertTrue((SKILLS / "km-plan/scripts/plan-artifact.py").is_file())
         self.assertTrue((SKILLS / "km-plan/scripts/run-python.sh").is_file())
 

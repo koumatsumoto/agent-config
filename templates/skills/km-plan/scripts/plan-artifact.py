@@ -51,7 +51,10 @@ def init_artifact(repo_root_value: str) -> Path:
         return artifact
     except Exception:
         if temp_directory is not None:
-            shutil.rmtree(temp_directory, ignore_errors=True)
+            try:
+                shutil.rmtree(temp_directory)
+            except OSError as error:
+                raise RuntimeError(f"cannot remove temporary directory: {error}") from error
         raise
 
 

@@ -19,7 +19,7 @@ argument-hint: "[title-or-topic | issue-number]"
 
 それ以外の可逆な判断は既存設計と最小方針から決める。`references/goal-contract.md`を読み、計画を作る。
 
-対象repository rootを確定し、次のhelperでplan artifactを初期化する。
+対象repository rootを確定し、次のhelperでplan artifactを初期化する。`<skill-directory>`はこの`SKILL.md`のあるdirectory。
 
 ```text
 bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/plan-artifact.py" init --repo-root "<absolute-repository-root>"
@@ -56,5 +56,17 @@ stdoutで返った絶対pathの`plan.md`だけをlocal plan sourceとして編�
 bash "<skill-directory>/scripts/run-python.sh" "<skill-directory>/scripts/plan-artifact.py" validate --repo-root "<absolute-repository-root>" "<absolute-plan-file>"
 ```
 
-共有上の正本はGitHub issueとし、一時ファイルをセッションをまたぐ正本にしない。validateが成功して返した同一pathを`gh issue create/edit --body-file`へ渡す。`--body`、stdinからの本文再構成、validate後の別fileへのcopyは使わない。GitHub writeをhelperへ任せない。
+共有上の正本はGitHub issueとし、一時ファイルをセッションをまたぐ正本にしない。validateが成功して返した同一pathを、作成時は次の形で渡す。
+
+```text
+gh issue create ... --body-file "<validated-plan-file>"
+```
+
+更新時は次の形で渡す。
+
+```text
+gh issue edit <issue-number> ... --body-file "<validated-plan-file>"
+```
+
+`--body`、stdinからの本文再構成、validate後の別fileへのcopyは使わない。GitHub writeをhelperへ任せない。
 反映失敗を成功扱いせず、issue URL、実装時確認事項、重要な残存リスクを報告する。
