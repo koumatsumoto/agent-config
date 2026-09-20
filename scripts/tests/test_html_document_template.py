@@ -58,6 +58,7 @@ class HtmlDocumentTemplateTests(unittest.TestCase):
             "http-equiv=\"Content-Security-Policy\"",
             "default-src 'none'",
             "connect-src 'none'",
+            "img-src blob: data:",
             'name="referrer" content="no-referrer"',
             "integrity=\"sha384-",
             'crossorigin="anonymous"',
@@ -190,6 +191,36 @@ class HtmlDocumentRenderTests(unittest.TestCase):
             for marker in ("RENDER:TITLE", "RENDER:CONTENT", "BUILD:INLINE"):
                 self.assertNotIn(marker, html)
 
+    def test_preserves_dollar_replacement_tokens_in_all_inputs(self) -> None:
+        token_text = "$& $$ $` $'"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copied_skill = root / "skill"
+            shutil.copytree(SKILL, copied_skill)
+            copied_css = copied_skill / "references" / "document-template.css"
+            copied_js = copied_skill / "references" / "document-template.js"
+            copied_css.write_text(copied_css.read_text(encoding="utf-8") + f"\n/* {token_text} */\n", encoding="utf-8")
+            copied_js.write_text(copied_js.read_text(encoding="utf-8") + f"\n// {token_text}\n", encoding="utf-8")
+            source = root / "source.html"
+            output = root / "output.html"
+            fragment = f"<pre>{token_text}</pre>"
+            title = f"Title {token_text}"
+            source.write_text(fragment, encoding="utf-8")
+
+            result = self.run_render(
+                source,
+                output,
+                title=title,
+                render_js=copied_skill / "scripts" / "render.js",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            html = output.read_text(encoding="utf-8")
+            self.assertIn(fragment, html)
+            self.assertIn("<title>Title $&amp; $$ $` $&#39;</title>", html)
+            self.assertIn(f"/* {token_text} */", html)
+            self.assertIn(f"// {token_text}", html)
+
     def test_existing_output_requires_explicit_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -258,6 +289,31 @@ class HtmlDocumentRenderTests(unittest.TestCase):
                         )
                         self.assertEqual(result.returncode, 1)
                         self.assertFalse(output.exists())
+
+    def test_overwrite_preserves_existing_output_when_render_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copied_skill = root / "skill"
+            shutil.copytree(SKILL, copied_skill)
+            template = copied_skill / "references" / "document-template.html"
+            template.write_text(
+                template.read_text(encoding="utf-8").replace(TITLE_MARKER, ""),
+                encoding="utf-8",
+            )
+            source = root / "source.html"
+            output = root / "output.html"
+            source.write_text("<section>content</section>", encoding="utf-8")
+            output.write_text("sentinel", encoding="utf-8")
+
+            result = self.run_render(
+                source,
+                output,
+                overwrite=True,
+                render_js=copied_skill / "scripts" / "render.js",
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(output.read_text(encoding="utf-8"), "sentinel")
 
     def test_usage_errors_return_two(self) -> None:
         cases = [

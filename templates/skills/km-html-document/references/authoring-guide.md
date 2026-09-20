@@ -80,4 +80,4 @@ source fileには`<div class="container">`の内側だけを書く。`<!doctype 
 ## レイアウトと画像
 
 - スタイル変更には`document-template.css`を使い、印刷用の色保持・改ページ回避を保つ
-- 外部画像は使わない。スクリーンショットはBase64で埋め、その場合だけ`img-src blob: data:`にする。connect / form / defaultなどの`'none'`は変えない
+- 外部画像は使わない。スクリーンショットはBase64で埋める。trusted shellの`img-src blob: data:`を保ち、connect / form / defaultなどの`'none'`は変えない

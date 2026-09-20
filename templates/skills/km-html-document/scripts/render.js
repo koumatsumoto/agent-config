@@ -83,10 +83,10 @@ function render(template, css, js, source, title) {
   for (const [marker, label] of markers) requireExactlyOne(template, marker, label);
 
   return template
-    .replace(TITLE_MARKER, escapeHtml(title))
-    .replace(CSS_TAG, `<style>\n${css}\n</style>`)
-    .replace(JS_TAG, `<script>\n${js}\n</script>`)
-    .replace(CONTENT_MARKER, source);
+    .replace(TITLE_MARKER, () => escapeHtml(title))
+    .replace(CSS_TAG, () => `<style>\n${css}\n</style>`)
+    .replace(JS_TAG, () => `<script>\n${js}\n</script>`)
+    .replace(CONTENT_MARKER, () => source);
 }
 
 function publish(output, contents, overwrite) {
