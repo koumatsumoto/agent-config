@@ -18,4 +18,4 @@ Windows（Git Bash）またはWSL（Ubuntu）から、指定したローカル�
 bash "<skill-directory>/scripts/open-file.sh" "<path>"
 ```
 
-相対pathは呼び出し時のworking directory基準。起動要求の結果と対象pathを報告し、helperが失敗した場合は理由を伝える。
+相対pathは呼び出し時のworking directory基準。起動要求を送信したことと対象pathを報告する。GUI表示完了は確認しない。helperが失敗した場合は理由を伝える。
