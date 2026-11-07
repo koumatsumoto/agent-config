@@ -6,14 +6,15 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 
 - 正本は `templates/` 配下
 - `scripts/cli.py` で `~/.claude/`、`~/.codex/`、`~/.agents/skills/` に反映 (Linux / macOS / Windows 対応)
-- AI共通ガイドラインの正本は`templates/CLAUDE.md`だけである。各ツールが要求するファイル名（`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`）へ同じ内容を配布する
+- Codex向けガイドラインの正本は`templates/AGENTS.md`だけであり、`~/.codex/AGENTS.md`へ配布する。Claude向けのガイドラインは配布しない
 - `--claude-dir <dir>` で `CLAUDE_CONFIG_DIR` 用の別プロファイルにも配布できる
 - Linux / macOS / Git Bashでは `install.sh` / `clean.sh` などのシェルラッパーから呼び出せる
 - `README.md`は説明資料であり、実行時契約の正本は`templates/`に置く
 
 ## 正本
 
-- `templates/CLAUDE.md` - Claude Code、Codex CLIに共通するAI共通ガイドライン（唯一の正本）
+- `templates/AGENTS.md` - Codex CLI向けのガイドライン（唯一の配布元）
+- `AGENTS.md` - このリポジトリの作業用指示（配布しない）
 - `templates/skills/` - Claude / Codex CLI 共用の skills
 - `templates/config.toml` - Codex CLI 用設定テンプレート
 - `templates/codex/*.config.toml` - Codex CLI用のプロファイルテンプレート（`~/.codex/<profile>.config.toml`）
@@ -29,7 +30,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `templates/` - 配布対象テンプレート
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
-- `scripts/tests/` - Python unittest / Node helper test
+- `scripts/tests/` - Python unittest / Skill helper test
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布しない
 - `.github/workflows/` - GitHub Actions CI 設定
 
@@ -107,7 +108,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 つまり、`theme`のような個人設定はユーザー側で書き加えれば、次回のインストールでも消えない。一方、テンプレートが宣言するキーは実行時に一時変更しても、次回のインストールでリポジトリの値に戻る。恒久的に変える場合は`templates/settings.json`を編集する。
 
-配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。`includeGitInstructions=false`でClaude組み込みのcommit・PR指示と開始時のGit statusスナップショットを外し、Git操作の契約は共通ガイドラインと`km-github-workflow`で管理する。
+配布するキーと値の正本は[`templates/settings.json`](templates/settings.json)。応答言語・表示、status line、権限などの共通設定を管理する。`includeGitInstructions=false`でClaude組み込みのcommit・PR指示と開始時のGit statusスナップショットを外し、CodexのGit操作の指針は`templates/AGENTS.md`で管理する。
 
 `*.config`や`appsettings.json`のような一般的なアプリ設定はglobal denyに含めない。これらに秘密情報を置くrepositoryでは、`.claude/settings.json`または`.claude/settings.local.json`でdenyを追加する。
 
@@ -125,11 +126,13 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 - 再installは同じ内容へ収束し、`verify`はテンプレートとの差分をすべてdriftとして検出する
 - マシン固有または一時的な設定は、CLI flagや明示的なprofileなど別の設定経路を使う
 
-### 共通 AI エージェント指針の取り扱い
+### Codex向けガイドラインの取り扱い
 
-指針は[`templates/CLAUDE.md`](templates/CLAUDE.md)を編集し、再インストールする。Claude / Codex向けの両ファイルへ同じ内容を上書きする。
+指針は[`templates/AGENTS.md`](templates/AGENTS.md)を編集し、再インストールする。`~/.codex/AGENTS.md`へ内容を上書きする。ルートの[`AGENTS.md`](AGENTS.md)はこのリポジトリの作業用で、配布しない。
 
-共通ガイドラインはツール非依存に保つ。モデル、推論強度、権限、承認ポリシーなどの実行時設定は各ツールの設定テンプレートで管理する。
+旧版が配布した`~/.claude/CLAUDE.md`と、廃止した`km-github-workflow`、`km-html-document`、`km-plan`、`km-review`は、次のinstallで退役する。旧ガイドラインは`CLAUDE.md.bak`、旧skillは各配布先の`skills.bak/<skill名>`へ退避し、skillの探索対象から外す。`--claude-dir`でも指定先だけに同じ退役処理を行う。独自skillは保持し、旧項目がない再実行では既存backupに触れない。
+
+ガイドラインの本文はツール非依存に保つ。モデル、推論強度、権限、承認ポリシーなどの実行時設定は各ツールの設定テンプレートで管理する。
 
 マシン固有・個人ローカルな指示は配布対象の正本へ書かない。Claude Codeでは各リポジトリの`CLAUDE.local.md`（git管理外）へ置く。Codexでは`AGENTS.override.md`が同じdirectoryの`AGENTS.md` / fallbackを置き換えるため、必要な通常指示も含めたlocal overrideとして使う。ユーザーレベルの`~/.claude/CLAUDE.local.md`は自動読み込みされない。
 
@@ -150,7 +153,7 @@ python scripts/cli.py verify
 
 検証対象はインストール時と同じ構成要素の選択規則に従う。通常はClaude、Codex、共用skillを検証し、`--claude-dir <dir>`を指定すると、そのディレクトリへのインストール結果を検証する。同じテンプレート・実行環境で直後にinstallしても管理状態が変わらないことを確認する。管理ファイルの内容・配置、スキル内の余分な項目、退役対象の残存、POSIX権限を検査する。`settings.json`は通常ファイルであることと、宣言したトップレベルキーの値をOS・配置先による変換後の期待値と比較する。未知の設定キー、JSONの空白・キー順、独自のトップレベルスキルと既存backupは対象外。
 
-配布CLI、Skill helper、HTMLテンプレートのrender・CSP、文書の参照・一覧を検査するunittest（環境依存の項目は該当OSで実行）:
+配布CLI、Skill helper、文書の参照・一覧を検査するunittest（環境依存の項目は該当OSで実行）:
 
 ```bash
 # Linux / macOS
@@ -162,13 +165,7 @@ python3 -m unittest discover -s scripts/tests -t scripts -v
 python -m unittest discover -s scripts/tests -t scripts -v
 ```
 
-km-planのNode helperは次を実行する。
-
-```bash
-node --test scripts/tests/test_prepare_plan_helper.js
-```
-
-GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke testを実行し、独立したjobでNode helper testも実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
+GitHub Actions (`.github/workflows/tests.yml`) は pull request ごとに `ubuntu-latest` の Python 3.9 / 3.13 / 3.14 マトリクスで unittest と bash wrapper の smoke testを実行する。`macos-latest` / `windows-latest` は workflow_dispatch で OS を選択（`all` で全 OS）して手動実行する。
 
 ## クリーンアップ
 
@@ -189,8 +186,7 @@ python scripts/cli.py clean
 
 | Repository Source | Destination |
 | --- | --- |
-| `templates/CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `templates/CLAUDE.md` | `~/.codex/AGENTS.md` |
+| `templates/AGENTS.md` | `~/.codex/AGENTS.md` |
 | `templates/skills/` | `~/.claude/skills/` |
 | `templates/statusline.py` | `~/.claude/statusline.py` |
 | `templates/subagent-statusline.py` | `~/.claude/subagent-statusline.py` |
@@ -206,7 +202,6 @@ python scripts/cli.py clean
 
 - Claude Code
   - Best practices: `https://code.claude.com/docs/en/best-practices`
-  - Memory (`CLAUDE.md`): `https://code.claude.com/docs/en/memory`
   - Skills: `https://code.claude.com/docs/en/skills`
   - Sub-agents: `https://code.claude.com/docs/en/sub-agents`
   - Hooks: `https://code.claude.com/docs/en/hooks`
@@ -230,19 +225,15 @@ python scripts/cli.py clean
 - モデルと推論・応答量は製品の既定に追従し、永続的な指示は共通ガイドラインとSkillsで管理する
 - 既定はworkspace内の作業用。探索には`readonly`、リポジトリと入力を完全に信頼できる作業または外部隔離済み環境には明示的に`trusted`を選ぶ
 - [`agent-config.rules`](templates/codex-rules/agent-config.rules)は代表的な危険操作をapproval reviewへ送る補助境界であり、すべての同義コマンドの検出は保証しない。workspace sandboxと共通ガイドラインを安全境界とする
-- リポジトリの`CLAUDE.md`も指示として利用し、外部エディタは`VISUAL` / `EDITOR`に委ねる
+- リポジトリの指示は`AGENTS.md`を使い、外部エディタは`VISUAL` / `EDITOR`に委ねる
 
 ## スキル一覧
 
 | スキル | 説明 |
 | --- | --- |
-| `km-html-document` | 用意済みの内容を安全対策済みの単一HTMLにする |
 | `km-open-file` | Windows / WSL Ubuntuでローカルのファイル・フォルダを開く |
 | `km-document-refine` | 既存文書の情報の過不足・重複・構成を、意味と利用条件を保って整理する |
 | `km-japanese-refine` | 意味と書き手の声を保ち、直訳調・不自然な言い回し・文のつながりを整える |
-| `km-review` | 実装した変更をread-onlyでレビューし、欠陥と品質判定を返す |
-| `km-github-workflow` | 変更を実装・検証・レビューしてPRへ届け、依頼された場合はマージまで完了する |
-| `km-plan` | 複雑で誤方向の手戻りが大きい変更について、背景と設計判断を含む実装計画を作成し、GitHub issueにする |
 
 ## ライセンス
 
