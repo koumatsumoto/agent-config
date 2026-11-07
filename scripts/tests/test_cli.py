@@ -36,8 +36,8 @@ def _verified_spec() -> cli.FileSpec:
 
 
 def _global_guideline_specs() -> list[cli.FileSpec]:
-    """The shared agent guidelines refreshed from the template on every install."""
-    dests = {".claude/CLAUDE.md", ".codex/AGENTS.md"}
+    """The Codex agent guideline refreshed from the template on every install."""
+    dests = {".codex/AGENTS.md"}
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel in dests]
 
 
@@ -1021,7 +1021,7 @@ class InstallTests(unittest.TestCase):
         )
         self.assertEqual(base["personality"], "pragmatic")
         self.assertEqual(base["web_search"], "live")
-        self.assertEqual(base["project_doc_fallback_filenames"], ["CLAUDE.md"])
+        self.assertNotIn("project_doc_fallback_filenames", base)
         self.assertEqual(base["history"], {"max_bytes": 50000000})
         for key in (
             "model",
@@ -1179,8 +1179,8 @@ class InstallTests(unittest.TestCase):
         self._run_install()
         widened = [
             self.home / cli.SETTINGS_DEST_REL,
-            self.home / cli.TEMPLATE_FILES[0].dest_rel,
-            self.home / ".claude/skills/km-review/SKILL.md",
+            self.home / ".codex/AGENTS.md",
+            self.home / ".claude/skills/km-document-refine/SKILL.md",
         ]
         for path in widened:
             self.assertTrue(path.is_file(), f"missing: {path}")
@@ -1321,8 +1321,8 @@ class CleanTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self._run_clean()
         self.assertTrue(root.is_symlink())
-        self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
-        self.assertTrue((outside / "km-review/SKILL.md").exists())
+        self.assertTrue((self.home / ".codex/AGENTS.md").exists())
+        self.assertTrue((outside / "km-document-refine/SKILL.md").exists())
 
     @unittest.skipUnless(os.name == "posix", "symlink fixture requires POSIX")
     def test_clean_refuses_linked_backup_root_before_removal(self) -> None:
@@ -1338,8 +1338,8 @@ class CleanTests(unittest.TestCase):
                     with self.assertRaises(PermissionError):
                         self._run_clean()
                     self.assertEqual(marker.read_text(encoding="utf-8"), "user data")
-                    self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
-                    self.assertTrue((root / "km-review/SKILL.md").exists())
+                    self.assertTrue((self.home / ".codex/AGENTS.md").exists())
+                    self.assertTrue((root / "km-document-refine/SKILL.md").exists())
                 finally:
                     bak.unlink()
 
@@ -1347,7 +1347,7 @@ class CleanTests(unittest.TestCase):
     def test_clean_checks_resolved_backup_boundary_without_symlink_flag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             outside = Path(tmp)
-            marker = outside / "km-review/keep"
+            marker = outside / "km-document-refine/keep"
             marker.parent.mkdir()
             marker.write_text("user data", encoding="utf-8")
             bak = self.home / ".claude/skills.bak"
@@ -1359,8 +1359,8 @@ class CleanTests(unittest.TestCase):
                 with self.assertRaises(PermissionError):
                     self._run_clean()
             self.assertEqual(marker.read_text(encoding="utf-8"), "user data")
-            self.assertTrue((self.home / ".claude/CLAUDE.md").exists())
-            self.assertTrue((self.home / ".claude/skills/km-review/SKILL.md").exists())
+            self.assertTrue((self.home / ".codex/AGENTS.md").exists())
+            self.assertTrue((self.home / ".claude/skills/km-document-refine/SKILL.md").exists())
 
     def test_creates_bak_for_each(self) -> None:
         self._run_clean()
@@ -1542,9 +1542,9 @@ class VerifyTests(unittest.TestCase):
         for tree in self.layout.trees:
             with self.subTest(tree=tree.dest_rel):
                 root = self.home / tree.dest_rel
-                orphan = root / "km-review/old-reference.md"
+                orphan = root / "km-document-refine/old-reference.md"
                 orphan.write_text("old", encoding="utf-8")
-                subdir = root / "km-review/old-dir"
+                subdir = root / "km-document-refine/old-dir"
                 subdir.mkdir()
                 (subdir / "old.txt").write_text("old nested", encoding="utf-8")
                 custom = root / "custom/SKILL.md"
@@ -1841,7 +1841,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
 
     def test_deploys_claude_files_at_the_top_level(self) -> None:
         self._run_install()
-        for name in ("CLAUDE.md", "statusline.py", "subagent-statusline.py"):
+        for name in ("statusline.py", "subagent-statusline.py"):
             self.assertTrue((self.target / name).is_file(), f"missing: {name}")
         self.assertTrue((self.target / "skills").is_dir())
         self.assertFalse((self.target / "rules").exists())
@@ -1859,10 +1859,11 @@ class ClaudeDirInstallTests(unittest.TestCase):
 
     def test_content_matches_the_templates(self) -> None:
         self._run_install()
-        src = cli.REPO_ROOT / "templates" / "CLAUDE.md"
-        self.assertEqual(
-            (self.target / "CLAUDE.md").read_bytes(), src.read_bytes()
-        )
+        for spec in self.layout.files:
+            self.assertEqual(
+                (self.target / spec.dest_rel).read_bytes(),
+                (cli.REPO_ROOT / spec.src_rel).read_bytes(),
+            )
 
     def test_leaves_the_home_layout_untouched(self) -> None:
         self._run_install()
@@ -1964,7 +1965,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
 
     def test_verify_detects_drift(self) -> None:
         self._run_install()
-        (self.target / "CLAUDE.md").write_text("edited", encoding="utf-8")
+        (self.target / "statusline.py").write_text("edited", encoding="utf-8")
         with patch("sys.stdout", new=StringIO()):
             report = cli.verify(self.layout)
         self.assertTrue(any("drift" in m for m in report.failures), report.failures)
@@ -1975,7 +1976,7 @@ class ClaudeDirInstallTests(unittest.TestCase):
             rc = cli.clean(self.layout)
         self.assertEqual(rc, 0)
         self.assertIn(str(self.target), out.getvalue())
-        for name in ("CLAUDE.md", "statusline.py", "skills/km-review"):
+        for name in ("statusline.py", "skills/km-document-refine"):
             self.assertFalse((self.target / name).exists(), f"still present: {name}")
         self.assertTrue(
             (self.target / "settings.json").exists(),
@@ -2107,7 +2108,7 @@ class ClaudeDirCliTests(unittest.TestCase):
         with patch("sys.stdout", new=StringIO()):
             rc = cli.main(["cli.py", "install", "--claude-dir", str(self.target)])
         self.assertEqual(rc, 0)
-        self.assertTrue((self.target / "CLAUDE.md").is_file())
+        self.assertTrue((self.target / "statusline.py").is_file())
 
     def test_verify_dispatches_to_the_target(self) -> None:
         with patch("sys.stdout", new=StringIO()):
@@ -2134,7 +2135,7 @@ class ClaudeDirCliTests(unittest.TestCase):
 # --------------------------------------------------------------------------- #
 def _guideline_specs() -> list[cli.FileSpec]:
     """Every managed destination that is an agent guideline file."""
-    names = {"CLAUDE.md", "AGENTS.md"}
+    names = {"AGENTS.md"}
     return [
         spec
         for spec in cli.TEMPLATE_FILES
@@ -2147,7 +2148,7 @@ class CanonicalGuidelineTests(unittest.TestCase):
         specs = _guideline_specs()
         self.assertEqual(
             {spec.dest_rel for spec in specs},
-            {".claude/CLAUDE.md", ".codex/AGENTS.md"},
+            {".codex/AGENTS.md"},
         )
         self.assertEqual({spec.src_rel for spec in specs}, {cli.GUIDELINE_TEMPLATE_REL})
 
@@ -2159,6 +2160,113 @@ class CanonicalGuidelineTests(unittest.TestCase):
         guideline_names = {Path(spec.dest_rel).name for spec in _guideline_specs()}
         present = {p.name for p in (cli.REPO_ROOT / canonical.parent).glob("*.md")}
         self.assertEqual(present & guideline_names, {canonical.name})
+
+    def test_claude_guideline_sources_are_absent(self) -> None:
+        self.assertTrue((cli.REPO_ROOT / "AGENTS.md").is_file())
+        self.assertEqual(Path(cli.GUIDELINE_TEMPLATE_REL), Path("templates/AGENTS.md"))
+        self.assertFalse((cli.REPO_ROOT / "CLAUDE.md").exists())
+        self.assertFalse((cli.REPO_ROOT / "templates/CLAUDE.md").exists())
+        self.assertNotIn(".claude/CLAUDE.md", {s.dest_rel for s in cli.TEMPLATE_FILES})
+
+
+class GuidelineAndSkillRetirementTests(unittest.TestCase):
+    RETIRED_SKILLS = (
+        "km-github-workflow", "km-html-document", "km-plan", "km-review",
+    )
+
+    def test_fresh_install_only_deploys_remaining_skills(self) -> None:
+        for alternate in (False, True):
+            with self.subTest(alternate=alternate), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                target = home / (".claude-sub" if alternate else ".claude")
+                layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                with patch("sys.stdout", new=StringIO()):
+                    self.assertEqual(cli.install(layout), 0)
+                    self.assertEqual(cli.verify(layout).failures, [])
+                self.assertFalse((target / "CLAUDE.md").exists())
+                for tree in layout.trees:
+                    root = layout.root / tree.dest_rel
+                    self.assertEqual(
+                        {p.name for p in root.iterdir()},
+                        {"km-open-file", "km-document-refine", "km-japanese-refine"},
+                    )
+                if alternate:
+                    self.assertFalse((home / ".codex").exists())
+                    self.assertFalse((home / ".agents").exists())
+
+    def test_upgrade_retires_complete_trees_and_guideline_with_recoverable_backups(self) -> None:
+        for alternate in (False, True):
+            with self.subTest(alternate=alternate), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                target = home / (".claude-sub" if alternate else ".claude")
+                layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                target.mkdir(parents=True)
+                guideline = target / "CLAUDE.md"
+                guideline.write_text("old guideline", encoding="utf-8")
+                # A named profile must not retire files in any other profile.
+                untouched = home / (".claude" if alternate else ".claude-other") / "CLAUDE.md"
+                untouched.parent.mkdir(parents=True)
+                untouched.write_text("other profile", encoding="utf-8")
+                expected_backups = {guideline.with_name("CLAUDE.md.bak"): b"old guideline"}
+                custom_skills = []
+                for tree in layout.trees:
+                    root = layout.root / tree.dest_rel
+                    custom = root / "my-custom/SKILL.md"
+                    custom.parent.mkdir(parents=True)
+                    custom.write_text("user skill", encoding="utf-8")
+                    custom_skills.append(custom)
+                    backup_root = root.with_name("skills.bak")
+                    kept = backup_root / "unrelated/SKILL.md"
+                    kept.parent.mkdir(parents=True)
+                    kept.write_text("previous backup", encoding="utf-8")
+                    expected_backups[kept] = b"previous backup"
+                    for name in self.RETIRED_SKILLS:
+                        for rel in ("SKILL.md", "references/notes.md", "scripts/helper.js"):
+                            old = root / name / rel
+                            old.parent.mkdir(parents=True, exist_ok=True)
+                            content = f"old {name}/{rel}".encode()
+                            old.write_bytes(content)
+                            expected_backups[backup_root / name / rel] = content
+                with patch("sys.stdout", new=StringIO()):
+                    self.assertEqual(cli.install(layout), 0)
+                    self.assertEqual(cli.verify(layout).failures, [])
+                    self.assertEqual(cli.install(layout), 0)
+                    self.assertEqual(cli.verify(layout).failures, [])
+                    self.assertEqual(cli.clean(layout), 0)
+                self.assertFalse(guideline.exists())
+                self.assertEqual(untouched.read_text(encoding="utf-8"), "other profile")
+                for path, content in expected_backups.items():
+                    self.assertEqual(path.read_bytes(), content, str(path))
+                for custom in custom_skills:
+                    self.assertEqual(custom.read_text(encoding="utf-8"), "user skill")
+                for tree in layout.trees:
+                    root = layout.root / tree.dest_rel
+                    self.assertEqual(list(root.rglob("SKILL.md")), [root / "my-custom/SKILL.md"])
+
+    def test_verify_detects_each_reintroduced_retired_asset(self) -> None:
+        for alternate in (False, True):
+            with self.subTest(alternate=alternate), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                target = home / ".claude-sub" if alternate else home / ".claude"
+                layout = cli.claude_dir_layout(target, home) if alternate else cli.home_layout(home)
+                with patch("sys.stdout", new=StringIO()):
+                    cli.install(layout)
+                    retired = [
+                        layout.root / rel for rel in layout.retired_dests
+                        if Path(rel).name in (*self.RETIRED_SKILLS, "CLAUDE.md")
+                    ]
+                    self.assertEqual(len(retired), 5 if alternate else 9)
+                    for path in retired:
+                        if path.name == "CLAUDE.md":
+                            path.write_text("old", encoding="utf-8")
+                        else:
+                            path.mkdir(parents=True)
+                            (path / "SKILL.md").write_text("old", encoding="utf-8")
+                    report = cli.verify(layout)
+                    for path in retired:
+                        self.assertIn(f"retired path drift: {path}", report.failures)
+                    cli.install(layout)
+                    self.assertEqual(cli.verify(layout).failures, [])
 
 
 if __name__ == "__main__":

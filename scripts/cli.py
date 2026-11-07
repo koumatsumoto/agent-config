@@ -66,16 +66,13 @@ class TreeSpec:
     prune: bool = True
 
 
-# The one canonical agent guideline. Every tool reads it under the file name it
-# expects, so the same source is deployed to each of those names and the
-# deployed copies stay byte-for-byte identical.
-GUIDELINE_TEMPLATE_REL = "templates/CLAUDE.md"
+# The canonical Codex guideline, deployed as a byte-for-byte template copy.
+GUIDELINE_TEMPLATE_REL = "templates/AGENTS.md"
 
 # Files that are full-template overwrites (with .bak backup). The agent
 # guideline is owned by the template: each install refreshes it so edits to the
 # repo propagate.
 TEMPLATE_FILES: tuple[FileSpec, ...] = (
-    FileSpec(GUIDELINE_TEMPLATE_REL, ".claude/CLAUDE.md", 0o600),
     FileSpec("templates/statusline.py", ".claude/statusline.py", 0o700),
     FileSpec("templates/subagent-statusline.py", ".claude/subagent-statusline.py", 0o700),
     FileSpec(GUIDELINE_TEMPLATE_REL, ".codex/AGENTS.md", 0o600),
@@ -126,6 +123,15 @@ INSTALL_HOME_DIRS: tuple[str, ...] = (".claude", ".codex", ".agents")
 # directory are re-rooted by claude_dir_layout alongside the active specs, so
 # a --claude-dir profile retires the same slice it used to receive.
 DECOMMISSIONED_PATHS: tuple[str, ...] = (
+    ".claude/CLAUDE.md",
+    ".claude/skills/km-github-workflow",
+    ".agents/skills/km-github-workflow",
+    ".claude/skills/km-html-document",
+    ".agents/skills/km-html-document",
+    ".claude/skills/km-plan",
+    ".agents/skills/km-plan",
+    ".claude/skills/km-review",
+    ".agents/skills/km-review",
     ".claude/output-styles/fable-like.md",
     ".claude/skills/km-commit/SKILL.md",
     ".agents/skills/km-commit/SKILL.md",

@@ -10,7 +10,6 @@ approvals_reviewer = "auto_review"
 default_permissions = ":workspace"
 
 web_search = "live"
-project_doc_fallback_filenames = ["CLAUDE.md"]
 
 [tui]
 alternate_screen = "never"
