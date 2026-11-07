@@ -30,7 +30,7 @@ Claude CodeとCodex CLIの共通設定テンプレートを管理する。
 - `templates/` - 配布対象テンプレート
 - `scripts/` - Python CLI 本体と補助スクリプト
 - `scripts/cli.py` - インストーラ / クリーナ / 検証 / settings マージを束ねる Python CLI
-- `scripts/tests/` - Python unittest / Skill helper test
+- `scripts/tests/` - 配布CLIと文書の契約テスト
 - `evals/` - 挙動資産ごとの評価シナリオ集。配布しない
 - `.github/workflows/` - GitHub Actions CI 設定
 
@@ -130,7 +130,7 @@ python scripts/cli.py install --claude-dir C:/Users/<user>/.claude-sub
 
 指針は[`templates/AGENTS.md`](templates/AGENTS.md)を編集し、再インストールする。`~/.codex/AGENTS.md`へ内容を上書きする。ルートの[`AGENTS.md`](AGENTS.md)はこのリポジトリの作業用で、配布しない。
 
-旧版が配布した`~/.claude/CLAUDE.md`と、廃止した`km-github-workflow`、`km-html-document`、`km-plan`、`km-review`は、次のinstallで退役する。旧ガイドラインは`CLAUDE.md.bak`、旧skillは各配布先の`skills.bak/<skill名>`へ退避し、skillの探索対象から外す。`--claude-dir`でも指定先だけに同じ退役処理を行う。独自skillは保持し、旧項目がない再実行では既存backupに触れない。
+旧版が配布した`~/.claude/CLAUDE.md`と、廃止した`km-github-workflow`、`km-html-document`、`km-open-file`、`km-plan`、`km-review`は、次のinstallで退役する。旧ガイドラインは`CLAUDE.md.bak`、旧skillは各配布先の`skills.bak/<skill名>`へ退避し、skillの探索対象から外す。`--claude-dir`でも指定先だけに同じ退役処理を行う。独自skillは保持し、旧項目がない再実行では既存backupに触れない。
 
 ガイドラインの本文はツール非依存に保つ。モデル、推論強度、権限、承認ポリシーなどの実行時設定は各ツールの設定テンプレートで管理する。
 
@@ -153,7 +153,7 @@ python scripts/cli.py verify
 
 検証対象はインストール時と同じ構成要素の選択規則に従う。通常はClaude、Codex、共用skillを検証し、`--claude-dir <dir>`を指定すると、そのディレクトリへのインストール結果を検証する。同じテンプレート・実行環境で直後にinstallしても管理状態が変わらないことを確認する。管理ファイルの内容・配置、スキル内の余分な項目、退役対象の残存、POSIX権限を検査する。`settings.json`は通常ファイルであることと、宣言したトップレベルキーの値をOS・配置先による変換後の期待値と比較する。未知の設定キー、JSONの空白・キー順、独自のトップレベルスキルと既存backupは対象外。
 
-配布CLI、Skill helper、文書の参照・一覧を検査するunittest（環境依存の項目は該当OSで実行）:
+配布CLI、文書の参照・一覧を検査するunittest（環境依存の項目は該当OSで実行）:
 
 ```bash
 # Linux / macOS
@@ -231,7 +231,6 @@ python scripts/cli.py clean
 
 | スキル | 説明 |
 | --- | --- |
-| `km-open-file` | Windows / WSL Ubuntuでローカルのファイル・フォルダを開く |
 | `km-document-refine` | 既存文書の情報の過不足・重複・構成を、意味と利用条件を保って整理する |
 | `km-japanese-refine` | 意味と書き手の声を保ち、直訳調・不自然な言い回し・文のつながりを整える |
 
