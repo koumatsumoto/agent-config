@@ -128,6 +128,8 @@ DECOMMISSIONED_PATHS: tuple[str, ...] = (
     ".agents/skills/km-github-workflow",
     ".claude/skills/km-html-document",
     ".agents/skills/km-html-document",
+    ".claude/skills/km-open-file",
+    ".agents/skills/km-open-file",
     ".claude/skills/km-plan",
     ".agents/skills/km-plan",
     ".claude/skills/km-review",

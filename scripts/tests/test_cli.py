@@ -51,12 +51,6 @@ def _skill_docs() -> list[Path]:
     return [p.relative_to(skills_root) for p in sorted(skills_root.rglob("*.md"))]
 
 
-def _skill_files() -> list[Path]:
-    """Every distributed regular file in the managed skills tree."""
-    skills_root = cli.REPO_ROOT / "templates" / "skills"
-    return [p.relative_to(skills_root) for p in sorted(skills_root.rglob("*")) if p.is_file()]
-
-
 def _codex_profile_specs() -> list[cli.FileSpec]:
     """Codex profile files loaded by `codex --profile <name>`."""
     return [s for s in cli.TEMPLATE_FILES if s.dest_rel.startswith(".codex/") and s.dest_rel.endswith(".config.toml")]
@@ -896,17 +890,6 @@ class InstallTests(unittest.TestCase):
         for root_rel in (".claude/skills", ".agents/skills"):
             for rel in docs:
                 self.assertTrue((self.home / root_rel / rel).is_file(), f"missing: {root_rel}/{rel}")
-
-    def test_every_skill_helper_reaches_each_skills_root(self) -> None:
-        self._run_install()
-        helpers = [path for path in _skill_files() if "scripts" in path.parts]
-        self.assertTrue(helpers, "no managed skill helpers found")
-        for root_rel in (".claude/skills", ".agents/skills"):
-            for rel in helpers:
-                deployed = self.home / root_rel / rel
-                self.assertTrue(deployed.is_file(), f"missing: {root_rel}/{rel}")
-                if os.name != "nt":
-                    self.assertFalse(os.access(deployed, os.X_OK), str(deployed))
 
     def test_creates_settings_json(self) -> None:
         self._run_install()
@@ -1847,16 +1830,6 @@ class ClaudeDirInstallTests(unittest.TestCase):
         self.assertFalse((self.target / "rules").exists())
         self.assertTrue((self.target / "settings.json").is_file())
 
-    def test_deploys_skill_helpers_without_execute_bit(self) -> None:
-        self._run_install()
-        helpers = [path for path in _skill_files() if "scripts" in path.parts]
-        self.assertTrue(helpers, "no managed skill helpers found")
-        for rel in helpers:
-            deployed = self.target / "skills" / rel
-            self.assertTrue(deployed.is_file(), str(deployed))
-            if os.name != "nt":
-                self.assertFalse(os.access(deployed, os.X_OK), str(deployed))
-
     def test_content_matches_the_templates(self) -> None:
         self._run_install()
         for spec in self.layout.files:
@@ -2171,7 +2144,7 @@ class CanonicalGuidelineTests(unittest.TestCase):
 
 class GuidelineAndSkillRetirementTests(unittest.TestCase):
     RETIRED_SKILLS = (
-        "km-github-workflow", "km-html-document", "km-plan", "km-review",
+        "km-github-workflow", "km-html-document", "km-open-file", "km-plan", "km-review",
     )
 
     def test_fresh_install_only_deploys_remaining_skills(self) -> None:
@@ -2188,7 +2161,7 @@ class GuidelineAndSkillRetirementTests(unittest.TestCase):
                     root = layout.root / tree.dest_rel
                     self.assertEqual(
                         {p.name for p in root.iterdir()},
-                        {"km-open-file", "km-document-refine", "km-japanese-refine"},
+                        {"km-document-refine", "km-japanese-refine"},
                     )
                 if alternate:
                     self.assertFalse((home / ".codex").exists())
@@ -2255,7 +2228,7 @@ class GuidelineAndSkillRetirementTests(unittest.TestCase):
                         layout.root / rel for rel in layout.retired_dests
                         if Path(rel).name in (*self.RETIRED_SKILLS, "CLAUDE.md")
                     ]
-                    self.assertEqual(len(retired), 5 if alternate else 9)
+                    self.assertEqual(len(retired), 6 if alternate else 11)
                     for path in retired:
                         if path.name == "CLAUDE.md":
                             path.write_text("old", encoding="utf-8")
